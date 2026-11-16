@@ -1,0 +1,7 @@
+{
+  "login": "Sign in",
+  "email": "Email",
+  "password": "Password",
+  "loginFailedTitle": "Sign-in failed",
+  "loginFailed": "The email or the password is wrong."
+}

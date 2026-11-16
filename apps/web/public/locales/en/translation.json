@@ -1,0 +1,23 @@
+{
+  "english": "English",
+  "czech": "Čeština",
+  "language": "Language",
+  "theme": "Theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "search": "Search…",
+  "searchHint": "Search pages, projects, tasks and events",
+  "noResults": "No results found.",
+  "searchProjects": "Projects",
+  "searchTasks": "Tasks",
+  "searchEvents": "Events",
+  "actions": "Actions",
+  "cancel": "Cancel",
+  "countryPlaceholder": "Select a country",
+  "countrySearch": "Search countries…",
+  "countryMore_one": "{{count}} more – type to narrow",
+  "countryMore_other": "{{count}} more – type to narrow",
+  "datePlaceholder": "Pick a date",
+  "clearDate": "Clear date"
+}

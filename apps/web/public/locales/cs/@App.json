@@ -1,0 +1,6 @@
+{
+  "name": "ras",
+  "tagline": "Konzole vlastníka",
+  "devEnvironment": "Vývojové prostředí",
+  "testEnvironment": "Testovací prostředí"
+}

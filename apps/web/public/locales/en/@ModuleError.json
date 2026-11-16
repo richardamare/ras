@@ -1,0 +1,25 @@
+{
+  "400": {
+    "title": "Bad Request",
+    "message": "Request could not be fulfilled because it is invalid."
+  },
+  "403": {
+    "title": "Forbidden",
+    "message": "You do not have permission to access this resource!"
+  },
+  "404": {
+    "title": "Not Found",
+    "message": "Requested resource does not exist or has been removed."
+  },
+  "offline": {
+    "title": "Server Unreachable",
+    "message": "The application could not reach the server. Check your connection and try again."
+  },
+  "default": {
+    "title": "Unknow Error",
+    "message": "An unknown error has occurred in the module."
+  },
+  "contactUs": "If the problem persists, email us at",
+  "back": "Back",
+  "home": "Home"
+}

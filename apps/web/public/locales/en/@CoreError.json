@@ -1,0 +1,9 @@
+{
+  "title": "System Error",
+  "message": {
+    "row1": "A\u00a0critical error occurred in the application and the request was terminated.",
+    "row2": "Try reloading the app using the button below and repeat the action."
+  },
+  "contactUs": "If the problem persists, email us at",
+  "reload": "Reload"
+}
