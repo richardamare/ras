@@ -12,7 +12,7 @@ const count = Effect.gen(function* () {
   return rows[0]?.n ?? 0
 })
 
-layer(Testing.layer())("Writes", (test) => {
+layer(Testing.layer([]))("Writes", (test) => {
   test.effect("appends the audit entry in the write's transaction", () =>
     Effect.gen(function* () {
       const writes = yield* Global.Writes

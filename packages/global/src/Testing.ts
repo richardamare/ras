@@ -23,11 +23,15 @@ export const signedIn = Layer.mergeAll(
   Layer.succeed(Http.Authenticated, (httpEffect) => Effect.provideService(httpEffect, Actor.CurrentActor, owner))
 )
 
-/** Global and `modules`, composed as apps/api composes them, over a fresh database with the owner signed in. */
 const compose = Module.services as unknown as (modules: ReadonlyArray<Module.Module>) => Layer.Layer<never>
 
-export const layer = <const Ms extends ReadonlyArray<Module.Module>>(
-  ...modules: Ms
+/**
+ * Global and `modules`, composed as apps/api composes them, over a fresh database with the owner signed in. `env`
+ * adds to the settings what the modules read.
+ */
+export const layer = <const Ms extends ReadonlyArray<Module.Module> = readonly []>(
+  modules: Ms = [] as unknown as Ms,
+  env: Readonly<Record<string, string>> = {}
 ): Layer.Layer<
   | Module.Services<readonly [typeof Global.module, ...Ms]>
   | Actor.CurrentActor
@@ -37,10 +41,17 @@ export const layer = <const Ms extends ReadonlyArray<Module.Module>>(
   compose([Global.module, ...modules]).pipe(
     Layer.provideMerge(database(modules)),
     Layer.provideMerge(signedIn),
-    Layer.provideMerge(settings)
+    Layer.provideMerge(settingsWith(env))
   ) as any
 
-/** The settings of a ras at `http://localhost:4100`. */
-export const settings = ConfigProvider.layer(
-  ConfigProvider.fromEnvRecord({ RAS_URL: "http://localhost:4100", RAS_AUTH_SECRET: "test-secret-".repeat(4) })
-)
+/** The settings of a ras at `http://localhost:4100`, with `env` added. */
+export const settingsWith = (env: Readonly<Record<string, string>>) =>
+  ConfigProvider.layer(
+    ConfigProvider.fromEnvRecord({
+      RAS_URL: "http://localhost:4100",
+      RAS_AUTH_SECRET: "test-secret-".repeat(4),
+      ...env
+    })
+  )
+
+export const settings = settingsWith({})
