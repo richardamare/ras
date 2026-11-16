@@ -34,7 +34,11 @@ export const layer = <const Ms extends ReadonlyArray<Module.Module>>(
   | Http.Authenticated
   | SqlClient.SqlClient
 > =>
-  compose([Global.module, ...modules]).pipe(Layer.provideMerge(database(modules)), Layer.provideMerge(signedIn)) as any
+  compose([Global.module, ...modules]).pipe(
+    Layer.provideMerge(database(modules)),
+    Layer.provideMerge(signedIn),
+    Layer.provideMerge(settings)
+  ) as any
 
 /** The settings of a ras at `http://localhost:4100`. */
 export const settings = ConfigProvider.layer(

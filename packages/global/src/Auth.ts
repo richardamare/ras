@@ -47,7 +47,7 @@ export const make = (options: {
     user: table("users"),
     session: table("sessions"),
     account: table("accounts"),
-    verification: table("verifications"),
+    verification: { ...table("verifications"), storeInDatabase: true },
     plugins: [
       BetterAuthPlugins.jwt({ disableSettingJwtHeader: true, schema: { jwks: table("jwks") } }),
       BetterAuthMcp.mcp({

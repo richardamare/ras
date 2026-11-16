@@ -1,13 +1,17 @@
+import * as Layer from "effect/Layer"
 import * as Module from "@ras/kernel/Module"
+import * as Auth from "./Auth.ts"
 import * as Http from "./Http.ts"
 import * as Migrations from "./Migrations.ts"
+import * as Routes from "./Routes.ts"
 import * as Tools from "./Tools.ts"
 import * as Writes from "./Writes.ts"
 
 export const module = Module.make({
   name: "global",
   migrations: Migrations.migrations,
-  services: Writes.Writes.layer,
+  services: Layer.mergeAll(Writes.Writes.layer, Auth.Auth.layer),
   http: { group: Http.group, handlers: Http.handlers },
-  tools: { toolkit: Tools.toolkit, handlers: Tools.handlers }
+  tools: { toolkit: Tools.toolkit, handlers: Tools.handlers },
+  routes: Routes.routes
 })
