@@ -1,0 +1,2 @@
+# Recorded HTTP responses are stored and hashed as they arrived, line endings included.
+**/test/fixtures/** -text

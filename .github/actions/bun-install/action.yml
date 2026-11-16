@@ -1,0 +1,17 @@
+name: bun install
+description: Sets up the Bun version pinned in package.json and installs from the frozen lockfile.
+
+inputs:
+  working-directory:
+    description: Directory whose bun.lock is installed.
+    default: .
+
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: package.json
+    - shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun install --frozen-lockfile

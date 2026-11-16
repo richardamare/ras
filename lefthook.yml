@@ -1,0 +1,10 @@
+pre-commit:
+  jobs:
+    - name: format
+      run: bun x oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: bun x commitlint --edit {1}
