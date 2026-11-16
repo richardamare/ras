@@ -41,8 +41,8 @@ Calls run only in the listed directions, so the graph has no cycle. A module rea
 
 ## global
 
-- **The owner** is the one person who signs in. Sign-in is better-auth with Microsoft as the first provider, through the existing Entra app registration of the owner's Outlook account. The owner is identified by the account's immutable ids (`tid` and `oid`), checked in better-auth's `user.create.before` hook, so any other account is refused before a user row is written.
-- **Graph tokens.** better-auth stores the owner's Microsoft access and refresh tokens with `offline_access` and the calendar scope. The `calendar` module takes the owner's current token from `global`, refreshing it when it expires, whichever client called. No caller's token is forwarded.
+- **The owner** is the one person who signs in, with an email and a password through better-auth. Sign-up is closed: `ras owner` creates the one account and sets its password, and refuses a second email.
+- **Graph tokens.** Connecting Graph is its own flow, separate from sign-in: the owner connects the Outlook account once, and ras stores its access and refresh tokens with `offline_access` and the calendar scope. The `calendar` module takes the current token from `global`, refreshing it when it expires, whichever client called. No caller's token is forwarded.
 - **The connector's sign-in.** better-auth is the OAuth 2.1 authorization server for `/mcp`, with the MCP plugin, as `dsght` does: dynamic client registration, protected resource metadata, short-lived access tokens bound to the `/mcp` resource, rotating refresh tokens. A client signs in as the owner on a sign-in page and the owner consents once per client on a consent page; the API serves both pages itself, so the connector works before the console exists. Settings lists the connected clients and revokes any of them.
 - **An agent** is a named actor the owner's bots act as: a slug (`kalendarnik`), a display name, active or archived. Agents are tasks' assignees, comments' authors and memory commits' authors. Every writing tool takes an optional `agent` argument naming the agent it acts as; an unknown or archived slug is refused. The agent is declared, not proven: every client signs in as the owner.
 - **Audit.** Every write appends one entry in the same transaction as the write: action, subject, before and after, the MCP client or the console, the agent if one was named, the time. The table refuses updates and deletes.
@@ -134,7 +134,7 @@ The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague
 
 - **One Bun workspace.** `apps/api` composes the modules and serves HTTP, MCP and the console; `apps/web` is the console. Each module is a package, `packages/<module>`, holding its domain schemas, service, SQL store, migrations, HTTP group and tools. Bun's isolated linker makes an import of an undeclared package fail, so a module's `package.json` dependencies are its allowed calls and the table in Modules is enforced by the build.
 - **Effect 4** throughout: services and layers, typed errors, Schema at every boundary, `HttpApi` for HTTP, `effect/ai` `McpServer` and `Toolkit` for the connector. Take the shapes from `dsght` (`apps/api/src/Auth.ts`, `Mcp.ts`, `Tools.ts`).
-- **SQLite** through `@effect/sql-sqlite-bun`, one file in WAL mode. Each module runs its own migrations at start and prefixes its tables with its name. better-auth uses the same file.
+- **SQLite** through `@effect/sql-sqlite-bun`, one file in WAL mode. Each module runs its own migrations at start and prefixes its tables with its name. better-auth uses the same file through the Effect client: a second `bun:sqlite` connection would block the event loop against an open Effect transaction.
 - **One client per outside system** (Reclaim, Graph, IMAP, git) with retries on 429 and 5xx honouring `Retry-After`. The Reclaim client is written by hand against what Reclaim sends; its OpenAPI document fails validation and mistypes events and calendars.
 - **Errors**: an outside failure maps to a typed error with a plain reason; HTTP answers it as Problem Details and MCP as a tool error. The transport cause stays in the log.
 - **Contract**: `HttpApi` generates `.oas/api.json`, CI fails when it differs from the committed one, and the console's client is generated from it.
@@ -155,11 +155,11 @@ The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague
 
 Build one step at a time. A step is done when its criterion holds on the running system.
 
-1. **Skeleton.** Workspace and `apps/api`; the module packages with Bun's isolated linker set in `bunfig.toml`; SQLite and migrations; better-auth with Microsoft for the owner only, storing the Graph tokens; the sign-in and consent pages; `/mcp` behind OAuth with `whoami`; audit, health, OpenAPI, sample mode. **Done when** Claude Code connects to a local ras through OAuth and `whoami` answers; a second Microsoft account is refused; after the owner's access token expires, ras refreshes it and creates and deletes an event in a personal calendar through Graph; and a module importing an undeclared module fails the build.
+1. **Skeleton.** Workspace and `apps/api`; the module packages with Bun's isolated linker set in `bunfig.toml`; SQLite and migrations; better-auth with the owner's email and password; the sign-in and consent pages; `/mcp` behind OAuth with `whoami`; audit, health, OpenAPI, sample mode. **Done when** Claude Code connects to a local ras through OAuth and `whoami` answers; nobody but the owner can sign in or sign up; and a module importing an undeclared module fails the build.
 2. **Memory.** The clone, the tools, the FTS index, the webhook. **Done when** a fact the owner pushes from the IDE is returned by `memory_read` within a minute, a `memory_write` lands as a commit by its agent on GitHub, and a write against a stale version is refused with the current text.
 3. **Live.** launchd, tunnel, secrets, backup, deploy from a release. **Done when** a Grok bot and claude.ai are connected to the ras on the host and read memory.
 4. **Board.** Agents, spaces, projects, tasks with status, assignee, body, comments and links, their tools and HTTP. **Done when** an agent's poll finds a task assigned to it, the agent moves it to `review` with a comment, and `tasks` returns it to the owner's filter.
-5. **Calendar.** Reclaim and Graph clients, the cache, roles, rules, free time, conflicts, event drafts, the tools. **Done when** the week across every calendar shows each event once, a show-as change and an all-day event land in the personal calendar, and a weekly series keeps its clock across a daylight-saving change.
+5. **Calendar.** Connecting Graph, the Reclaim and Graph clients, the cache, roles, rules, free time, conflicts, event drafts, the tools. **Done when** the owner connects Outlook and, after the Graph access token expires, ras refreshes it; the week across every calendar shows each event once, a show-as change and an all-day event land in the personal calendar, and a weekly series keeps its clock across a daylight-saving change.
 6. **Work blocks.** Plan, start, stop, log, move, remove, block drafts, time spent. **Done when** a block planned from a thread lands in its space's calendar, start and stop leave a block with the real times, and the project shows the time spent.
 7. **Mail.** The IMAP client and the four tools. **Done when** `recent_mail` lists today's newest messages and nothing on the server is marked read.
 8. **Console.** The screens above. **Done when** the owner plans and reviews a week from the board and the calendar without opening Reclaim or Outlook.
@@ -167,8 +167,7 @@ Build one step at a time. A step is done when its criterion holds on the running
 ## Open
 
 - Whether Grok can start a routine from an incoming webhook; until it can, its agents poll and ras pushes nothing.
-- Whether the owner's account is a personal Microsoft account or an Entra one, which decides the tenant better-auth signs in against; step 1 finds out.
+- Whether the owner's Outlook account is a personal Microsoft account or an Entra one, which decides the tenant the Graph connection signs in against; step 5 finds out.
 - How the host authenticates its pushes to `memory`: a deploy key or a fine-grained token from 1Password.
 - Whether the test runner is `bun test` or Vitest under Bun; step 1 picks the one that runs the Effect layers and `bun:sqlite` together.
-- Whether better-auth runs on Bun over `bun:sqlite` in the same file as `@effect/sql-sqlite-bun` (WAL, `busy_timeout`); `dsght` runs it on Node with Postgres, so step 1 proves it first.
 - The tunnel's domain.
