@@ -36,6 +36,19 @@
         "vitest": "catalog:",
       },
     },
+    "apps/ctl": {
+      "name": "@ras/ctl",
+      "dependencies": {
+        "@effect/platform-bun": "catalog:",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
     "apps/web": {
       "name": "@ras/web",
       "dependencies": {
@@ -588,6 +601,8 @@
     "@ras/api": ["@ras/api@workspace:apps/api"],
 
     "@ras/calendar": ["@ras/calendar@workspace:packages/calendar"],
+
+    "@ras/ctl": ["@ras/ctl@workspace:apps/ctl"],
 
     "@ras/global": ["@ras/global@workspace:packages/global"],
 

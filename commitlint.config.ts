@@ -9,6 +9,7 @@ const config: UserConfig = {
       [
         "api",
         "calendar",
+        "ctl",
         "ci",
         "deps",
         "deps-dev",
