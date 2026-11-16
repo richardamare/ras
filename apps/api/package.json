@@ -1,0 +1,28 @@
+{
+  "name": "@ras/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "oxlint src test",
+    "test": "bun --bun vitest run",
+    "openapi": "bun src/main.ts openapi"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@effect/sql-sqlite-bun": "catalog:",
+    "@ras/calendar": "workspace:*",
+    "@ras/global": "workspace:*",
+    "@ras/kernel": "workspace:*",
+    "@ras/mail": "workspace:*",
+    "@ras/memory": "workspace:*",
+    "@ras/work": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
