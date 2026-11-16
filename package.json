@@ -8,6 +8,7 @@
       "packages/*"
     ],
     "catalog": {
+      "@better-auth/core": "1.7.25",
       "@better-auth/mcp": "1.7.25",
       "@better-auth/oauth-provider": "1.7.25",
       "@effect/platform-bun": "4.1.4",

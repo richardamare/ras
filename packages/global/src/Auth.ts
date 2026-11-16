@@ -81,7 +81,7 @@ export class Auth extends Context.Service<Auth, Instance>()("@ras/global/Auth") 
     Auth,
     Effect.gen(function* () {
       const database = yield* AuthDatabase.dialect
-      return make({ settings: yield* settings, database: { dialect: database, type: "sqlite", transaction: false } })
+      return make({ settings: yield* settings, database: { dialect: database, type: "sqlite", transaction: true } })
     })
   )
 }
@@ -91,7 +91,7 @@ export const schemaSql = Effect.gen(function* () {
   const dialect = yield* AuthDatabase.dialect
   const auth = make({
     settings: { url: new URL("http://localhost"), secret: Redacted.make("x".repeat(32)) },
-    database: { dialect, type: "sqlite", transaction: false }
+    database: { dialect, type: "sqlite", transaction: true }
   })
   const migrations = yield* Effect.promise(() => BetterAuthMigration.getMigrations(auth.options))
   return yield* Effect.promise(() => migrations.compileMigrations())
