@@ -9,6 +9,12 @@ When a requirement changes, **rewrite** every unit the change touches (the funct
 - Keep the unit's contract (signature, route, schema) unless the requirement changes it. If it changes, update every caller and test in the same change.
 - A defect in code whose requirements still hold gets a targeted fix. A rewrite is for a changed requirement.
 
+## Writing code
+
+Write TypeScript the Effect way, with Effect's own modules wherever one fits: `Schema` for every type that crosses a boundary, `Data` and `Schema.TaggedError` for values and typed errors, `Option` and `Array` in place of `null`, `undefined` and hand-rolled loops, `Context.Service` and `Layer` for dependencies, `Config` for settings, `effect/cli` for commands, and `@effect/vitest` for tests.
+
+Import every module as a namespace, `import * as Option from "effect/Option"` and `import * as Writes from "./Writes.ts"`, so each use names where it comes from. The one exception is `@effect/vitest`, whose `describe`, `it`, `assert` and `layer` are imported by name.
+
 ## Language
 
 Code, docs, tickets and commits are English and use the terms in `GLOSSARY.md`. Read it before naming a domain concept or describing a UI feature, and add the term there when you introduce a new one.
