@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./module": "./src/Module.ts"
+    "./module": "./src/Module.ts",
+    "./testing": "./src/Testing.ts"
   },
   "scripts": {
     "typecheck": "tsc",
-    "lint": "oxlint src"
+    "lint": "oxlint src test",
+    "test": "bun --bun vitest run"
   },
   "dependencies": {
     "@ras/global": "workspace:*",
@@ -15,7 +17,10 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@effect/vitest": "catalog:",
     "@types/bun": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

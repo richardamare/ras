@@ -91,7 +91,7 @@ A work block is a row and a plain event in its space's calendar, titled with the
 
 ## memory
 
-Memory is the owner's facts, preferences and rules that every agent shares. It lives in the private GitHub repository `memory`, so the owner edits it in an IDE and sees each change in `git log`.
+Memory is the owner's facts, preferences and rules that every agent shares. It lives in the private GitHub repository `memory`, so the owner edits it in an IDE and sees each change in `git log`. ras works in the clone at `RAS_MEMORY_PATH`; a clone whose branch has no upstream, as on a development machine, keeps its commits local and pulls nothing.
 
 - **A fact** is one Markdown file with frontmatter `name` (kebab-case, unique, equal to the file name), `description` (one line, what the index shows) and `type` (`fact`, `preference`, `rule`, `person` or `project`), then the text. Facts sit flat at the repository's root. A file without valid frontmatter is refused on write and reported on read.
 - **Memory holds what no source holds.** Tasks, events and mail are read live from their modules, never copied into memory.

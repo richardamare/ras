@@ -153,8 +153,11 @@
         "effect": "catalog:",
       },
       "devDependencies": {
+        "@effect/platform-bun": "catalog:",
+        "@effect/vitest": "catalog:",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
+        "vitest": "catalog:",
       },
     },
     "packages/work": {

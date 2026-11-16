@@ -1,4 +1,5 @@
 import * as BunHttpServer from "@effect/platform-bun/BunHttpServer"
+import * as BunServices from "@effect/platform-bun/BunServices"
 import { assert, describe, layer } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -8,19 +9,24 @@ import * as HttpApiClient from "effect/http-api/HttpApiClient"
 import * as HttpApiError from "effect/http-api/HttpApiError"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
+import * as MemoryTesting from "@ras/memory/testing"
 import * as Api from "../src/Api.ts"
 import * as Modules from "../src/Modules.ts"
 
 const served = (authenticated: Layer.Layer<Global.Authenticated>) =>
-  HttpRouter.serve(HttpApiBuilder.layer(Api.Api).pipe(Layer.provide(Api.HttpHandlers)), {
-    disableListenLog: true
-  }).pipe(
-    Layer.provide(Api.Services),
-    Layer.provide(Testing.database(Modules.modules.slice(1))),
-    Layer.provide(authenticated),
-    Layer.provide(Testing.settings),
-    Layer.provideMerge(BunHttpServer.layerTest)
-  )
+  Layer.unwrap(
+    Effect.map(MemoryTesting.repositories, (repositories) =>
+      HttpRouter.serve(HttpApiBuilder.layer(Api.Api).pipe(Layer.provide(Api.HttpHandlers)), {
+        disableListenLog: true
+      }).pipe(
+        Layer.provide(Api.Services),
+        Layer.provide(Testing.database(Modules.modules.slice(1))),
+        Layer.provide(authenticated),
+        Layer.provide(Testing.settingsWith({ RAS_MEMORY_PATH: repositories.clone })),
+        Layer.provideMerge(BunHttpServer.layerTest)
+      )
+    )
+  ).pipe(Layer.provide(BunServices.layer))
 
 const refused = Layer.succeed(Global.Authenticated, () => Effect.fail(new HttpApiError.Unauthorized()))
 
