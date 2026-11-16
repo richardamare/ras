@@ -8,7 +8,7 @@ import * as Testing from "@ras/global/testing"
 
 const count = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient
-  const rows = yield* sql<{ n: number }>`SELECT count(*) AS n FROM global_audit`
+  const rows = yield* sql<{ n: number }>`SELECT count(*) AS n FROM global_audit_entries`
   return rows[0]?.n ?? 0
 })
 
@@ -53,7 +53,7 @@ layer(Testing.layer())("Writes", (test) => {
   test.effect("refuses to change an audit entry", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient
-      const error = yield* sql`DELETE FROM global_audit`.pipe(Effect.flip)
+      const error = yield* sql`DELETE FROM global_audit_entries`.pipe(Effect.flip)
       assert.strictEqual(error.reason._tag, "ConstraintError")
     })
   )

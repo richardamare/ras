@@ -8,11 +8,15 @@
       "packages/*"
     ],
     "catalog": {
+      "@better-auth/mcp": "1.7.25",
+      "@better-auth/oauth-provider": "1.7.25",
       "@effect/platform-bun": "4.1.4",
       "@effect/sql-sqlite-bun": "4.1.4",
       "@effect/vitest": "4.1.4",
       "@types/bun": "1.4.4",
+      "better-auth": "1.7.25",
       "effect": "4.1.4",
+      "kysely": "0.29.9",
       "typescript": "7.0.2",
       "vitest": "5.1.0"
     }

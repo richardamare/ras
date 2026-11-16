@@ -1,4 +1,8 @@
 export { Actor, AgentSlug, Channel, CurrentActor } from "./Actor.ts"
+export { Auth, settings, type Settings } from "./Auth.ts"
+export { middleware as connector } from "./Connector.ts"
 export { api, Authenticated } from "./Http.ts"
+export { set as setOwner } from "./Owner.ts"
+export { layer as session } from "./Session.ts"
 export { read } from "./Tools.ts"
 export { changed, snapshot, Transaction, write, Writes, type Action, type Change, type Snapshot } from "./Writes.ts"

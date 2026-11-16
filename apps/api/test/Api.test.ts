@@ -18,6 +18,7 @@ const served = (authenticated: Layer.Layer<Global.Authenticated>) =>
     Layer.provide(Api.Services),
     Layer.provide(Testing.database(Modules.modules.slice(1))),
     Layer.provide(authenticated),
+    Layer.provide(Testing.settings),
     Layer.provideMerge(BunHttpServer.layerTest)
   )
 

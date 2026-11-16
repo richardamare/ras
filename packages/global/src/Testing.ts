@@ -1,4 +1,5 @@
 import * as SqliteClient from "@effect/sql-sqlite-bun/SqliteClient"
+import * as ConfigProvider from "effect/ConfigProvider"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
@@ -33,4 +34,13 @@ export const layer = <const Ms extends ReadonlyArray<Module.Module>>(
   | Http.Authenticated
   | SqlClient.SqlClient
 > =>
-  compose([Global.module, ...modules]).pipe(Layer.provideMerge(database(modules)), Layer.provideMerge(signedIn)) as any
+  compose([Global.module, ...modules]).pipe(
+    Layer.provideMerge(database(modules)),
+    Layer.provideMerge(signedIn),
+    Layer.provideMerge(settings)
+  ) as any
+
+/** The settings of a ras at `http://localhost:4100`. */
+export const settings = ConfigProvider.layer(
+  ConfigProvider.fromEnvRecord({ RAS_URL: "http://localhost:4100", RAS_AUTH_SECRET: "test-secret-".repeat(4) })
+)
