@@ -45,8 +45,17 @@ Write each ticket from the form in `.github/ISSUE_TEMPLATE/` that matches its ki
 - Write every PR body from `.github/PULL_REQUEST_TEMPLATE.md`: keep each heading, fill every section by its guidance comment, then delete the comments. `gh pr create --body` skips the template that GitHub's web form applies, so a body written from memory drops it, and the body becomes the squash commit's message, so a comment left in it lands in `git log`. Add `Closes #<number>` only for an issue that already exists.
 - Tick every checkbox in the PR body before the merge. A check you cannot run until after the merge goes in a PR comment instead: the squash commit freezes the body in `git log`, so a `- [ ]` left there stays unticked forever, while a comment can still be edited.
 - Keep your PR comments current. When a check passes or its result changes, edit the comment that holds it (`gh pr comment --edit-last`, or `gh api --method PATCH repos/{owner}/{repo}/issues/comments/<id>`) rather than posting a new one under it, so the reader does not meet the stale state first.
-- A change that bumps the version in `package.json` adds a section for that version to `CHANGELOG.md` in the same commit, because nothing writes the changelog for you and a version without its entry leaves the release undocumented.
-- `scripts/setup-github.py` defines the repository's settings, labels and ruleset. Change a setting in the script and rerun it, so the script keeps matching the live repository.
+- `scripts/setup-github.py` defines the repository's settings, labels and rulesets. Change a setting in the script and rerun it, so the script keeps matching the live repository.
+
+## Releases
+
+Versions follow Semantic Versioning, and the GitHub release of each version is its changelog.
+
+1. Open a PR titled `chore(release): vX.Y.Z` that sets `version` in `package.json` to `X.Y.Z`, and merge it.
+2. On the merged `master`, run `git tag -a vX.Y.Z -m vX.Y.Z` and `git push origin vX.Y.Z`. A version with a suffix, such as `v1.2.0-rc.1`, becomes a prerelease.
+3. The `release` workflow checks that the tag is a version on `master` that matches `package.json`, runs CI on it, and publishes the release with notes generated from the PRs since the previous release.
+
+Only an admin can push a `v*` tag. Releases are immutable, so a published tag never moves: fix a bad release with the next patch version.
 
 ## Agent skills
 
