@@ -1,9 +1,9 @@
 import * as ReactRouter from "@tanstack/react-router"
-import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 
 import * as NavEntries from "@/components/nav-entries"
 import * as NavItem from "@/components/nav-item"
+import * as RasMark from "@/components/ras-mark"
 import * as Sidebar from "@/components/ui/sidebar"
 
 export const AppSidebar = () => {
@@ -17,7 +17,7 @@ export const AppSidebar = () => {
       <Sidebar.SidebarHeader>
         <div className="flex h-12 items-center gap-2 overflow-hidden p-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0">
           <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <LucideReact.CircleDotIcon className="size-5 text-primary-foreground" />
+            <RasMark.RasMark className="size-5 text-primary-foreground" />
           </div>
           <div className="grid flex-1 text-left leading-tight">
             <span className="truncate text-sm font-semibold">{t("name")}</span>
