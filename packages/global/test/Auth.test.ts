@@ -57,4 +57,27 @@ describe("Auth", () => {
       })
     )
   })
+
+  layer(App)("a client that registers itself", (test) => {
+    test.effect("may ask for every scope ras offers when it names none at registration", () =>
+      Effect.gen(function* () {
+        const auth = yield* Auth.Auth
+        const response = yield* Effect.promise(() =>
+          auth.handler(
+            new Request("http://localhost:4100/auth/oauth2/register", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                client_name: "probe",
+                redirect_uris: ["https://client.example.com/callback"],
+                token_endpoint_auth_method: "none"
+              })
+            })
+          )
+        )
+        const client = (yield* Effect.promise(() => response.json())) as { readonly scope: string }
+        assert.deepStrictEqual(client.scope.split(" ").sort(), ["email", "offline_access", "openid", "profile"])
+      })
+    )
+  })
 })
