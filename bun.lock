@@ -16,6 +16,20 @@
         "typescript": "catalog:",
       },
     },
+    "packages/global": {
+      "name": "@ras/global",
+      "dependencies": {
+        "@effect/sql-sqlite-bun": "catalog:",
+        "@ras/kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
     "packages/kernel": {
       "name": "@ras/kernel",
       "dependencies": {
@@ -177,6 +191,8 @@
     "@oxlint/binding-win32-ia32-msvc": ["@oxlint/binding-win32-ia32-msvc@1.94.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-1l1FDlzbPmAeDoZ8UGspOE2dOmz1ZL6SlDsvOmRCmWSQjCdTy5LzUepS8mO/SGpAoz4D6WAt/yNZAUyHqbkmkQ=="],
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.94.0", "", { "os": "win32", "cpu": "x64" }, "sha512-I3eZdd4bemIJQDNv9XDV/FEofDxIoN32tzCv98wIgLdW05EqxZb5hF4AwPrRzHD/dQhl0n7KgPy5AQPfM0HWrA=="],
+
+    "@ras/global": ["@ras/global@workspace:packages/global"],
 
     "@ras/kernel": ["@ras/kernel@workspace:packages/kernel"],
 
