@@ -1,0 +1,20 @@
+{
+  "name": "@ras/ctl",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "oxlint src test",
+    "test": "bun --bun vitest run"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -10,6 +10,7 @@ import * as Prompt from "effect/cli/Prompt"
 import * as Global from "@ras/global"
 import * as Package from "../../../package.json" with { type: "json" }
 import * as Api from "./Api.ts"
+import * as Backup from "./Backup.ts"
 import * as Server from "./Server.ts"
 
 const database = Flag.String("database").pipe(
@@ -44,10 +45,16 @@ const owner = Command.make(
     )
 ).pipe(Command.withDescription("Creates the owner's account, or sets the owner's password."))
 
+const backup = Command.make("backup", { database }, (flags) =>
+  Effect.provide(Backup.run, Server.database(flags.database))
+).pipe(
+  Command.withDescription("Backs the database up now, to the iCloud folder and the R2 bucket that are configured.")
+)
+
 const openapi = Command.make("openapi", {}, () => Console.log(JSON.stringify(Api.openApi(), null, 2))).pipe(
   Command.withDescription("Prints the OpenAPI document of the HTTP API. Needs no configuration and no database.")
 )
 
-const ras = Command.make("ras").pipe(Command.withSubcommands([serve, migrate, owner, openapi]))
+const ras = Command.make("ras").pipe(Command.withSubcommands([serve, migrate, owner, backup, openapi]))
 
 Command.run(ras, { version: Package.version }).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain)

@@ -142,14 +142,14 @@ The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague
 
 ## Running it
 
-| Piece          | Choice                                                                                                                                               |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Host           | The always-on Mac, a launchd agent that restarts on exit                                                                                             |
-| Public address | A Cloudflare Tunnel to the API's port                                                                                                                |
-| Deploy         | A published GitHub release deploys: the host fetches the release's commit into its own folder, starts it, and rolls back when its health check fails |
-| Secrets        | 1Password vault `ras`, injected by `op run` at start                                                                                                 |
-| Backup         | SQLite `VACUUM INTO` nightly to iCloud (7 kept) and Cloudflare R2 (30 kept); memory is backed up by GitHub                                           |
-| Budget         | Under 150 MB resident at idle on the host                                                                                                            |
+| Piece          | Choice                                                                                                                                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host           | The always-on Mac, a launchd agent that restarts on exit                                                                                                                                                        |
+| Public address | A Cloudflare Tunnel to the API's port                                                                                                                                                                           |
+| Deploy         | `rasctl`, a launchd agent, checks GitHub every two minutes; a newly published release deploys: the host fetches the release's commit into its own folder, starts it, and rolls back when its health check fails |
+| Secrets        | 1Password vault `ras`, injected by `op run` at start                                                                                                                                                            |
+| Backup         | SQLite `VACUUM INTO` nightly to iCloud (7 kept) and Cloudflare R2 (30 kept); memory is backed up by GitHub                                                                                                      |
+| Budget         | Under 150 MB resident at idle on the host                                                                                                                                                                       |
 
 ## Steps
 
