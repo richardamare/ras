@@ -8,6 +8,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Global from "@ras/global"
 import * as Module from "@ras/kernel/Module"
 import * as Api from "./Api.ts"
+import * as Backup from "./Backup.ts"
 import * as Mcp from "./Mcp.ts"
 import * as Modules from "./Modules.ts"
 
@@ -28,8 +29,7 @@ export const database = (filename: string) =>
   Layer.effectDiscard(Effect.orDie(Api.migrate)).pipe(Layer.provideMerge(SqliteClient.layer({ filename })))
 
 export const serve = (options: { readonly port: number; readonly database: string }) =>
-  HttpRouter.serve(routes).pipe(
-    Layer.provide(Api.Services),
+  Layer.merge(HttpRouter.serve(routes).pipe(Layer.provide(Api.Services)), Backup.nightly).pipe(
     Layer.provide(database(options.database)),
     Layer.provide(BunHttpServer.layer({ port: options.port }))
   )
