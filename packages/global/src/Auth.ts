@@ -14,6 +14,9 @@ export const mcpPath = "/mcp"
 export const signInPage = "/sign-in"
 export const consentPage = "/consent"
 
+/** What a client may ask for, and what a client that registers without naming scopes gets. */
+const scopes = ["openid", "profile", "email", "offline_access"]
+
 export interface Settings {
   readonly url: URL
   readonly secret: Redacted.Redacted
@@ -54,8 +57,8 @@ export const make = (options: {
         resource: new URL(mcpPath, options.settings.url).href,
         loginPage: signInPage,
         consentPage,
-        scopes: ["openid", "profile", "email", "offline_access"],
-        clientRegistrationDefaultScopes: ["openid", "offline_access"],
+        scopes,
+        clientRegistrationDefaultScopes: scopes,
         allowDynamicClientRegistration: true,
         allowUnauthenticatedClientRegistration: true,
         clientRegistrationDefaultApplicationType: "infer",
