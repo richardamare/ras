@@ -28,3 +28,7 @@ logs
 
 .private/
 .devbox/
+
+*.db
+*.db-shm
+*.db-wal
