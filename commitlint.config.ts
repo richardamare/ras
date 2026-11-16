@@ -14,6 +14,7 @@ const config: UserConfig = {
         "deps-dev",
         "docs",
         "global",
+        "kernel",
         "mail",
         "memory",
         "release",
