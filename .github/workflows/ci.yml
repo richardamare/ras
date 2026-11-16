@@ -17,35 +17,11 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: ras
-          POSTGRES_PASSWORD: ras
-          POSTGRES_DB: ras_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U ras -d ras_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-    env:
-      DATABASE_URL: postgres://ras:ras@localhost:5432/ras_test
-      TEST_DATABASE_URL: postgres://ras:ras@localhost:5432/ras_test
-      # Azurite's well-known development account.
-      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;
-      STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;
     steps:
       - uses: actions/checkout@v7
-      # A service container takes no arguments, and the published Azurite lags the API version the SDK sends.
-      - name: start Azurite
-        run: docker run -d -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0 --skipApiVersionCheck
       - uses: ./.github/actions/bun-install
       - run: bun run fmt:check
-      - run: bun x turbo run typecheck lint
-      # Every suite resets the one test database, so they take turns.
-      - run: bun x turbo run test --concurrency=1
+      - run: bun x turbo run typecheck lint test
 
   actionlint:
     runs-on: ubuntu-latest

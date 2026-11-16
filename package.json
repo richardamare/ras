@@ -9,7 +9,6 @@
     ],
     "catalog": {
       "@effect/platform-bun": "4.1.4",
-      "@effect/sql-pg": "4.1.4",
       "@effect/vitest": "4.1.4",
       "@types/bun": "1.4.4",
       "effect": "4.1.4",
