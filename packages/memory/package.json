@@ -1,0 +1,21 @@
+{
+  "name": "@ras/memory",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./module": "./src/Module.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "oxlint src"
+  },
+  "dependencies": {
+    "@ras/global": "workspace:*",
+    "@ras/kernel": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

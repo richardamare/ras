@@ -16,6 +16,18 @@
         "typescript": "catalog:",
       },
     },
+    "packages/calendar": {
+      "name": "@ras/calendar",
+      "dependencies": {
+        "@ras/global": "workspace:*",
+        "@ras/kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/global": {
       "name": "@ras/global",
       "dependencies": {
@@ -41,6 +53,43 @@
         "@types/bun": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:",
+      },
+    },
+    "packages/mail": {
+      "name": "@ras/mail",
+      "dependencies": {
+        "@ras/global": "workspace:*",
+        "@ras/kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/memory": {
+      "name": "@ras/memory",
+      "dependencies": {
+        "@ras/global": "workspace:*",
+        "@ras/kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/work": {
+      "name": "@ras/work",
+      "dependencies": {
+        "@ras/calendar": "workspace:*",
+        "@ras/global": "workspace:*",
+        "@ras/kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
       },
     },
   },
@@ -192,9 +241,17 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.94.0", "", { "os": "win32", "cpu": "x64" }, "sha512-I3eZdd4bemIJQDNv9XDV/FEofDxIoN32tzCv98wIgLdW05EqxZb5hF4AwPrRzHD/dQhl0n7KgPy5AQPfM0HWrA=="],
 
+    "@ras/calendar": ["@ras/calendar@workspace:packages/calendar"],
+
     "@ras/global": ["@ras/global@workspace:packages/global"],
 
     "@ras/kernel": ["@ras/kernel@workspace:packages/kernel"],
+
+    "@ras/mail": ["@ras/mail@workspace:packages/mail"],
+
+    "@ras/memory": ["@ras/memory@workspace:packages/memory"],
+
+    "@ras/work": ["@ras/work@workspace:packages/work"],
 
     "@rolldown/binding-android-arm-eabi": ["@rolldown/binding-android-arm-eabi@1.2.19", "", { "os": "android", "cpu": "arm" }, "sha512-e+Ebe0WT+9tbXmNKPIiC8YrWAHYwug3m6i4p3rZGGulfZri1jtI4HslT+OZnFf/OIHowWF71DTlHwXBP2SiA7A=="],
 
