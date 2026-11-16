@@ -5,7 +5,10 @@ import * as Arr from "effect/Array"
 const root = new URL("../../../", import.meta.url).pathname
 
 const sources = Arr.map(
-  Arr.fromIterable(new Bun.Glob("{apps,packages}/*/{src,test}/**/*.ts").scanSync({ cwd: root })),
+  Arr.filter(
+    Arr.fromIterable(new Bun.Glob("{apps,packages}/*/{src,test}/**/*.{ts,tsx}").scanSync({ cwd: root })),
+    (path) => !path.endsWith(".gen.ts")
+  ),
   (path) => ({ path, text: Fs.readFileSync(root + path, "utf8") })
 )
 
