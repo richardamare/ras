@@ -1,0 +1,24 @@
+{
+  "name": "@ras/kernel",
+  "private": true,
+  "description": "Vocabulary every module shares. A file belongs here only when it holds no table, no stateful service and no outside system, and two or more modules use it.",
+  "type": "module",
+  "exports": {
+    "./Module": "./src/Module.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "oxlint src test",
+    "test": "bun --bun vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/sql-sqlite-bun": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
