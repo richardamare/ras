@@ -13,9 +13,13 @@
     "test": "bun --bun vitest run"
   },
   "dependencies": {
+    "@better-auth/mcp": "catalog:",
+    "@better-auth/oauth-provider": "catalog:",
     "@effect/sql-sqlite-bun": "catalog:",
     "@ras/kernel": "workspace:*",
-    "effect": "catalog:"
+    "better-auth": "catalog:",
+    "effect": "catalog:",
+    "kysely": "catalog:"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",
