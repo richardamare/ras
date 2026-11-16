@@ -104,6 +104,7 @@
     "packages/global": {
       "name": "@ras/global",
       "dependencies": {
+        "@better-auth/core": "catalog:",
         "@better-auth/mcp": "catalog:",
         "@better-auth/oauth-provider": "catalog:",
         "@effect/sql-sqlite-bun": "catalog:",
@@ -171,6 +172,7 @@
     },
   },
   "catalog": {
+    "@better-auth/core": "1.7.25",
     "@better-auth/mcp": "1.7.25",
     "@better-auth/oauth-provider": "1.7.25",
     "@effect/platform-bun": "4.1.4",

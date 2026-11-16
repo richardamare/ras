@@ -1,3 +1,4 @@
+import * as BetterAuthContext from "@better-auth/core/context"
 import * as Effect from "effect/Effect"
 import * as Redacted from "effect/Redacted"
 import * as Errors from "@ras/kernel/Errors"
@@ -27,15 +28,18 @@ export const set = (email: string, password: Redacted.Redacted) =>
         instead: "Run `ras owner` with the owner's email to set a new password."
       })
     }
-    const user = yield* Effect.promise(() =>
-      context.internalAdapter.createUser({ email, name: email, emailVerified: true }, { method: "admin" })
-    )
     yield* Effect.promise(() =>
-      context.internalAdapter.linkAccount({
-        userId: user.id,
-        providerId: "credential",
-        accountId: user.id,
-        password: hash
+      BetterAuthContext.runWithTransaction(context.adapter, async () => {
+        const user = await context.internalAdapter.createUser(
+          { email, name: email, emailVerified: true },
+          { method: "admin" }
+        )
+        await context.internalAdapter.linkAccount({
+          userId: user.id,
+          providerId: "credential",
+          accountId: user.id,
+          password: hash
+        })
       })
     )
     return "created" as const
