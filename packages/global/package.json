@@ -1,0 +1,26 @@
+{
+  "name": "@ras/global",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./module": "./src/Module.ts",
+    "./testing": "./src/Testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "oxlint src test",
+    "test": "bun --bun vitest run"
+  },
+  "dependencies": {
+    "@effect/sql-sqlite-bun": "catalog:",
+    "@ras/kernel": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
