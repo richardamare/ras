@@ -15,6 +15,8 @@ Write TypeScript the Effect way, with Effect's own modules wherever one fits: `S
 
 Import every module as a namespace, `import * as Option from "effect/Option"` and `import * as Writes from "./Writes.ts"`, so each use names where it comes from. The one exception is `@effect/vitest`, whose `describe`, `it`, `assert` and `layer` are imported by name.
 
+Name a table `<module>_<plural noun>`, such as `global_audit_entries` or `work_tasks`.
+
 ## Language
 
 Code, docs, tickets and commits are English and use the terms in `GLOSSARY.md`. Read it before naming a domain concept or describing a UI feature, and add the term there when you introduce a new one.

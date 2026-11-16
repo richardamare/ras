@@ -83,7 +83,7 @@ export class Writes extends Context.Service<
           const at = DateTime.formatIso(yield* DateTime.now)
           const actorJson = encodeActor(actor)
           yield* sql`
-            INSERT INTO global_audit (action, subject, before, after, channel, agent, at)
+            INSERT INTO global_audit_entries (action, subject, before, after, channel, agent, at)
             VALUES (${action}, ${change.subject},
                     ${Option.match(change.before, { onNone: () => null, onSome: (value) => JSON.stringify(value) })},
                     ${Option.match(change.after, { onNone: () => null, onSome: (value) => JSON.stringify(value) })},

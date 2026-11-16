@@ -6,7 +6,7 @@ export const migrations: Module.Migrations = {
   "0001_create_audit": Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
     yield* sql`
-      CREATE TABLE global_audit (
+      CREATE TABLE global_audit_entries (
         id INTEGER PRIMARY KEY,
         action TEXT NOT NULL,
         subject TEXT NOT NULL,
@@ -16,7 +16,7 @@ export const migrations: Module.Migrations = {
         agent TEXT,
         at TEXT NOT NULL
       ) STRICT`
-    yield* sql`CREATE TRIGGER global_audit_no_update BEFORE UPDATE ON global_audit BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END`
-    yield* sql`CREATE TRIGGER global_audit_no_delete BEFORE DELETE ON global_audit BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END`
+    yield* sql`CREATE TRIGGER global_audit_no_update BEFORE UPDATE ON global_audit_entries BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END`
+    yield* sql`CREATE TRIGGER global_audit_no_delete BEFORE DELETE ON global_audit_entries BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END`
   })
 }
