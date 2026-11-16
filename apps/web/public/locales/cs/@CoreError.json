@@ -1,0 +1,9 @@
+{
+  "title": "Selhání systému",
+  "message": {
+    "row1": "V\u00a0aplikaci nastala kritická chyba a\u00a0zpracování požadavku bylo ukončeno.",
+    "row2": "Zkuste aplikaci načíst znovu pomocí tlačítka níže a\u00a0akci opakujte."
+  },
+  "contactUs": "Pokud problém přetrvává, napište nám na",
+  "reload": "Načíst znovu"
+}

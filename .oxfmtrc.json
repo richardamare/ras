@@ -3,5 +3,5 @@
   "semi": false,
   "printWidth": 120,
   "trailingComma": "none",
-  "ignorePatterns": ["bun.lock", "apps/web/**", "**/generated/**", "**/test/fixtures/**"]
+  "ignorePatterns": ["bun.lock", "**/generated/**", "**/test/fixtures/**", "**/*.gen.ts"]
 }

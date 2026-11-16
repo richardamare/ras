@@ -1,0 +1,348 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./components/ui/shadcn-tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Re-applying a shadcn preset rewrites --font-sans to the preset's font - restore Sora after. */
+@font-face {
+  font-family: "Sora";
+  src:
+    local("Sora"),
+    url("/fonts/sora.ttf") format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+/*
+ * `radix-nova` - control heights and radii come from it,
+ * so do not tune them per-component. `--primary` is the brand violet (#884DFF); keep it in step
+ * with `--color-brand-violet` below.
+ */
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(55% 0.225 277);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(55% 0.225 277);
+
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(55% 0.225 277);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(55% 0.225 277);
+
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+
+  /* Status tones, the same in every palette: a green and an amber mean the same thing on any brand. */
+  --success: oklch(50% 0.13 150);
+  --success-soft: oklch(95% 0.045 150);
+  --warning: oklch(52% 0.12 70);
+  --warning-soft: oklch(95.5% 0.06 85);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(68% 0.21 277);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(68% 0.21 277);
+
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(68% 0.21 277);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(68% 0.21 277);
+
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+
+  --success: oklch(78% 0.14 150);
+  --success-soft: oklch(30% 0.06 150);
+  --warning: oklch(82% 0.13 80);
+  --warning-soft: oklch(32% 0.06 75);
+}
+
+/* The toolbar's search, filters and actions share the table card's surface. Hover, an open menu and a pressed toggle keep the button's
+   own colours. Unlayered, so it outranks the utilities it overrides. */
+[data-slot="data-table-toolbar"]
+  :is([data-slot="input-group"], [data-variant="outline"]:not(:hover, [aria-expanded="true"], [aria-pressed="true"])) {
+  background-color: var(--card);
+}
+
+/* The default palette, chosen per user in settings: a deep blue on graphite greys tinted toward it. Boxier than
+   the brand palette: every primitive derives its corners from `--radius`, and the smallest steps clamp to zero. */
+.palette-blue {
+  --radius: 0.25rem;
+}
+
+.palette-blue:not(.dark) {
+  --background: oklch(99.4% 0.002 258);
+  --foreground: oklch(24% 0.025 262);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(24% 0.025 262);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(24% 0.025 262);
+  --primary: oklch(41.2% 0.152 258);
+  --primary-foreground: oklch(100% 0 0);
+  --secondary: oklch(96.5% 0.008 258);
+  --secondary-foreground: oklch(24% 0.025 262);
+  --muted: oklch(96.5% 0.008 258);
+  --muted-foreground: oklch(46% 0.014 264);
+  --accent: oklch(96.5% 0.008 258);
+  --accent-foreground: oklch(24% 0.025 262);
+  --destructive: oklch(55.5% 0.223 29);
+  --destructive-foreground: oklch(100% 0 0);
+  --border: oklch(91.5% 0.01 258);
+  --input: oklch(91.5% 0.01 258);
+  --ring: oklch(41.2% 0.152 258);
+
+  --sidebar: oklch(97.5% 0.006 258);
+  --sidebar-foreground: oklch(24% 0.025 262);
+  --sidebar-primary: oklch(41.2% 0.152 258);
+  --sidebar-primary-foreground: oklch(100% 0 0);
+  --sidebar-accent: oklch(93% 0.03 258);
+  --sidebar-accent-foreground: oklch(41.2% 0.152 258);
+  --sidebar-border: oklch(91.5% 0.01 258);
+  --sidebar-ring: oklch(41.2% 0.152 258);
+}
+
+.palette-blue.dark {
+  --background: oklch(17% 0.018 260);
+  --foreground: oklch(96.5% 0.006 258);
+  --card: oklch(21% 0.02 260);
+  --card-foreground: oklch(96.5% 0.006 258);
+  --popover: oklch(21% 0.02 260);
+  --popover-foreground: oklch(96.5% 0.006 258);
+  --primary: oklch(68% 0.14 258);
+  --primary-foreground: oklch(17% 0.018 260);
+  --secondary: oklch(27% 0.022 260);
+  --secondary-foreground: oklch(96.5% 0.006 258);
+  --muted: oklch(27% 0.022 260);
+  --muted-foreground: oklch(72% 0.016 262);
+  --accent: oklch(27% 0.022 260);
+  --accent-foreground: oklch(96.5% 0.006 258);
+  --destructive: oklch(68% 0.19 27);
+  --destructive-foreground: oklch(96.5% 0.006 258);
+  --border: oklch(100% 0 0 / 10%);
+  --input: oklch(100% 0 0 / 15%);
+  --ring: oklch(68% 0.14 258);
+
+  --sidebar: oklch(21% 0.02 260);
+  --sidebar-foreground: oklch(96.5% 0.006 258);
+  --sidebar-primary: oklch(68% 0.14 258);
+  --sidebar-primary-foreground: oklch(17% 0.018 260);
+  --sidebar-accent: oklch(29% 0.05 258);
+  --sidebar-accent-foreground: oklch(96.5% 0.006 258);
+  --sidebar-border: oklch(100% 0 0 / 10%);
+  --sidebar-ring: oklch(68% 0.14 258);
+}
+
+@theme inline {
+  --font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  /* Mixed, not declared, so it follows whichever palette sets `--primary`. */
+  --color-primary-soft: color-mix(in oklab, var(--primary) 12%, var(--card));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Fixed corporate colours - they do not shift with the theme. For surfaces use `primary`/`muted`. */
+@theme {
+  --color-brand-violet: #884dff;
+  --color-brand-sherpa-blue: #023444;
+  --color-brand-lawn-green: #89e103;
+  --color-brand-teams: #5b5fc7;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /*
+     * Leave this unstyled and it collapses to content height: `flex-1` and `h-full` resolve to
+     * nothing, and a top-level 404 renders jammed against the top of the window. `svh` not `vh` -
+     * `100vh` includes mobile Safari's retracting chrome.
+     */
+  #root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}
+
+/* A calendar event takes its colour from --event-bar, set per event; the fill strength follows its status. */
+.calendar-event {
+  --event-fill-share: 20%;
+  border-left-color: var(--event-bar);
+  background-color: color-mix(in srgb, var(--event-bar) var(--event-fill-share), transparent);
+  color: color-mix(in srgb, var(--event-bar) 55%, var(--foreground));
+}
+
+.calendar-event[data-show-as="tentative"] {
+  --event-fill-share: 10%;
+}
+
+.calendar-event[data-show-as="free"] {
+  --event-fill-share: 4%;
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--event-bar) 10%, transparent) 0 4px,
+    transparent 4px 9px
+  );
+  color: color-mix(in srgb, var(--event-bar) 35%, var(--muted-foreground));
+}
+
+/* A draft is not in Outlook yet: greyed toward the background, with a dashed outline in its calendar colour. */
+.calendar-event[data-draft="true"] {
+  --event-fill-share: 8%;
+  border: 1.5px dashed color-mix(in srgb, var(--event-bar) 60%, var(--muted-foreground));
+  background-color: color-mix(in srgb, var(--event-bar) var(--event-fill-share), var(--muted));
+  color: color-mix(in srgb, var(--event-bar) 25%, var(--muted-foreground));
+}
+
+.calendar-event[data-show-as="oof"] {
+  --event-fill-share: 30%;
+}
+
+.calendar-event[data-show-as="workingElsewhere"] {
+  --event-fill-share: 15%;
+}
+
+/*
+ * A task row while it is being closed (see use-task-completion.ts): crossed out while it can still be undone,
+ * then faded and folded away. The fold runs on max-height, so it is sized above the tallest task row.
+ */
+[data-completion="pending"] {
+  opacity: 0.55;
+  text-decoration-line: line-through;
+  transition: opacity 150ms ease-out;
+}
+
+[data-completion="closing"] {
+  overflow: hidden;
+  text-decoration-line: line-through;
+  animation: task-close 300ms ease-in forwards;
+}
+
+@keyframes task-close {
+  from {
+    max-height: 5rem;
+    opacity: 0.55;
+  }
+  to {
+    max-height: 0;
+    opacity: 0;
+    padding-block: 0;
+    border-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-completion="closing"] {
+    animation-duration: 1ms;
+  }
+}

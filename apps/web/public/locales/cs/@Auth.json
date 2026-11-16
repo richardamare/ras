@@ -1,0 +1,7 @@
+{
+  "login": "Přihlásit se",
+  "email": "E-mail",
+  "password": "Heslo",
+  "loginFailedTitle": "Přihlášení se nezdařilo",
+  "loginFailed": "E-mail nebo heslo nesouhlasí."
+}

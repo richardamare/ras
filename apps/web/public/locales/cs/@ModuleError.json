@@ -1,0 +1,25 @@
+{
+  "400": {
+    "title": "Neplatný požadavek",
+    "message": "Požadavek nemohl být zpracován, protože je neplatný."
+  },
+  "403": {
+    "title": "Přístup odepřen",
+    "message": "Nemáte oprávnění pro přístup k\u00a0tomuto prostředku!"
+  },
+  "404": {
+    "title": "Nenalezeno",
+    "message": "Požadovaný prostředek neexistuje nebo byl odstraněn."
+  },
+  "offline": {
+    "title": "Server není dostupný",
+    "message": "Aplikaci se nepodařilo spojit se serverem. Zkontrolujte připojení a\u00a0zkuste to znovu."
+  },
+  "default": {
+    "title": "Něco se pokazilo",
+    "message": "V\u00a0modulu se vyskytla neznámá chyba."
+  },
+  "contactUs": "Pokud problém přetrvává, napište nám na",
+  "back": "Zpět",
+  "home": "Domů"
+}

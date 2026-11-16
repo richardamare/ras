@@ -4,5 +4,5 @@
   "rules": {
     "no-underscore-dangle": "off"
   },
-  "ignorePatterns": ["apps/web/**", "**/generated/**"]
+  "ignorePatterns": ["**/generated/**", "**/*.gen.ts"]
 }
