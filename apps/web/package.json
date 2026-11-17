@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "typecheck": "tsc",
     "lint": "oxlint src",
-    "test": "bun --bun vitest run"
+    "test": "bun --bun vitest run",
+    "api:generate": "bun install --cwd ../../scripts/openapi --frozen-lockfile && bun run --cwd ../../scripts/openapi generate"
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.5",
