@@ -99,5 +99,122 @@
       "running": "Work block running now",
       "done": "Finished work block"
     }
+  },
+  "repeat": {
+    "label": "Repeat",
+    "preset": {
+      "never": "Does not repeat",
+      "daily": "Every day",
+      "workdays": "Every weekday",
+      "weekly": "Every week {{weekday}}",
+      "monthly": "Every month {{where}}",
+      "yearly": "Every year {{where}}",
+      "custom": "Custom…"
+    },
+    "dayOn": {
+      "monday": "on Monday",
+      "tuesday": "on Tuesday",
+      "wednesday": "on Wednesday",
+      "thursday": "on Thursday",
+      "friday": "on Friday",
+      "saturday": "on Saturday",
+      "sunday": "on Sunday"
+    },
+    "interval_one": "Repeat every",
+    "interval_other": "Repeat every",
+    "unitLabel": "Unit",
+    "unit": {
+      "day_one": "day",
+      "day_other": "days",
+      "week_one": "week",
+      "week_other": "weeks",
+      "month_one": "month",
+      "month_other": "months",
+      "year_one": "year",
+      "year_other": "years"
+    },
+    "on": "On",
+    "when": "When",
+    "short": {
+      "monday": "Mo",
+      "tuesday": "Tu",
+      "wednesday": "We",
+      "thursday": "Th",
+      "friday": "Fr",
+      "saturday": "Sa",
+      "sunday": "Su"
+    },
+    "day": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "place": {
+      "1": "the first",
+      "2": "the second",
+      "3": "the third",
+      "4": "the fourth",
+      "5": "the last"
+    },
+    "monthly": {
+      "date": "on day {{date}}",
+      "weekday": "on {{place}} {{weekday}}"
+    },
+    "yearly": {
+      "date": "on {{month}} {{date}}",
+      "weekday": "on {{place}} {{weekday}} of {{month}}"
+    },
+    "monthOf": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
+    },
+    "monthIn": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
+    },
+    "ends": "Ends",
+    "end": {
+      "never": "Never",
+      "until": "On",
+      "count": "After"
+    },
+    "occurrences_one": "occurrence",
+    "occurrences_other": "occurrences",
+    "until": "Last day",
+    "count": "Occurrences",
+    "summary": {
+      "never": "Does not repeat",
+      "every_one": "Every {{unit}}",
+      "every_other": "Every {{count}} {{unit}}",
+      "on": "on {{days}}",
+      "and": " and ",
+      "until": "until {{date}}",
+      "count_one": "once",
+      "count_other": "{{count}} times"
+    }
   }
 }

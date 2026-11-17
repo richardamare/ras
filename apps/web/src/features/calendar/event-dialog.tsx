@@ -10,6 +10,8 @@ import * as Label from "@/components/ui/label"
 import * as Select from "@/components/ui/select"
 import * as Textarea from "@/components/ui/textarea"
 import * as Pointer from "@/features/calendar/pointer"
+import * as Repeat from "@/features/calendar/repeat"
+import * as RepeatFields from "@/features/calendar/repeat-fields"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as DialogStore from "@/lib/dialog-store"
@@ -194,6 +196,8 @@ function Body({
   const writable = calendars.filter((calendar) => calendar.writable && calendar.enabled)
   const [form, setForm] = React.useState(() => formOf(state, writable))
   const set = (change: Partial<Form>) => setForm((current) => ({ ...current, ...change }))
+  const repeats = state.kind === "create" && !state.draft
+  const [repeat, setRepeat] = React.useState(() => Repeat.initial(form.day))
   const settle = {
     onSuccess: () => {
       onClose()
@@ -217,8 +221,16 @@ function Body({
         ? { firstDay: form.firstDay, lastDay: form.lastDay }
         : { start: `${form.day}T${form.start}`, end: endOf(form) })
     }
+    const repeated = repeats ? Repeat.repeatOf(repeat) : undefined
     if (state.kind === "create")
-      create.mutate({ body: { ...details, calendar: Number(form.calendar), draft: state.draft } })
+      create.mutate({
+        body: {
+          ...details,
+          calendar: Number(form.calendar),
+          draft: state.draft,
+          ...(repeated !== undefined && { repeat: repeated })
+        }
+      })
     else change.mutate({ path: { id: state.event.id }, body: details })
   }
 
@@ -236,8 +248,15 @@ function Body({
             : calendars.find((calendar) => calendar.id === state.event.calendar)?.name}
         </Dialog.DialogDescription>
       </Dialog.DialogHeader>
-      <Dialog.DialogBody>
+      <Dialog.DialogBody className="grid gap-3">
         <Fields form={form} set={set} allDay={allDay} calendars={state.kind === "create" ? writable : null} />
+        {repeats && (
+          <RepeatFields.RepeatFields
+            day={form.day}
+            form={repeat}
+            set={(edit) => setRepeat((current) => ({ ...current, ...edit }))}
+          />
+        )}
       </Dialog.DialogBody>
       <Dialog.DialogFooter>
         <Button.Button type="button" variant="outline" onClick={onClose}>
