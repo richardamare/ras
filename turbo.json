@@ -5,7 +5,7 @@
     "typecheck": { "dependsOn": ["^typecheck"] },
     "lint": {},
     "test": { "dependsOn": ["^typecheck"] },
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "build": { "dependsOn": ["^build"], "env": ["VITE_ENVIRONMENT", "APP_COMMIT"], "outputs": ["dist/**"] },
     "dev": { "cache": false, "persistent": true }
   }
 }
