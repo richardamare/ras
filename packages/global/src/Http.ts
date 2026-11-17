@@ -11,6 +11,7 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Module from "@ras/kernel/Module"
 import * as Actor from "./Actor.ts"
 import * as Agents from "./Agents.ts"
+import * as Graph from "./Graph.ts"
 import * as Store from "./Store.ts"
 
 export class Authenticated extends HttpApiMiddleware.Service<Authenticated, { provides: Actor.CurrentActor }>()(
@@ -44,6 +45,17 @@ export const group = HttpApiGroup.make("global")
       error: Errors.NotFound
     })
   )
+  .add(
+    HttpApiEndpoint.get("graph", "/graph", {
+      success: Schema.NullOr(Graph.Connection).annotate({ description: "The Outlook account connected, if any." })
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("connectGraph", "/graph/connect", {
+      success: Schema.Struct({ url: Schema.String.annotate({ description: "Open it to sign in to Microsoft." }) }),
+      error: Errors.Refused
+    })
+  )
   .prefix("/global")
 
 export const me = Effect.map(Effect.service(Actor.CurrentActor), (actor) => ({
@@ -54,7 +66,10 @@ export const me = Effect.map(Effect.service(Actor.CurrentActor), (actor) => ({
 export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) =>
   Effect.gen(function* () {
     const agents = yield* Agents.Agents
+    const graph = yield* Graph.Graph
     return endpoints
+      .handle("graph", () => Effect.map(graph.connection, Option.getOrNull))
+      .handle("connectGraph", () => Effect.map(graph.connect, (url) => ({ url: url.href })))
       .handle("whoami", () => me)
       .handle("agents", () => agents.list)
       .handle("addAgent", ({ payload }) => agents.add(payload.slug, payload.name))

@@ -193,6 +193,92 @@
         }
       }
     },
+    "/global/graph": {
+      "get": {
+        "tags": ["global"],
+        "operationId": "global.graph",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The Outlook account connected, if any.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConnectionEncoded"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The Outlook account connected, if any."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global/graph/connect": {
+      "post": {
+        "tags": ["global"],
+        "operationId": "global.connectGraph",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "Open it to sign in to Microsoft."
+                    }
+                  },
+                  "required": ["url"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/calendar/calendars": {
       "get": {
         "tags": ["calendar"],
@@ -2928,6 +3014,19 @@
           }
         },
         "required": ["id", "name", "color", "role", "enabled"],
+        "additionalProperties": false
+      },
+      "ConnectionEncoded": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "connected": {
+            "type": "string"
+          }
+        },
+        "required": ["account", "connected"],
         "additionalProperties": false
       },
       "AgentEncoded": {

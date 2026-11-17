@@ -88,6 +88,36 @@ const agent = Command.make("agent").pipe(
   ])
 )
 
+const outlook = (file: string) =>
+  Global.graph.pipe(Layer.provide(Global.Writes.layer), Layer.provide(Server.database(file)))
+
+const graph = Command.make("graph").pipe(
+  Command.withDescription("Connects the owner's Outlook account, whose calendars Graph writes."),
+  Command.withSubcommands([
+    Command.make("connect", { database }, (flags) =>
+      Global.Graph.use((graph) => graph.connect).pipe(
+        Effect.flatMap((url) => Console.log(`Open this within ten minutes and allow ras the calendar:\n${url.href}`)),
+        Effect.provide(outlook(flags.database))
+      )
+    ).pipe(
+      Command.withDescription("Prints the Microsoft sign-in that connects Outlook; ras's callback stores the tokens.")
+    ),
+    Command.make("status", { database }, (flags) =>
+      Global.Graph.use((graph) => graph.connection).pipe(
+        Effect.flatMap((connection) =>
+          Console.log(
+            Option.match(connection, {
+              onNone: () => "Outlook is not connected.",
+              onSome: (found) => `Outlook ${found.account} is connected since ${found.connected}.`
+            })
+          )
+        ),
+        Effect.provide(outlook(flags.database))
+      )
+    ).pipe(Command.withDescription("Says which Outlook account is connected."))
+  ])
+)
+
 const backup = Command.make("backup", { database }, (flags) =>
   Effect.provide(Backup.run, Server.database(flags.database))
 ).pipe(
@@ -98,6 +128,6 @@ const openapi = Command.make("openapi", {}, () => Console.log(JSON.stringify(Api
   Command.withDescription("Prints the OpenAPI document of the HTTP API. Needs no configuration and no database.")
 )
 
-const ras = Command.make("ras").pipe(Command.withSubcommands([serve, migrate, owner, agent, backup, openapi]))
+const ras = Command.make("ras").pipe(Command.withSubcommands([serve, migrate, owner, agent, graph, backup, openapi]))
 
 Command.run(ras, { version: Package.version }).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain)
