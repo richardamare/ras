@@ -12,6 +12,7 @@ import * as Textarea from "@/components/ui/textarea"
 import * as Pointer from "@/features/calendar/pointer"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
+import * as DialogStore from "@/lib/dialog-store"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 
@@ -253,27 +254,23 @@ function Body({
   )
 }
 
+export const useEventDialog = DialogStore.createDialogStore<{ state: DialogState }>()
+
 /** The form that creates an event or changes one ras may write. */
 export function EventDialog({
-  state,
-  calendars,
-  onClose
+  open,
+  onOpenChange,
+  state
 }: {
-  state: DialogState | null
-  calendars: ReadonlyArray<Api.CalendarEncoded>
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  state: DialogState
 }) {
+  const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   return (
-    <Dialog.Dialog open={state !== null} onOpenChange={(open) => !open && onClose()}>
+    <Dialog.Dialog open={open} onOpenChange={onOpenChange}>
       <Dialog.DialogContent className="sm:max-w-lg">
-        {state !== null && (
-          <Body
-            key={state.kind === "edit" ? state.event.id : `${state.placement.day}-${state.placement.start}`}
-            state={state}
-            calendars={calendars}
-            onClose={onClose}
-          />
-        )}
+        <Body state={state} calendars={calendars.data ?? []} onClose={() => onOpenChange(false)} />
       </Dialog.DialogContent>
     </Dialog.Dialog>
   )

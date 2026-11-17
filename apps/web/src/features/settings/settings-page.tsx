@@ -5,9 +5,9 @@ import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
 import * as Badge from "@/components/ui/badge"
+import * as ConfirmDialog from "@/components/confirm-dialog"
 import * as Button from "@/components/ui/button"
 import * as Card from "@/components/ui/card"
-import * as Dialog from "@/components/ui/dialog"
 import * as Input from "@/components/ui/input"
 import * as Select from "@/components/ui/select"
 import * as Skeleton from "@/components/ui/skeleton"
@@ -319,14 +319,10 @@ function Clients() {
   const { t } = ReactI18next.useTranslation("Settings")
   const settle = useSettle()
   const clients = ReactQuery.useQuery(Queries.globalClientsOptions())
-  const [revoking, setRevoking] = React.useState<Api.McpClientEncoded | null>(null)
+  const confirmDialog = ConfirmDialog.useConfirmDialog()
   const revoke = ReactQuery.useMutation({
     ...Queries.globalRevokeClientMutation(),
-    onSuccess: () => {
-      setRevoking(null)
-      return settle.onSuccess()
-    },
-    onError: settle.onError
+    ...settle
   })
 
   return (
@@ -346,32 +342,21 @@ function Clients() {
             size="sm"
             variant="ghost"
             className="ms-auto text-destructive"
-            onClick={() => setRevoking(client)}
+            onClick={() =>
+              confirmDialog.open({
+                title: t("clients.revokeTitle", { name: client.name }),
+                description: t("clients.revokeDescription"),
+                confirmLabel: t("clients.revoke"),
+                cancelLabel: t("clients.keep"),
+                destructive: true,
+                onConfirm: () => revoke.mutate({ path: { id: client.id } })
+              })
+            }
           >
             {t("clients.revoke")}
           </Button.Button>
         </Row>
       ))}
-      <Dialog.Dialog open={revoking !== null} onOpenChange={(open) => !open && setRevoking(null)}>
-        <Dialog.DialogContent>
-          <Dialog.DialogHeader>
-            <Dialog.DialogTitle>{t("clients.revokeTitle", { name: revoking?.name ?? "" })}</Dialog.DialogTitle>
-            <Dialog.DialogDescription>{t("clients.revokeDescription")}</Dialog.DialogDescription>
-          </Dialog.DialogHeader>
-          <Dialog.DialogFooter>
-            <Button.Button variant="outline" onClick={() => setRevoking(null)}>
-              {t("clients.keep")}
-            </Button.Button>
-            <Button.Button
-              variant="destructive"
-              disabled={revoke.isPending}
-              onClick={() => revoking !== null && revoke.mutate({ path: { id: revoking.id } })}
-            >
-              {t("clients.revoke")}
-            </Button.Button>
-          </Dialog.DialogFooter>
-        </Dialog.DialogContent>
-      </Dialog.Dialog>
     </Section>
   )
 }

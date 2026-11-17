@@ -4,9 +4,9 @@ import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
+import * as ConfirmDialog from "@/components/confirm-dialog"
 import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
-import * as Dialog from "@/components/ui/dialog"
 import * as Tooltip from "@/components/ui/tooltip"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
@@ -43,12 +43,11 @@ export function DraftControls({
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   const client = ReactQuery.useQueryClient()
-  const [discarding, setDiscarding] = React.useState(false)
+  const confirmDialog = ConfirmDialog.useConfirmDialog()
   const confirm = useConfirmDrafts(() => onDrafting(false))
   const discard = ReactQuery.useMutation({
     ...Queries.workDiscardDraftsMutation(),
     onSuccess: () => {
-      setDiscarding(false)
       onDrafting(false)
       return client.invalidateQueries()
     },
@@ -95,28 +94,21 @@ export function DraftControls({
             label={t("draft.discardAll")}
             className="size-7 text-destructive"
             disabled={busy || inView === 0}
-            onClick={() => setDiscarding(true)}
+            onClick={() =>
+              confirmDialog.open({
+                title: t("draft.discardTitle"),
+                description: t("draft.discardDescription"),
+                confirmLabel: t("draft.discardAll"),
+                cancelLabel: t("draft.keep"),
+                destructive: true,
+                onConfirm: () => discard.mutate({})
+              })
+            }
           >
             <LucideReact.Trash2Icon />
           </IconButton.IconButton>
         </>
       )}
-      <Dialog.Dialog open={discarding} onOpenChange={setDiscarding}>
-        <Dialog.DialogContent>
-          <Dialog.DialogHeader>
-            <Dialog.DialogTitle>{t("draft.discardTitle")}</Dialog.DialogTitle>
-            <Dialog.DialogDescription>{t("draft.discardDescription")}</Dialog.DialogDescription>
-          </Dialog.DialogHeader>
-          <Dialog.DialogFooter>
-            <Button.Button variant="outline" onClick={() => setDiscarding(false)}>
-              {t("draft.keep")}
-            </Button.Button>
-            <Button.Button variant="destructive" disabled={discard.isPending} onClick={() => discard.mutate({})}>
-              {t("draft.discardAll")}
-            </Button.Button>
-          </Dialog.DialogFooter>
-        </Dialog.DialogContent>
-      </Dialog.Dialog>
     </div>
   )
 }

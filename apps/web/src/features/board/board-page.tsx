@@ -4,13 +4,11 @@ import * as Nuqs from "nuqs"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
-import * as Button from "@/components/ui/button"
-import * as Dialog from "@/components/ui/dialog"
 import * as Select from "@/components/ui/select"
 import * as Skeleton from "@/components/ui/skeleton"
-import * as Textarea from "@/components/ui/textarea"
 import * as PageHeader from "@/components/page-header"
 import * as Columns from "@/features/board/columns"
+import * as MoveDialog from "@/features/board/move-dialog"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
@@ -78,64 +76,6 @@ function Card({ task, projects, onOpen }: { task: Task; projects: Map<string, st
   )
 }
 
-/** The comment a move into `blocked` or `review` takes. */
-function MoveDialog({
-  move,
-  onClose,
-  onMove
-}: {
-  move: { task: Task; status: Work.Status } | null
-  onClose: () => void
-  onMove: (comment: string) => void
-}) {
-  const { t } = ReactI18next.useTranslation("Work")
-  const [comment, setComment] = React.useState("")
-  return (
-    <Dialog.Dialog
-      open={move !== null}
-      onOpenChange={(open) => {
-        if (!open) {
-          setComment("")
-          onClose()
-        }
-      }}
-    >
-      <Dialog.DialogContent>
-        <Dialog.DialogHeader>
-          <Dialog.DialogTitle>
-            {move === null ? "" : t("board.moveTitle", { task: move.task.title, status: t(`status.${move.status}`) })}
-          </Dialog.DialogTitle>
-          <Dialog.DialogDescription>
-            {move?.status === "blocked" ? t("board.whatIsNeeded") : t("board.whatToCheck")}
-          </Dialog.DialogDescription>
-        </Dialog.DialogHeader>
-        <form
-          className="contents"
-          onSubmit={(event) => {
-            event.preventDefault()
-            onMove(comment.trim())
-            setComment("")
-          }}
-        >
-          <Dialog.DialogBody>
-            <Textarea.Textarea
-              autoFocus
-              aria-label={t("comment")}
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-            />
-          </Dialog.DialogBody>
-          <Dialog.DialogFooter>
-            <Button.Button type="submit" disabled={comment.trim().length === 0}>
-              {t("board.move")}
-            </Button.Button>
-          </Dialog.DialogFooter>
-        </form>
-      </Dialog.DialogContent>
-    </Dialog.Dialog>
-  )
-}
-
 export function BoardPage() {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
@@ -145,7 +85,7 @@ export function BoardPage() {
     project: Nuqs.parseAsString.withDefault(all)
   })
   const [over, setOver] = React.useState<Work.Status | null>(null)
-  const [move, setMove] = React.useState<{ task: Task; status: Work.Status } | null>(null)
+  const moveDialog = MoveDialog.useMoveDialog()
   const openTask = TaskUrl.useOpenTask()
 
   const query = {
@@ -169,7 +109,7 @@ export function BoardPage() {
     setOver(null)
     const task = (tasks.data ?? []).find((one) => one.id === id)
     if (task === undefined || task.status === status) return
-    if (Work.explained.includes(status)) setMove({ task, status })
+    if (Work.explained.includes(status)) moveDialog.open({ task, status })
     else change.mutate({ path: { id }, body: { status } })
   }
 
@@ -245,14 +185,6 @@ export function BoardPage() {
           ))}
         </div>
       )}
-      <MoveDialog
-        move={move}
-        onClose={() => setMove(null)}
-        onMove={(comment) => {
-          if (move !== null) change.mutate({ path: { id: move.task.id }, body: { status: move.status, comment } })
-          setMove(null)
-        }}
-      />
     </div>
   )
 }

@@ -10,8 +10,10 @@ import * as Input from "@/components/ui/input"
 import * as Label from "@/components/ui/label"
 import * as Select from "@/components/ui/select"
 import * as Textarea from "@/components/ui/textarea"
+import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
+import * as DialogStore from "@/lib/dialog-store"
 import type * as Api from "@/lib/api/generated/types.gen"
 
 const noProject = "none"
@@ -25,42 +27,57 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-/** A button that opens a form for a new task; `project` preselects the project. */
-export function NewTaskButton({ project, status }: { project?: string; status?: Work.Status }) {
+interface Preset {
+  /** Preselects the project. */
+  readonly project?: string
+  /** The column the task starts in; left out, the API's default. */
+  readonly status?: Work.Status
+}
+
+export const useNewTaskDialog = DialogStore.createDialogStore<Preset>()
+
+export function NewTaskButton(preset: Preset) {
+  const { t } = ReactI18next.useTranslation("Work")
+  const dialog = useNewTaskDialog()
+  return (
+    <Button.Button onClick={() => dialog.open(preset)}>
+      <LucideReact.PlusIcon />
+      {t("newTask.button")}
+    </Button.Button>
+  )
+}
+
+export function NewTaskDialog({
+  open,
+  onOpenChange,
+  project,
+  status
+}: Preset & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())
   const agents = ReactQuery.useQuery(Queries.globalAgentsOptions())
-  const [open, setOpen] = React.useState(false)
-  const blank = {
+  const [form, setForm] = React.useState({
     title: "",
     project: project ?? noProject,
     assignee: "owner",
     priority: "normal" as Api.TaskSummaryEncoded["priority"],
     deadline: "",
     body: ""
-  }
-  const [form, setForm] = React.useState(blank)
-  const set = (change: Partial<typeof blank>) => setForm((current) => ({ ...current, ...change }))
+  })
+  const set = (change: Partial<typeof form>) => setForm((current) => ({ ...current, ...change }))
   const add = ReactQuery.useMutation({
     ...Queries.workAddTaskMutation(),
     onSuccess: (task) => {
       Sonner.toast.success(t("newTask.added", { title: task.title }))
-      setOpen(false)
-      setForm(blank)
+      onOpenChange(false)
       return client.invalidateQueries()
     },
     onError: (error) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
   })
 
   return (
-    <Dialog.Dialog open={open} onOpenChange={setOpen}>
-      <Dialog.DialogTrigger asChild>
-        <Button.Button>
-          <LucideReact.PlusIcon />
-          {t("newTask.button")}
-        </Button.Button>
-      </Dialog.DialogTrigger>
+    <Dialog.Dialog open={open} onOpenChange={onOpenChange}>
       <Dialog.DialogContent className="sm:max-w-lg">
         <form
           className="contents"
@@ -116,14 +133,14 @@ export function NewTaskButton({ project, status }: { project?: string; status?: 
                     <Select.SelectValue />
                   </Select.SelectTrigger>
                   <Select.SelectContent>
-                    <Select.SelectItem value="owner">{t("owner")}</Select.SelectItem>
-                    {(agents.data ?? [])
-                      .filter((agent) => !agent.archived)
-                      .map((agent) => (
-                        <Select.SelectItem key={agent.slug} value={agent.slug}>
-                          {agent.name}
-                        </Select.SelectItem>
-                      ))}
+                    {[
+                      "owner",
+                      ...(agents.data ?? []).filter((agent) => !agent.archived).map((agent) => agent.slug)
+                    ].map((person) => (
+                      <Select.SelectItem key={person} value={person}>
+                        <TaskBits.Assignee assignee={person} />
+                      </Select.SelectItem>
+                    ))}
                   </Select.SelectContent>
                 </Select.Select>
               </Field>
