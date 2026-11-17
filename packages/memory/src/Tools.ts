@@ -9,17 +9,18 @@ import * as Memory from "./facts/Memory.ts"
 export const toolkit = Toolkit.make(
   Global.read("memory_index", {
     description:
-      "Every fact in the owner's shared memory: its name, one-line description and type. Lists the files that are not valid facts too.",
+      "The facts in the owner's shared memory: each one's path, kind and one-line description, filtered by kind or folder. Also lists the files that are not valid facts, and the kinds registry.yaml defines: each kind's path pattern, file-name rule, required and optional properties, and who writes it. Read the kinds before memory_write.",
+    parameters: Memory.Filter,
     success: Memory.Index
   }),
   Global.read("memory_read", {
     description:
-      "The full text of facts by name, each with its version. Pass that version to memory_write to change a fact.",
-    parameters: Schema.Struct({ names: Schema.NonEmptyArray(Schema.String) }),
+      "The full text of facts by path, each with its version. Pass that version to memory_write to change a fact. A path that holds a file breaking its kind's rules comes back under `invalid` with the reason.",
+    parameters: Schema.Struct({ paths: Schema.NonEmptyArray(Schema.String) }),
     success: Memory.Read
   }),
   Global.read("memory_search", {
-    description: "Facts whose name, description or text holds every word of the query, best match first.",
+    description: "Facts whose path, description or text holds every word of the query, best match first.",
     parameters: Schema.Struct({
       query: Schema.String,
       limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 })))
@@ -28,11 +29,10 @@ export const toolkit = Toolkit.make(
   }),
   Global.writeTool("memory_write", {
     description:
-      "Creates a fact, or changes one with the version memory_read returned. Commits it to the memory repository as the agent named. Memory holds what no other source holds: never tasks, events or mail, and never a secret.",
+      "Creates a fact, or changes one with the version memory_read returned. Its folder decides its kind, whose rules the properties must keep and who may write it; memory_index lists the kinds. Commits it to the memory repository under the owner's identity, naming the agent in the commit subject. Memory holds what no other source holds: never tasks, events or mail, and never a secret.",
     parameters: {
-      name: Fact.Name.annotate({ description: "kebab-case, such as `coffee-order`" }),
-      description: Schema.String.annotate({ description: "One line: what the index shows." }),
-      type: Fact.Type,
+      path: Fact.Path,
+      properties: Fact.Properties,
       text: Schema.String.annotate({ description: "Markdown." }),
       version: Schema.optionalKey(Fact.Version)
     },
@@ -40,8 +40,8 @@ export const toolkit = Toolkit.make(
     destructive: false
   }),
   Global.writeTool("memory_delete", {
-    description: "Deletes a fact, given the version memory_read returned.",
-    parameters: { name: Fact.Name, version: Fact.Version },
+    description: "Deletes a fact, given the version memory_read returned. Only who may write its kind deletes it.",
+    parameters: { path: Fact.Path, version: Fact.Version },
     destructive: true
   })
 )
@@ -51,12 +51,12 @@ export const handlers = toolkit.toLayer(
     const memory = yield* Memory.Memory
     const actingAs = yield* Global.actingAs
     return {
-      memory_index: () => memory.index,
-      memory_read: ({ names }) => memory.read(names),
+      memory_index: (filter) => memory.index(filter),
+      memory_read: ({ paths }) => memory.read(paths),
       memory_search: ({ query, limit }) => memory.search(query, limit ?? 10),
       memory_write: ({ agent, version, ...draft }) =>
         memory.write(draft, Option.fromUndefinedOr(version)).pipe(actingAs(agent)),
-      memory_delete: ({ agent, name, version }) => memory.remove(name, version).pipe(actingAs(agent))
+      memory_delete: ({ agent, path, version }) => memory.remove(path, version).pipe(actingAs(agent))
     }
   })
 )

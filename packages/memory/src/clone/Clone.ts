@@ -11,15 +11,10 @@ import * as ChildProcess from "effect/process/ChildProcess"
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner"
 import * as Errors from "@ras/kernel/Errors"
 
-/** A file at the root of the clone, as read from disk. */
+/** A Markdown file the clone tracks, by its path from the repository's root, as read from disk. */
 export interface File {
-  readonly file: string
+  readonly path: string
   readonly content: string
-}
-
-export interface Author {
-  readonly name: string
-  readonly email: string
 }
 
 const failed = (reason: string) => new Errors.SourceFailed({ source: "git", reason })
@@ -36,13 +31,13 @@ export class Clone extends Context.Service<
   {
     readonly pull: Effect.Effect<void, Errors.SourceFailed>
     readonly files: Effect.Effect<ReadonlyArray<File>, Errors.SourceFailed>
-    readonly read: (file: string) => Effect.Effect<Option.Option<string>, Errors.SourceFailed>
-    /** Writes `content` to `file`, or removes it when `content` is none, and commits that one file. */
+    /** The file at `path` from the repository's root, whether git tracks it or not. */
+    readonly read: (path: string) => Effect.Effect<Option.Option<string>, Errors.SourceFailed>
+    /** Writes `content` to `path`, making its folders, or removes it when `content` is none, and commits that one file under the identity the clone is configured with. */
     readonly commit: (change: {
-      readonly file: string
+      readonly path: string
       readonly content: Option.Option<string>
       readonly message: string
-      readonly author: Option.Option<Author>
     }) => Effect.Effect<void, Errors.SourceFailed>
     /** Pushes the commits; `false` when the remote rejected them because it moved on. */
     readonly push: Effect.Effect<boolean, Errors.SourceFailed>
@@ -97,35 +92,30 @@ export class Clone extends Context.Service<
 
       return Clone.of({
         pull: tracked ? Effect.asVoid(git("pull", "--ff-only", "--quiet")) : Effect.void,
-        files: filesystem(
-          Effect.gen(function* () {
-            const names = Arr.filter(
-              yield* fs.readDirectory(root),
-              (name) => name.endsWith(".md") && !name.startsWith(".")
+        files: Effect.gen(function* () {
+          const listed = Arr.filter(
+            (yield* git("ls-files", "-z")).split("\0"),
+            (file) => file.endsWith(".md") && !file.split("/").some((part) => part.startsWith("."))
+          )
+          return yield* filesystem(
+            Effect.forEach(listed, (file) =>
+              Effect.map(fs.readFileString(path.join(root, file)), (content) => ({ path: file, content }))
             )
-            return yield* Effect.forEach(names, (file) =>
-              Effect.map(fs.readFileString(path.join(root, file)), (content) => ({ file, content }))
-            )
-          })
-        ),
+          )
+        }),
         read: (file) => read(file),
-        commit: ({ file, content, message, author }) =>
+        commit: ({ path: file, content, message }) =>
           Effect.gen(function* () {
+            const at = path.join(root, file)
             yield* Option.match(content, {
-              onNone: () => filesystem(fs.remove(path.join(root, file))),
-              onSome: (text) => filesystem(fs.writeFileString(path.join(root, file), text))
+              onNone: () => filesystem(fs.remove(at)),
+              onSome: (text) =>
+                filesystem(
+                  Effect.andThen(fs.makeDirectory(path.dirname(at), { recursive: true }), fs.writeFileString(at, text))
+                )
             })
             yield* git("add", "--all", "--", file)
-            yield* git(
-              "commit",
-              "--quiet",
-              "--no-verify",
-              ...Option.match(author, { onNone: () => [], onSome: (who) => [`--author=${who.name} <${who.email}>`] }),
-              "--message",
-              message,
-              "--",
-              file
-            )
+            yield* git("commit", "--quiet", "--no-verify", "--message", message, "--", file)
           }),
         push: tracked
           ? Effect.flatMap(run(["push", "--quiet"]), ({ output, code }) =>

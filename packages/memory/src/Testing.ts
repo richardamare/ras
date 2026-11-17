@@ -8,9 +8,35 @@ const git = (cwd: string, ...args: ReadonlyArray<string>) =>
     if ((await run.exited) !== 0) throw new Error(`git ${args.join(" ")}: ${await new Response(run.stderr).text()}`)
   })
 
+/** The registry the test repositories start with: preferences any agent writes, bots only the owner, SOPs their bot. */
+export const registry = `kinds:
+  preference:
+    path: preferences/*.md
+    name: kebab
+    write: agents
+    required: { description: line }
+  person:
+    path: people/*/*.md
+    name: kebab
+    write: agents
+    required: { description: line }
+    optional: { email: line, aliases: list }
+  bot:
+    path: bots/{agent}.md
+    write: owner
+    required: { description: line }
+  sop:
+    path: sops/{agent}/*.md
+    name: kebab
+    write: own
+    required:
+      description: line
+      status: [draft, active, retired]
+`
+
 /**
  * A bare remote and a clone tracking it, in a temporary directory removed with the scope. The clone is where ras
- * works; `owner` is a second clone the owner edits and pushes from, as from an IDE.
+ * works; `owner` is a second clone the owner edits and pushes from, as from an IDE. The first commit holds `registry`.
  */
 export const repositories = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
@@ -27,12 +53,14 @@ export const repositories = Effect.gen(function* () {
     ["commit.gpgsign", "false"]
   ] as const)
     yield* git(owner, "config", key, value)
-  yield* git(owner, "commit", "--quiet", "--allow-empty", "--message", "start")
+  yield* fs.writeFileString(path.join(owner, "registry.yaml"), registry)
+  yield* git(owner, "add", "registry.yaml")
+  yield* git(owner, "commit", "--quiet", "--message", "start")
   yield* git(owner, "push", "--quiet", "origin", "master")
   yield* git(root, "clone", "--quiet", remote, clone)
   for (const [key, value] of [
-    ["user.name", "ras"],
-    ["user.email", "ras@example.com"],
+    ["user.name", "Owner"],
+    ["user.email", "owner@example.com"],
     ["commit.gpgsign", "false"]
   ] as const)
     yield* git(clone, "config", key, value)

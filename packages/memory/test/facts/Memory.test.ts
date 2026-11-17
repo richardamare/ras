@@ -6,6 +6,7 @@ import * as FileSystem from "effect/FileSystem"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Path from "effect/Path"
+import * as Result from "effect/Result"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
 import * as Global from "@ras/global"
@@ -14,6 +15,7 @@ import * as Testing from "@ras/global/testing"
 import * as Fact from "../../src/facts/Fact.ts"
 import * as Memory from "../../src/facts/Memory.ts"
 import * as Module from "../../src/Module.ts"
+import * as Registry from "../../src/registry/Registry.ts"
 import * as MemoryTesting from "../../src/Testing.ts"
 
 class Repositories extends Context.Service<Repositories, Effect.Success<typeof MemoryTesting.repositories>>()(
@@ -29,12 +31,15 @@ const App = Layer.unwrap(
   )
 ).pipe(Layer.provideMerge(BunServices.layer))
 
-const draft = (name: string, text: string): Fact.Draft => ({
-  name: Fact.Name.make(name),
-  description: `About ${name}`,
-  type: "preference",
+const registry = Result.getOrThrow(Registry.parse(MemoryTesting.registry))
+
+const draft = (path: string, text: string, properties: Fact.Properties = {}): Fact.Draft => ({
+  path: Fact.Path.make(path),
+  properties: { description: `About ${path}`, ...properties },
   text
 })
+
+const fileOf = (one: Fact.Draft) => Fact.render(Option.getOrThrow(Registry.placeOf(registry, one.path)), one)
 
 const git = (cwd: string, ...args: ReadonlyArray<string>) =>
   Effect.promise(() => new Response(Bun.spawn(["git", ...args], { cwd, stdout: "pipe" }).stdout).text()).pipe(
@@ -48,6 +53,7 @@ const ownerPushes = (file: string, content: string) =>
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     yield* run(owner, "pull", "--quiet", "--ff-only")
+    yield* fs.makeDirectory(path.dirname(path.join(owner, file)), { recursive: true })
     yield* fs.writeFileString(path.join(owner, file), content)
     yield* run(owner, "add", "--all")
     yield* run(owner, "commit", "--quiet", "--message", `owner: ${file}`)
@@ -55,24 +61,47 @@ const ownerPushes = (file: string, content: string) =>
   })
 
 const scheduler = Global.AgentSlug.make("scheduler")
+const mailer = Global.AgentSlug.make("mailer")
 
 const refusal = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.map(Effect.flip(effect), (error) => ("code" in error ? String(error.code) : error._tag))
 
+const everything: Memory.Filter = {}
+
+const withRules = `${MemoryTesting.registry}  rule:
+    path: rules/*.md
+    name: kebab
+    write: owner
+    required: { description: line }
+`
+
+const reason = (path: string, content: string) =>
+  Result.match(Fact.parse(registry, path, content), { onFailure: (file) => file.reason, onSuccess: () => "" })
+
 describe("Fact", () => {
-  it("reads a fact whose frontmatter names its file", () => {
-    const content = Fact.render(draft("coffee-order", "Flat white, oat milk."))
-    const parsed = Fact.parse("coffee-order.md", content)
-    assert.isTrue(parsed._tag === "Success")
-    if (parsed._tag === "Success") {
-      assert.strictEqual(parsed.success.text, "Flat white, oat milk.")
-      assert.strictEqual(parsed.success.version, Fact.version(content))
-    }
+  it("reads a file as a fact of the kind its folder gives it", () => {
+    const content = fileOf(draft("preferences/coffee-order.md", "Flat white, oat milk."))
+    const fact = Result.getOrThrow(Fact.parse(registry, "preferences/coffee-order.md", content))
+    assert.deepStrictEqual(
+      [fact.kind, fact.description, fact.text],
+      ["preference", "About preferences/coffee-order.md", "Flat white, oat milk."]
+    )
+    assert.strictEqual(fact.version, Fact.version(content))
   })
 
-  it("reports a file whose frontmatter names another file", () => {
-    const parsed = Fact.parse("tea.md", Fact.render(draft("coffee-order", "x")))
-    assert.isTrue(parsed._tag === "Failure")
+  it("reports a file no kind matches, and one that breaks its kind's rules", () => {
+    assert.strictEqual(
+      reason("coffee-order.md", "---\ndescription: x\n---\n"),
+      "No kind in registry.yaml matches this path."
+    )
+    assert.strictEqual(
+      reason("preferences/coffee-order.md", "---\ndescription: x\ntype: preference\n---\n"),
+      "`type` is not a property of preference; it takes `description`."
+    )
+    assert.strictEqual(
+      reason("preferences/coffee-order.md", "Flat white."),
+      "The file does not open with a `---` frontmatter block."
+    )
   })
 
   it("versions a file as git hashes its blob", () =>
@@ -95,73 +124,171 @@ layer(App)("Memory", (test) => {
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
       const { remote } = yield* Repositories
-      yield* (yield* Global.Agents).add(scheduler, "Kalendářník")
+      const agents = yield* Global.Agents
+      yield* agents.add(scheduler, "Scheduler")
+      yield* agents.add(mailer, "Mailer")
       const actingAs = yield* Global.actingAs
       const written = yield* memory
-        .write(draft("coffee-order", "Flat white, oat milk."), Option.none())
+        .write(draft("preferences/coffee-order.md", "Flat white, oat milk."), Option.none())
         .pipe(actingAs(scheduler))
+      assert.strictEqual(written.kind, "preference")
       assert.strictEqual(
         yield* git(remote, "log", "-1", "--format=%an <%ae>|%s", "master"),
-        "scheduler <scheduler@agents.ras.invalid>|memory(scheduler): coffee-order"
+        "Owner <owner@example.com>|memory(scheduler): preferences/coffee-order.md"
       )
-      const read = yield* memory.read(["coffee-order", "nothing"])
+      const read = yield* memory.read(["preferences/coffee-order.md", "preferences/nothing.md"])
       assert.strictEqual(read.facts[0]?.version, written.version)
-      assert.deepStrictEqual(read.missing, ["nothing"])
+      assert.deepStrictEqual(read.missing, ["preferences/nothing.md"])
+      const index = yield* memory.index(everything)
       assert.deepStrictEqual(
-        (yield* memory.index).facts.map((entry) => entry.name),
-        ["coffee-order"]
+        index.facts.map((entry) => [entry.path, entry.kind]),
+        [["preferences/coffee-order.md", "preference"]]
       )
       assert.deepStrictEqual(
-        (yield* memory.search("oat", 10)).map((hit) => hit.name),
-        ["coffee-order"]
+        index.kinds.map((kind) => [kind.kind, kind.path, kind.write]),
+        [
+          ["preference", "preferences/*.md", "agents"],
+          ["person", "people/*/*.md", "agents"],
+          ["bot", "bots/{agent}.md", "owner"],
+          ["sop", "sops/{agent}/*.md", "own"]
+        ]
+      )
+      assert.isNull(index.registry)
+      assert.deepStrictEqual(
+        (yield* memory.search("oat", 10)).map((hit) => hit.path),
+        ["preferences/coffee-order.md"]
       )
       const sql = yield* SqlClient.SqlClient
-      const audit = yield* sql<{ action: string; agent: string }>`SELECT action, agent FROM global_audit_entries`
+      const audit = yield* sql<{
+        action: string
+        subject: string
+      }>`SELECT action, subject FROM global_audit_entries WHERE action LIKE 'memory.%'`
       assert.deepStrictEqual(
-        audit.map((row) => [row.action, row.agent]),
-        [
-          ["global.agent.added", null],
-          ["memory.fact.written", "scheduler"]
-        ]
+        audit.map((row) => [row.action, row.subject]),
+        [["memory.fact.written", "memory/preferences/coffee-order.md"]]
       )
     })
   )
 
-  test.effect("returns a fact the owner pushed once the last pull is a minute old", () =>
+  test.effect("returns a fact the owner pushed into a folder once the last pull is a minute old", () =>
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
-      yield* ownerPushes("standup.md", Fact.render(draft("standup", "Standup is at 9:30.")))
-      yield* TestClock.adjust("61 seconds")
-      const read = yield* memory.read(["standup"])
-      assert.strictEqual(read.facts[0]?.text, "Standup is at 9:30.")
-      assert.deepStrictEqual(
-        (yield* memory.search("standup", 10)).map((hit) => hit.name),
-        ["standup"]
+      yield* ownerPushes(
+        "people/colleagues/jan-novak.md",
+        fileOf(draft("people/colleagues/jan-novak.md", "Jan runs the standup.", { email: "jan@example.com" }))
       )
+      yield* TestClock.adjust("61 seconds")
+      const read = yield* memory.read(["people/colleagues/jan-novak.md"])
+      assert.deepStrictEqual(read.facts[0]?.properties, {
+        description: "About people/colleagues/jan-novak.md",
+        email: "jan@example.com"
+      })
+      assert.deepStrictEqual(
+        (yield* memory.search("standup", 10)).map((hit) => [hit.path, hit.kind]),
+        [["people/colleagues/jan-novak.md", "person"]]
+      )
+    })
+  )
+
+  test.effect("filters the index by kind and by folder", () =>
+    Effect.gen(function* () {
+      const memory = yield* Memory.Memory
+      const paths = (filter: Memory.Filter) =>
+        Effect.map(memory.index(filter), (index) => index.facts.map((entry) => entry.path))
+      assert.deepStrictEqual(yield* paths({ kind: "person" }), ["people/colleagues/jan-novak.md"])
+      assert.deepStrictEqual(yield* paths({ folder: "people/" }), ["people/colleagues/jan-novak.md"])
+      assert.deepStrictEqual(yield* paths({ folder: "people/family" }), [])
     })
   )
 
   test.effect("refuses a write against a version the owner changed, with the current text", () =>
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
-      const read = yield* memory.read(["standup"])
-      const stale = read.facts[0]!.version
-      yield* ownerPushes("standup.md", Fact.render(draft("standup", "Standup is at 10:00.")))
-      const error = yield* Effect.flip(memory.write(draft("standup", "Standup is at 9:45."), Option.some(stale)))
+      const path = "people/colleagues/jan-novak.md"
+      const stale = (yield* memory.read([path])).facts[0]!.version
+      yield* ownerPushes(path, fileOf(draft(path, "Jan runs the standup at 10:00.")))
+      const error = yield* Effect.flip(memory.write(draft(path, "Jan runs it at 9:45."), Option.some(stale)))
       assert.strictEqual(error._tag === "Refused" ? error.code : error._tag, "memory.fact.changed")
-      assert.include(error.reason, "Standup is at 10:00.")
+      assert.include(error.reason, "Jan runs the standup at 10:00.")
     })
   )
 
   test.effect("refuses to overwrite a fact without its version, and a fact holding a secret", () =>
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
-      assert.strictEqual(yield* refusal(memory.write(draft("standup", "again"), Option.none())), "memory.fact.exists")
       assert.strictEqual(
-        yield* refusal(memory.write(draft("github", `token: ghp_${"b".repeat(36)}`), Option.none())),
+        yield* refusal(memory.write(draft("preferences/coffee-order.md", "again"), Option.none())),
+        "memory.fact.exists"
+      )
+      assert.strictEqual(
+        yield* refusal(memory.write(draft("preferences/github.md", `token: ghp_${"b".repeat(36)}`), Option.none())),
         "memory.fact.secret"
       )
     })
+  )
+
+  test.effect("refuses a path no kind matches, properties its kind does not take, and an agent ras lacks", () =>
+    Effect.gen(function* () {
+      const memory = yield* Memory.Memory
+      assert.strictEqual(yield* refusal(memory.write(draft("notes/x.md", "x"), Option.none())), "memory.path.unknown")
+      assert.strictEqual(
+        yield* refusal(memory.write(draft("people/jan-novak.md", "x"), Option.none())),
+        "memory.path.unknown"
+      )
+      const invalid = yield* Effect.flip(
+        memory.write(draft("sops/scheduler/weekly-plan.md", "x", { status: "open", type: "sop" }), Option.none())
+      )
+      assert.strictEqual(invalid._tag === "Refused" ? invalid.code : invalid._tag, "memory.fact.invalid")
+      assert.include(invalid.reason, "`status` must be one of `draft`, `active`, `retired`.")
+      assert.include(invalid.reason, "`type` is not a property of sop")
+      assert.strictEqual(
+        yield* refusal(memory.write(draft("sops/nobody/weekly-plan.md", "x", { status: "draft" }), Option.none())),
+        "memory.agent.unknown"
+      )
+    })
+  )
+
+  test.effect("lets only the owner write a bot's specification, and only the owner and that bot its SOPs", () =>
+    Effect.gen(function* () {
+      const memory = yield* Memory.Memory
+      const actingAs = yield* Global.actingAs
+      const sop = draft("sops/scheduler/weekly-plan.md", "Plan the week on Monday.", { status: "active" })
+      const written = yield* memory.write(sop, Option.none()).pipe(actingAs(scheduler))
+      const forbidden = yield* Effect.flip(memory.write(sop, Option.some(written.version)).pipe(actingAs(mailer)))
+      assert.strictEqual(forbidden._tag === "Refused" ? forbidden.code : forbidden._tag, "memory.write.forbidden")
+      assert.include(forbidden.reason, "Only the owner and scheduler write this sop.")
+      assert.strictEqual(
+        yield* refusal(memory.remove(sop.path, written.version).pipe(actingAs(mailer))),
+        "memory.write.forbidden"
+      )
+      const bot = draft("bots/scheduler.md", "Plans the owner's week.")
+      assert.strictEqual(
+        yield* refusal(memory.write(bot, Option.none()).pipe(actingAs(scheduler))),
+        "memory.write.forbidden"
+      )
+      assert.strictEqual((yield* memory.write(bot, Option.none())).kind, "bot")
+    })
+  )
+
+  test.effect(
+    "takes a kind the owner adds to the registry after the next pull, and keeps it through a broken registry",
+    () =>
+      Effect.gen(function* () {
+        const memory = yield* Memory.Memory
+        const rule = draft("rules/no-friday-calls.md", "No calls on Friday afternoon.")
+        assert.strictEqual(yield* refusal(memory.write(rule, Option.none())), "memory.path.unknown")
+        yield* ownerPushes("registry.yaml", withRules)
+        assert.strictEqual((yield* memory.write(rule, Option.none())).kind, "rule")
+        yield* ownerPushes("registry.yaml", "kinds: [")
+        yield* TestClock.adjust("61 seconds")
+        const index = yield* memory.index({ kind: "rule" })
+        assert.include(index.registry ?? "", "registry.yaml is not valid YAML")
+        assert.deepStrictEqual(
+          index.facts.map((entry) => entry.path),
+          ["rules/no-friday-calls.md"]
+        )
+        yield* ownerPushes("registry.yaml", withRules)
+      })
   )
 
   test.effect("pulls and retries once when the remote moved on between the pull and the push", () =>
@@ -177,20 +304,24 @@ layer(App)("Memory", (test) => {
         `#!/bin/sh\n[ -e "${marker}" ] && exit 0\ntouch "${marker}"\ncd "${owner}" && git pull -q --ff-only && echo raced > raced.md && git add -A && git commit -qm raced && git push -q\n`
       )
       yield* fs.chmod(hook, 0o755)
-      yield* memory.write(draft("lunch", "Lunch at noon."), Option.none())
+      yield* memory.write(draft("preferences/lunch.md", "Lunch at noon."), Option.none())
       yield* fs.remove(hook)
       const subjects = yield* git(clone, "log", "-3", "--format=%s", "origin/master")
-      assert.deepStrictEqual(subjects.split("\n").slice(0, 2), ["memory(owner): lunch", "raced"])
+      assert.deepStrictEqual(subjects.split("\n").slice(0, 2), ["memory(owner): preferences/lunch.md", "raced"])
     })
   )
 
-  test.effect("reports a file that is not a valid fact", () =>
+  test.effect("leaves a file outside the registry out of the index and reports it on read", () =>
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
       yield* TestClock.adjust("61 seconds")
-      const index = yield* memory.index
+      const index = yield* memory.index(everything)
+      assert.deepStrictEqual(index.invalid, [
+        { path: "raced.md", reason: "No kind in registry.yaml matches this path." }
+      ])
+      assert.isFalse(index.facts.some((entry) => entry.path === "raced.md"))
       assert.deepStrictEqual(
-        index.invalid.map((file) => file.file),
+        (yield* memory.read(["raced.md"])).invalid.map((file) => file.path),
         ["raced.md"]
       )
     })
@@ -200,10 +331,11 @@ layer(App)("Memory", (test) => {
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
       const { remote } = yield* Repositories
-      const read = yield* memory.read(["lunch"])
-      yield* memory.remove(Fact.Name.make("lunch"), read.facts[0]!.version)
-      assert.deepStrictEqual((yield* memory.read(["lunch"])).missing, ["lunch"])
-      assert.strictEqual(yield* git(remote, "ls-tree", "--name-only", "master", "lunch.md"), "")
+      const path = Fact.Path.make("preferences/lunch.md")
+      const read = yield* memory.read([path])
+      yield* memory.remove(path, read.facts[0]!.version)
+      assert.deepStrictEqual((yield* memory.read([path])).missing, [path])
+      assert.strictEqual(yield* git(remote, "ls-tree", "--name-only", "master", path), "")
     })
   )
 
