@@ -97,6 +97,29 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("the calendar", (t
     })
   )
 
+  test.effect("finds the clash between the dentist and an invitation, and the free time around them", () =>
+    Effect.gen(function* () {
+      const calendar = yield* Calendar.Calendar
+      yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
+      yield* calendar.changeCalendar(Sample.work, { role: "work" })
+      const day = Time.addDays(yield* today, 2)
+      const afternoon = { from: Time.PragueLocal.make(`${day}T13:00`), to: Time.PragueLocal.make(`${day}T17:00`) }
+      const [clash] = yield* calendar.conflicts(afternoon)
+      assert.deepStrictEqual(
+        [clash!.first.title, clash!.second.title, clash!.from, clash!.to],
+        ["Dentist", "Quarterly review", `${day}T14:30`, `${day}T15:00`]
+      )
+      assert.deepStrictEqual(clash!.secondFixes, ["Decline it with reply_to_event."])
+      assert.deepStrictEqual(
+        (yield* calendar.freeTime(afternoon, 30)).map((slot) => [slot.start, slot.end]),
+        [
+          [`${day}T13:00`, `${day}T14:00`],
+          [`${day}T16:00`, `${day}T17:00`]
+        ]
+      )
+    })
+  )
+
   test.effect("refuses a window that ends before it starts, and an event that is not there", () =>
     Effect.gen(function* () {
       const calendar = yield* Calendar.Calendar

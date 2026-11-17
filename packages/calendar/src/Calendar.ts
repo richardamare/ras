@@ -11,9 +11,11 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
+import * as Busy from "./Busy.ts"
 import * as Domain from "./Domain.ts"
 import * as Reclaim from "./Reclaim.ts"
 import * as Store from "./Store.ts"
+import * as WorkHours from "./WorkHours.ts"
 
 type Read<A> = Effect.Effect<A, Errors.SourceFailed>
 
@@ -68,6 +70,16 @@ export class Calendar extends Context.Service<
       window: Domain.Window
     ) => Effect.Effect<ReadonlyArray<Domain.Event>, Errors.Invalid | Errors.SourceFailed>
     readonly event: (id: Domain.EventId) => Effect.Effect<Domain.Event, Errors.NotFound | Errors.SourceFailed>
+    /** The gaps of at least `minimum` minutes in the window that no event of an enabled calendar takes. */
+    readonly freeTime: (
+      window: Domain.Window,
+      minimum: number
+    ) => Effect.Effect<ReadonlyArray<Domain.Slot>, Errors.Invalid | Errors.SourceFailed>
+    readonly conflicts: (
+      window: Domain.Window
+    ) => Effect.Effect<ReadonlyArray<Domain.Conflict>, Errors.Invalid | Errors.SourceFailed>
+    /** The month's work hours; with `categories`, only those categories count. */
+    readonly workHours: (month: Domain.Month, categories: ReadonlyArray<string>) => Read<Domain.WorkHours>
     /** Reads the calendars and the cached span's events from Reclaim and replaces the cache with them. */
     readonly sync: Read<void>
   }
@@ -178,6 +190,22 @@ export class Calendar extends Context.Service<
             onSome: (entry) => Effect.succeed(Domain.eventOf(entry))
           })
         }),
+
+      freeTime: (window, minimum) =>
+        Effect.flatMap(spanOf(window), (span) =>
+          Effect.map(entries(span), (found) => Busy.freeTime(found, span, minimum))
+        ),
+
+      conflicts: (window) =>
+        Effect.gen(function* () {
+          const span = yield* spanOf(window)
+          const found = yield* entries(span)
+          const calendars = Arr.map(yield* connected, ({ calendar }) => calendar)
+          return Busy.conflicts(found, calendars, span)
+        }),
+
+      workHours: (month, categories) =>
+        Effect.map(entries(WorkHours.spanOfMonth(month)), (found) => WorkHours.report(found, month, categories)),
 
       sync
     })
