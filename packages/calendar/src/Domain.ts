@@ -146,3 +146,44 @@ export const eventOf = (entry: Entry): Event =>
     attendees: entry.attendees,
     copyOf: Option.getOrNull(Option.map(entry.copyOf, eventId))
   })
+
+export class Slot extends Schema.Class<Slot>("Slot")({
+  start: Time.PragueLocal,
+  end: Time.PragueLocal,
+  minutes: Schema.Int
+}) {}
+
+export class Conflict extends Schema.Class<Conflict>("Conflict")({
+  first: Event,
+  second: Event,
+  from: Time.PragueLocal,
+  to: Time.PragueLocal,
+  firstFixes: Schema.Array(Schema.String).annotate({
+    description: "What the calendar rules allow doing about the first."
+  }),
+  secondFixes: Schema.Array(Schema.String)
+}) {}
+
+/** A Prague month, `2026-10`. */
+export const Month = Schema.String.check(Schema.isPattern(/^\d{4}-(0[1-9]|1[0-2])$/)).pipe(Schema.brand("Month"))
+export type Month = typeof Month.Type
+
+export class CategoryTime extends Schema.Class<CategoryTime>("CategoryTime")({
+  category: Schema.String,
+  minutes: Schema.Int
+}) {}
+
+export class WorkDay extends Schema.Class<WorkDay>("WorkDay")({
+  date: Time.PragueDate,
+  minutes: Schema.Int,
+  categories: Schema.Array(CategoryTime)
+}) {}
+
+export class WorkHours extends Schema.Class<WorkHours>("WorkHours")({
+  month: Month,
+  minutes: Schema.Int.annotate({
+    description: "Time taken in the month; overlapping events count their shared time once."
+  }),
+  categories: Schema.Array(Schema.Struct({ category: Schema.String, minutes: Schema.Int, events: Schema.Int })),
+  days: Schema.Array(WorkDay)
+}) {}
