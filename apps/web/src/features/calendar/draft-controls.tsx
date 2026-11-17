@@ -4,10 +4,13 @@ import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
+import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Dialog from "@/components/ui/dialog"
+import * as Tooltip from "@/components/ui/tooltip"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
+import * as Utils from "@/lib/utils"
 
 /** Confirms drafts and toasts each one its calendar refused, with the reason. */
 export const useConfirmDrafts = (onConfirmed: () => void = () => {}) => {
@@ -25,40 +28,79 @@ export const useConfirmDrafts = (onConfirmed: () => void = () => {}) => {
   })
 }
 
-/** Under the grid while drafting is on or a draft is in view: confirm every draft, or discard every draft. */
-export function DraftBar({ drafting, inView, onDone }: { drafting: boolean; inView: number; onDone: () => void }) {
+/**
+ * The Draft toggle in the calendar's toolbar. While drafting is on or a draft is in view it grows to show how many
+ * drafts the view holds, with buttons that confirm every draft or discard every draft.
+ */
+export function DraftControls({
+  drafting,
+  inView,
+  onDrafting
+}: {
+  drafting: boolean
+  inView: number
+  onDrafting: (drafting: boolean) => void
+}) {
   const { t } = ReactI18next.useTranslation("Calendar")
   const client = ReactQuery.useQueryClient()
   const [discarding, setDiscarding] = React.useState(false)
-  const confirm = useConfirmDrafts(onDone)
+  const confirm = useConfirmDrafts(() => onDrafting(false))
   const discard = ReactQuery.useMutation({
     ...Queries.workDiscardDraftsMutation(),
     onSuccess: () => {
       setDiscarding(false)
-      onDone()
+      onDrafting(false)
       return client.invalidateQueries()
     },
     onError: (error) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
   })
-
-  if (!drafting && inView === 0) return null
   const busy = confirm.isPending || discard.isPending
+  const open = drafting || inView > 0
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed bg-muted/60 px-4 py-2">
-      <LucideReact.PencilRulerIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-      <p className="me-auto text-sm">
-        <span className="font-medium">{t(drafting ? "draft.on" : "draft.left")}</span>
-        <span className="text-muted-foreground"> · {t("draft.inView", { count: inView })}</span>
-      </p>
-      <Button.Button variant="outline" disabled={busy} onClick={() => setDiscarding(true)}>
-        <LucideReact.Trash2Icon />
-        {t("draft.discardAll")}
-      </Button.Button>
-      <Button.Button disabled={busy} onClick={() => confirm.mutate({ body: {} })}>
-        <LucideReact.CheckCheckIcon />
-        {t("draft.confirmAll")}
-      </Button.Button>
+    <div
+      className={Utils.cn(
+        "flex items-center gap-0.5 rounded-lg border p-0.5",
+        drafting && "border-dashed border-primary/60 bg-primary-soft"
+      )}
+    >
+      <Tooltip.Tooltip>
+        <Tooltip.TooltipTrigger asChild>
+          <Button.Button
+            size="sm"
+            variant={drafting ? "secondary" : "ghost"}
+            aria-pressed={drafting}
+            onClick={() => onDrafting(!drafting)}
+          >
+            <LucideReact.PencilRulerIcon />
+            {t("draft.toggle")}
+          </Button.Button>
+        </Tooltip.TooltipTrigger>
+        <Tooltip.TooltipContent className="max-w-64">{t("draft.on")}</Tooltip.TooltipContent>
+      </Tooltip.Tooltip>
+      {open && (
+        <>
+          <span className="px-1.5 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+            {t("draft.inView", { count: inView })}
+          </span>
+          <IconButton.IconButton
+            label={t("draft.confirmAll")}
+            className="size-7 text-primary"
+            disabled={busy || inView === 0}
+            onClick={() => confirm.mutate({ body: {} })}
+          >
+            <LucideReact.CheckCheckIcon />
+          </IconButton.IconButton>
+          <IconButton.IconButton
+            label={t("draft.discardAll")}
+            className="size-7 text-destructive"
+            disabled={busy || inView === 0}
+            onClick={() => setDiscarding(true)}
+          >
+            <LucideReact.Trash2Icon />
+          </IconButton.IconButton>
+        </>
+      )}
       <Dialog.Dialog open={discarding} onOpenChange={setDiscarding}>
         <Dialog.DialogContent>
           <Dialog.DialogHeader>

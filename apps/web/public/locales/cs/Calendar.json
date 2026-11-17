@@ -29,8 +29,7 @@
   "draft": {
     "toggle": "Návrh",
     "badge": "Návrh",
-    "on": "Navrhování: nové události a bloky zůstanou v ras, dokud je nepotvrdíš",
-    "left": "Čekají návrhy",
+    "on": "Se zapnutým Návrhem zůstávají nové události a bloky v ras, dokud je nepotvrdíš, a hýbat jde jen s návrhy.",
     "inView_one": "{{count}} návrh v zobrazení",
     "inView_few": "{{count}} návrhy v zobrazení",
     "inView_many": "{{count}} návrhů v zobrazení",

@@ -27,8 +27,7 @@
   "draft": {
     "toggle": "Draft",
     "badge": "Draft",
-    "on": "Drafting: new events and blocks stay in ras until you confirm them",
-    "left": "Drafts are waiting",
+    "on": "With Draft on, new events and blocks stay in ras until you confirm them, and only drafts move.",
     "inView_one": "{{count}} draft in view",
     "inView_other": "{{count}} drafts in view",
     "confirmAll": "Confirm all drafts",

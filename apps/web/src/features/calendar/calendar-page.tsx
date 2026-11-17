@@ -8,7 +8,7 @@ import * as Sonner from "sonner"
 import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Skeleton from "@/components/ui/skeleton"
-import * as DraftBar from "@/features/calendar/draft-bar"
+import * as DraftControls from "@/features/calendar/draft-controls"
 import * as EventDialog from "@/features/calendar/event-dialog"
 import * as Grid from "@/features/calendar/grid"
 import * as MonthGrid from "@/features/calendar/month-grid"
@@ -69,7 +69,7 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
   const plan = ReactQuery.useMutation({ ...Queries.workPlanMutation(), ...settle })
   const moveBlock = ReactQuery.useMutation({ ...Queries.workMoveMutation(), ...settle })
   const moveEvent = ReactQuery.useMutation({ ...Queries.calendarChangeEventMutation(), ...settle })
-  const confirmDay = DraftBar.useConfirmDrafts()
+  const confirmDay = DraftControls.useConfirmDrafts()
 
   const show = (nextView: Grid.View, nextDate: string) =>
     void navigate({ to: "/calendar", search: { view: nextView, date: nextDate } })
@@ -181,14 +181,7 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
             </Button.Button>
           ))}
         </div>
-        <Button.Button
-          variant={drafting ? "secondary" : "outline"}
-          aria-pressed={drafting}
-          onClick={() => setDrafting(!drafting)}
-        >
-          <LucideReact.PencilRulerIcon />
-          {t("draft.toggle")}
-        </Button.Button>
+        <DraftControls.DraftControls drafting={drafting} inView={draftsInView} onDrafting={setDrafting} />
         {view !== "month" && (
           <Button.Button
             variant={planner ? "secondary" : "outline"}
@@ -232,7 +225,6 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
         {planner && view !== "month" && <TasksPanel.TasksPanel onClose={() => setPlanner(false)} />}
       </div>
 
-      <DraftBar.DraftBar drafting={drafting} inView={draftsInView} onDone={() => setDrafting(false)} />
       <EventDialog.EventDialog state={dialog} calendars={allCalendars} onClose={() => setDialog(null)} />
       <TaskSheet.TaskSheet id={task?.id ?? null} title={task?.title ?? ""} onClose={() => setTask(null)} />
     </div>
