@@ -10,8 +10,7 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Textarea from "@/components/ui/textarea"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-
-const hours = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`
+import * as Prague from "@/lib/prague"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -47,8 +46,8 @@ function Details({ id }: { id: string }) {
         <Field label={t("fields.assignee")}>{found.assignee === "owner" ? t("owner") : found.assignee}</Field>
         <Field label={t("fields.priority")}>{t(`priority.${found.priority}`)}</Field>
         <Field label={t("fields.deadline")}>{found.deadline ?? "—"}</Field>
-        <Field label={t("fields.spent")}>{hours(found.spent)}</Field>
-        <Field label={t("fields.estimate")}>{found.estimate === null ? "—" : hours(found.estimate)}</Field>
+        <Field label={t("fields.spent")}>{Prague.duration(found.spent)}</Field>
+        <Field label={t("fields.estimate")}>{found.estimate === null ? "—" : Prague.duration(found.estimate)}</Field>
       </div>
       <Separator.Separator />
       <p className="text-sm whitespace-pre-wrap">{found.body.length > 0 ? found.body : t("noBody")}</p>

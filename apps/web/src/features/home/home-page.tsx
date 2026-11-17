@@ -23,8 +23,6 @@ const useNow = (period: number) => {
   return now
 }
 
-const elapsed = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`
-
 function Count({ label, value, tone }: { label: string; value: number; tone?: "warning" }) {
   return (
     <Card.Card size="sm">
@@ -65,7 +63,7 @@ function Running() {
             <span className="size-2 shrink-0 animate-pulse rounded-full bg-primary" aria-hidden />
             <span className="min-w-0 truncate font-medium">{block.title}</span>
             <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-              {elapsed(Math.max(0, Prague.minutesBetween(block.start, now)))}
+              {Prague.duration(Math.max(0, Prague.minutesBetween(block.start, now)))}
             </span>
             <Button.Button className="ms-auto shrink-0" disabled={stop.isPending} onClick={() => stop.mutate({})}>
               <LucideReact.SquareIcon />

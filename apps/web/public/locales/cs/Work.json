@@ -13,7 +13,9 @@
     "spent": "Stráveno",
     "estimate": "Odhad",
     "space": "Prostor",
-    "project": "Projekt"
+    "project": "Projekt",
+    "title": "Úkol",
+    "next": "Další blok"
   },
   "status": {
     "inbox": "Inbox",
@@ -36,5 +38,9 @@
     "whatIsNeeded": "Napiš, co je potřeba.",
     "whatToCheck": "Napiš, co zkontrolovat.",
     "move": "Přesunout"
+  },
+  "tasks": {
+    "title": "Úkoly",
+    "none": "Zatím žádné úkoly."
   }
 }
