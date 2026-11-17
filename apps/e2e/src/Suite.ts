@@ -43,6 +43,7 @@ export const page = Effect.gen(function* () {
     use(() => browser.newContext({ baseURL: url.origin, locale: "en-US" })),
     (opened) => use(() => opened.close())
   )
+  context.setDefaultTimeout(10_000)
   yield* use(() => context.addInitScript(() => window.localStorage.setItem("lang", "en")))
   return yield* use(() => context.newPage())
 })
