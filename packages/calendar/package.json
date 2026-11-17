@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./module": "./src/Module.ts"
+    ".": "./src/index.ts",
+    "./module": "./src/Module.ts",
+    "./testing": "./src/Testing.ts"
   },
   "scripts": {
     "typecheck": "tsc",
