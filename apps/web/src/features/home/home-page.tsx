@@ -99,7 +99,7 @@ function TaskRows({
   onOpen: (task: Api.TaskSummaryEncoded) => void
 }) {
   return (
-    <ul className="-mx-2 grid">
+    <ul className="-mx-2 flex flex-col">
       {tasks.map((task) => (
         <li key={task.id}>
           <button
@@ -131,7 +131,7 @@ function Group({
 }) {
   if (tasks.length === 0) return null
   return (
-    <section className="grid gap-1">
+    <section className="flex flex-col gap-1">
       <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{title}</h3>
       <TaskRows tasks={tasks} onOpen={onOpen} />
     </section>
@@ -267,7 +267,7 @@ export function HomePage() {
               <Card.CardHeader>
                 <Card.CardTitle>{t("deadlines.title")}</Card.CardTitle>
               </Card.CardHeader>
-              <Card.CardContent className="grid gap-4">
+              <Card.CardContent className="flex flex-col gap-4">
                 {deadlines.today.length + deadlines.tomorrow.length + deadlines.thisWeek.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{t("deadlines.none")}</p>
                 ) : (
