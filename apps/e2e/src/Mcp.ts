@@ -153,16 +153,75 @@ export const connect = (token: string) =>
     yield* post(Option.some(token), sessionId, { method: "notifications/initialized" })
 
     const ids = yield* Ref.make(0)
-    /** Sends a request and answers its result; an error response or a refused request fails the test. */
-    const request = (method: string, params: object = {}) =>
+    /** Sends a request and answers its JSON-RPC response; a refused HTTP request fails the test. */
+    const send = (method: string, params: object = {}) =>
       Effect.gen(function* () {
         const id = yield* Ref.updateAndGet(ids, (last) => last + 1)
         const response = yield* post(Option.some(token), sessionId, { id, method, params })
         if (response.status !== 200) return yield* Effect.die(new Error(`${method} answered ${response.status}`))
-        const body = yield* rpcBody(response)
-        if (body.error !== undefined) return yield* Effect.die(new Error(`${method}: ${body.error.message}`))
-        return body.result
+        return yield* rpcBody(response)
       })
+    /** Sends a request and answers its result; an error response fails the test. */
+    const request = (method: string, params: object = {}) =>
+      Effect.flatMap(send(method, params), (body) =>
+        body.error === undefined
+          ? Effect.succeed(body.result)
+          : Effect.die(new Error(`${method}: ${body.error.message}`))
+      )
 
-    return { server: server.result, sessionId, request }
+    return { server: server.result, sessionId, send, request }
+  })
+
+export type Session = Effect.Success<ReturnType<typeof connect>>
+
+/** A session of a client registered as `name` that the owner signed in for and allowed in Chromium. */
+export const allowed = (name: string) =>
+  Effect.gen(function* () {
+    const clientId = yield* register(name)
+    const { callback, verifier } = yield* authorize(yield* Suite.page, clientId, "Allow")
+    return yield* connect(yield* redeem(clientId, callback, verifier))
+  })
+
+const ToolResult = Schema.Struct({
+  content: Schema.Array(Schema.Struct({ type: Schema.String, text: Schema.optionalKey(Schema.String) })),
+  isError: Schema.optionalKey(Schema.Boolean)
+})
+
+/**
+ * The text a tool answered, and whether it refused: with a tool error, or with the JSON-RPC error of arguments its
+ * parameters reject.
+ */
+const answer = (session: Session, name: string, args: object) =>
+  Effect.gen(function* () {
+    const body = yield* session.send("tools/call", { name, arguments: args })
+    if (body.error !== undefined) return { text: body.error.message, refused: true }
+    const result = yield* Effect.orDie(Schema.decodeUnknownEffect(ToolResult)(body.result))
+    const text = Arr.join(
+      Arr.map(result.content, (part) => part.text ?? ""),
+      ""
+    )
+    return { text, refused: result.isError === true }
+  })
+
+/** Calls a tool and decodes its JSON answer with `schema`; a refusal fails the test. */
+export const call = <S extends Schema.Constraint>(session: Session, name: string, args: object, schema: S) =>
+  Effect.gen(function* () {
+    const { text, refused } = yield* answer(session, name, args)
+    if (refused) return yield* Effect.die(new Error(`${name} refused: ${text}`))
+    return yield* Effect.orDie(Schema.decodeUnknownEffect(Schema.fromJsonString(schema))(text))
+  })
+
+/** Calls a tool that answers nothing; a refusal fails the test. */
+export const run = (session: Session, name: string, args: object) =>
+  Effect.gen(function* () {
+    const { text, refused } = yield* answer(session, name, args)
+    if (refused) return yield* Effect.die(new Error(`${name} refused: ${text}`))
+  })
+
+/** Calls a tool that must refuse, and answers the reason it gave. */
+export const refusal = (session: Session, name: string, args: object) =>
+  Effect.gen(function* () {
+    const { text, refused } = yield* answer(session, name, args)
+    if (!refused) return yield* Effect.die(new Error(`${name} did not refuse: ${text}`))
+    return text
   })
