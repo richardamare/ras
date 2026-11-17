@@ -37,7 +37,15 @@ function useWhen() {
     new Intl.DateTimeFormat(i18n.language, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
       new Date(`${local.slice(0, 10)}T12:00:00Z`)
     )
-  return { day, span: (start: string, end: string) => `${day(start)}, ${start.slice(11)}–${end.slice(11)}` }
+  return {
+    day,
+    span: (start: string, end: string) => `${day(start)}, ${start.slice(11)}–${end.slice(11)}`,
+    /** All-day days: the end is the midnight after the last one, and a single day is named once. */
+    days: (start: string, end: string) => {
+      const last = Prague.addDays(end.slice(0, 10), -1)
+      return last === start.slice(0, 10) ? day(start) : `${day(start)} – ${day(last)}`
+    }
+  }
 }
 
 function Heading({ color, title, detail }: { color: string; title: string; detail: React.ReactNode }) {
@@ -101,9 +109,7 @@ function EventCard({
         {line(
           <LucideReact.ClockIcon />,
           <span className="first-letter:uppercase">
-            {event.allDay
-              ? `${when.day(event.start)} – ${when.day(Prague.addDays(event.end.slice(0, 10), -1))}`
-              : when.span(event.start, event.end)}
+            {event.allDay ? when.days(event.start, event.end) : when.span(event.start, event.end)}
           </span>
         )}
         {event.location !== null && line(<LucideReact.MapPinIcon />, event.location)}
