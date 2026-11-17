@@ -80,8 +80,19 @@ export class Calendar extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<Domain.Conflict>, Errors.Invalid | Errors.SourceFailed>
     /** The month's work hours; with `categories`, only those categories count. */
     readonly workHours: (month: Domain.Month, categories: ReadonlyArray<string>) => Read<Domain.WorkHours>
+    /** Every connected calendar, turned-off ones too, with the handles a write to its provider needs. */
+    readonly connected: Read<ReadonlyArray<Store.Connected>>
+    /** An event in any connected calendar, a turned-off one too, so the rules can say why it takes no write. */
+    readonly find: (
+      id: Domain.EventId
+    ) => Effect.Effect<
+      { readonly calendar: Store.Connected; readonly entry: Domain.Entry },
+      Errors.NotFound | Errors.SourceFailed
+    >
     /** Reads the calendars and the cached span's events from Reclaim and replaces the cache with them. */
     readonly sync: Read<void>
+    /** Syncs now and again shortly after, since Reclaim takes up to a minute to show a write. */
+    readonly refresh: Effect.Effect<void>
   }
 >()("@ras/calendar/Calendar") {
   static readonly make = Effect.gen(function* () {
@@ -90,6 +101,7 @@ export class Calendar extends Context.Service<
     const writes = yield* Global.Writes
     const db = Effect.provideService(SqlClient.SqlClient, sql)
     const one = yield* Semaphore.make(1)
+    const scope = yield* Effect.scope
 
     const sync = Effect.gen(function* () {
       const today = Time.pragueDateOf(yield* DateTime.now)
@@ -145,6 +157,10 @@ export class Calendar extends Context.Service<
         const found = yield* read(span)
         return originals(found, yield* shown).toSorted(byStart)
       })
+
+    const quietly = sync.pipe(
+      Effect.catchCause((cause) => Effect.logWarning("The calendar sync failed; the cache keeps what it had.", cause))
+    )
 
     return Calendar.of({
       calendars: (includeDisabled) =>
@@ -207,7 +223,26 @@ export class Calendar extends Context.Service<
       workHours: (month, categories) =>
         Effect.map(entries(WorkHours.spanOfMonth(month)), (found) => WorkHours.report(found, month, categories)),
 
-      sync
+      connected,
+
+      find: (id) =>
+        Effect.gen(function* () {
+          const ref = Domain.eventRef(id)
+          const day = { start: Time.pragueMidnight(ref.date), end: Time.pragueMidnight(Time.addDays(ref.date, 1)) }
+          const all = yield* connected
+          const entry = Arr.findFirst(
+            yield* read(day),
+            (found) => found.ref.calendar === ref.calendar && found.ref.id === ref.id && found.ref.date === ref.date
+          )
+          const calendar = Arr.findFirst(all, (found) => found.calendar.id === ref.calendar)
+          if (Option.isNone(entry) || Option.isNone(calendar))
+            return yield* new Errors.NotFound({ subject: "event", id })
+          return { calendar: calendar.value, entry: entry.value }
+        }),
+
+      sync,
+
+      refresh: Effect.asVoid(Effect.forkIn(Effect.andThen(quietly, Effect.delay(quietly, "45 seconds")), scope))
     })
   })
 

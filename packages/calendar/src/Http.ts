@@ -7,8 +7,9 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Calendar from "./Calendar.ts"
 import * as Domain from "./Domain.ts"
+import * as Events from "./Events.ts"
 
-const failures = [Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
+const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 
 export const group = HttpApiGroup.make("calendar")
   .add(
@@ -62,11 +63,35 @@ export const group = HttpApiGroup.make("calendar")
       error: failures
     })
   )
+  .add(
+    HttpApiEndpoint.post("createEvent", "/events", {
+      payload: Domain.NewEvent,
+      success: Domain.Created,
+      error: failures
+    })
+  )
+  .add(
+    HttpApiEndpoint.patch("changeEvent", "/events/:id", {
+      params: { id: Domain.EventId },
+      payload: Domain.EventChange,
+      success: Domain.Event,
+      error: failures
+    })
+  )
+  .add(HttpApiEndpoint.delete("cancelEvent", "/events/:id", { params: { id: Domain.EventId }, error: failures }))
+  .add(
+    HttpApiEndpoint.post("replyToEvent", "/events/:id/reply", {
+      params: { id: Domain.EventId },
+      payload: Schema.Struct({ reply: Domain.Reply }),
+      error: failures
+    })
+  )
   .prefix("/calendar")
 
 export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (endpoints) =>
   Effect.gen(function* () {
     const calendar = yield* Calendar.Calendar
+    const events = yield* Events.Events
     return endpoints
       .handle("calendars", ({ query }) => calendar.calendars(query.includeDisabled === "true"))
       .handle("changeCalendar", ({ params, payload }) => calendar.changeCalendar(params.id, payload))
@@ -77,5 +102,9 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (end
       .handle("workHours", ({ params, query }) =>
         calendar.workHours(params.month, query.category === undefined ? [] : [query.category].flat())
       )
+      .handle("createEvent", ({ payload }) => events.create(payload))
+      .handle("changeEvent", ({ params, payload }) => events.change(params.id, payload))
+      .handle("cancelEvent", ({ params }) => events.cancel(params.id))
+      .handle("replyToEvent", ({ params, payload }) => events.reply(params.id, payload.reply))
   })
 )

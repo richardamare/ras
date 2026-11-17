@@ -339,6 +339,16 @@
               }
             }
           },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
           "502": {
             "description": "SourceFailed",
             "content": {
@@ -404,6 +414,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
                 }
               }
             }
@@ -509,6 +529,16 @@
               }
             }
           },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
           "502": {
             "description": "SourceFailed",
             "content": {
@@ -519,6 +549,162 @@
               }
             }
           }
+        }
+      },
+      "post": {
+        "tags": ["calendar"],
+        "operationId": "calendar.createEvent",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedEncoded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "calendar": {
+                    "type": "integer",
+                    "maximum": 9007199254740991,
+                    "exclusiveMinimum": 0,
+                    "description": "A personal calendar; the one personal calendar when there is only one."
+                  },
+                  "start": {
+                    "type": "string",
+                    "description": "For a timed event."
+                  },
+                  "end": {
+                    "type": "string",
+                    "description": "For a timed event; an hour after the start when omitted."
+                  },
+                  "firstDay": {
+                    "type": "string"
+                  },
+                  "lastDay": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "showAs": {
+                    "type": "string",
+                    "enum": ["free", "tentative", "busy", "oof", "workingElsewhere"]
+                  },
+                  "repeat": {
+                    "type": "object",
+                    "properties": {
+                      "every": {
+                        "type": "string",
+                        "enum": ["day", "week", "month", "year"]
+                      },
+                      "interval": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 99
+                      },
+                      "on": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string",
+                            "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+                          }
+                        ],
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+                        },
+                        "description": "The weekdays of a weekly repeat; the start's weekday when omitted."
+                      },
+                      "until": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 999,
+                        "description": "How many occurrences, the first included."
+                      }
+                    },
+                    "required": ["every"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["title"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
         }
       }
     },
@@ -574,6 +760,204 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["calendar"],
+        "operationId": "calendar.changeEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventEncoded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "start": {
+                    "type": "string",
+                    "description": "For a timed event."
+                  },
+                  "end": {
+                    "type": "string",
+                    "description": "For a timed event; an hour after the start when omitted."
+                  },
+                  "firstDay": {
+                    "type": "string"
+                  },
+                  "lastDay": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "showAs": {
+                    "type": "string",
+                    "enum": ["free", "tentative", "busy", "oof", "workingElsewhere"]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": ["calendar"],
+        "operationId": "calendar.cancelEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
                 }
               }
             }
@@ -666,6 +1050,16 @@
               }
             }
           },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
           "502": {
             "description": "SourceFailed",
             "content": {
@@ -742,6 +1136,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
                 }
               }
             }
@@ -833,6 +1237,16 @@
               }
             }
           },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
           "502": {
             "description": "SourceFailed",
             "content": {
@@ -843,6 +1257,96 @@
               }
             }
           }
+        }
+      }
+    },
+    "/calendar/events/{id}/reply": {
+      "post": {
+        "tags": ["calendar"],
+        "operationId": "calendar.replyToEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reply": {
+                    "type": "string",
+                    "enum": ["accept", "tentative", "decline"]
+                  }
+                },
+                "required": ["reply"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
         }
       }
     },
@@ -2713,119 +3217,6 @@
         "required": ["_tag", "source", "reason"],
         "additionalProperties": false
       },
-      "WorkHoursEncoded": {
-        "type": "object",
-        "properties": {
-          "month": {
-            "type": "string"
-          },
-          "minutes": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991,
-            "description": "Time taken in the month; overlapping events count their shared time once."
-          },
-          "categories": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "category": {
-                  "type": "string"
-                },
-                "minutes": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "events": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                }
-              },
-              "required": ["category", "minutes", "events"],
-              "additionalProperties": false
-            }
-          },
-          "days": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WorkDayEncoded"
-            }
-          }
-        },
-        "required": ["month", "minutes", "categories", "days"],
-        "additionalProperties": false
-      },
-      "WorkDayEncoded": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string"
-          },
-          "minutes": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "categories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CategoryTimeEncoded"
-            }
-          }
-        },
-        "required": ["date", "minutes", "categories"],
-        "additionalProperties": false
-      },
-      "CategoryTimeEncoded": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string"
-          },
-          "minutes": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": ["category", "minutes"],
-        "additionalProperties": false
-      },
-      "ConflictEncoded": {
-        "type": "object",
-        "properties": {
-          "first": {
-            "$ref": "#/components/schemas/EventEncoded"
-          },
-          "second": {
-            "$ref": "#/components/schemas/EventEncoded"
-          },
-          "from": {
-            "type": "string"
-          },
-          "to": {
-            "type": "string"
-          },
-          "firstFixes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "What the calendar rules allow doing about the first."
-          },
-          "secondFixes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": ["first", "second", "from", "to", "firstFixes", "secondFixes"],
-        "additionalProperties": false
-      },
       "EventEncoded": {
         "type": "object",
         "properties": {
@@ -2971,6 +3362,156 @@
           }
         },
         "required": ["name", "email", "rsvp", "organizer", "optional"],
+        "additionalProperties": false
+      },
+      "CreatedEncoded": {
+        "type": "object",
+        "properties": {
+          "calendar": {
+            "type": "integer",
+            "maximum": 9007199254740991,
+            "exclusiveMinimum": 0
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "recurring": {
+            "type": "boolean"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["calendar", "title", "start", "end", "allDay", "recurring", "link"],
+        "additionalProperties": false
+      },
+      "WorkHoursEncoded": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "minutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Time taken in the month; overlapping events count their shared time once."
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "minutes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "events": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["category", "minutes", "events"],
+              "additionalProperties": false
+            }
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkDayEncoded"
+            }
+          }
+        },
+        "required": ["month", "minutes", "categories", "days"],
+        "additionalProperties": false
+      },
+      "WorkDayEncoded": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "minutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryTimeEncoded"
+            }
+          }
+        },
+        "required": ["date", "minutes", "categories"],
+        "additionalProperties": false
+      },
+      "CategoryTimeEncoded": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "minutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["category", "minutes"],
+        "additionalProperties": false
+      },
+      "ConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "$ref": "#/components/schemas/EventEncoded"
+          },
+          "second": {
+            "$ref": "#/components/schemas/EventEncoded"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "firstFixes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What the calendar rules allow doing about the first."
+          },
+          "secondFixes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["first", "second", "from", "to", "firstFixes", "secondFixes"],
         "additionalProperties": false
       },
       "SlotEncoded": {

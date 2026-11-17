@@ -187,3 +187,68 @@ export class WorkHours extends Schema.Class<WorkHours>("WorkHours")({
   categories: Schema.Array(Schema.Struct({ category: Schema.String, minutes: Schema.Int, events: Schema.Int })),
   days: Schema.Array(WorkDay)
 }) {}
+
+export const Weekday = Schema.Literals(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"])
+export type Weekday = typeof Weekday.Type
+
+/** How an event repeats: every `interval` days, weeks, months or years, until a day or for a count, or for ever. */
+export const Repeat = Schema.Struct({
+  every: Schema.Literals(["day", "week", "month", "year"]),
+  interval: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 99 }))),
+  on: Schema.optionalKey(Schema.NonEmptyArray(Weekday)).annotate({
+    description: "The weekdays of a weekly repeat; the start's weekday when omitted."
+  }),
+  until: Schema.optionalKey(Time.PragueDate).annotate({ description: "The last day an occurrence may start on." }),
+  count: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 999 }))).annotate({
+    description: "How many occurrences, the first included."
+  })
+})
+export type Repeat = typeof Repeat.Type
+
+/** When an event happens: a start and an end in Prague local time, or whole Prague days. */
+const When = {
+  start: Schema.optionalKey(Time.PragueLocal).annotate({ description: "For a timed event." }),
+  end: Schema.optionalKey(Time.PragueLocal).annotate({
+    description: "For a timed event; an hour after the start when omitted."
+  }),
+  firstDay: Schema.optionalKey(Time.PragueDate).annotate({ description: "For an all-day event, instead of start." }),
+  lastDay: Schema.optionalKey(Time.PragueDate).annotate({
+    description: "The last day of an all-day event; the first day when omitted."
+  })
+}
+
+export const NewEvent = Schema.Struct({
+  title: Schema.String.check(Schema.isNonEmpty()),
+  calendar: Schema.optionalKey(CalendarId).annotate({
+    description: "A personal calendar; the one personal calendar when there is only one."
+  }),
+  ...When,
+  location: Schema.optionalKey(Schema.String),
+  notes: Schema.optionalKey(Schema.String),
+  showAs: Schema.optionalKey(ShowAs),
+  repeat: Schema.optionalKey(Repeat)
+})
+export type NewEvent = typeof NewEvent.Type
+
+export const EventChange = Schema.Struct({
+  title: Schema.optionalKey(Schema.String.check(Schema.isNonEmpty())),
+  ...When,
+  location: Schema.optionalKey(Schema.String),
+  notes: Schema.optionalKey(Schema.String),
+  showAs: Schema.optionalKey(ShowAs)
+})
+export type EventChange = typeof EventChange.Type
+
+export const Reply = Schema.Literals(["accept", "tentative", "decline"])
+export type Reply = typeof Reply.Type
+
+/** What the calendar's provider stored; it reaches search_calendar once Reclaim has read it, usually within a minute. */
+export class Created extends Schema.Class<Created>("Created")({
+  calendar: CalendarId,
+  title: Schema.String,
+  start: Time.PragueLocal,
+  end: Time.PragueLocal,
+  allDay: Schema.Boolean,
+  recurring: Schema.Boolean,
+  link: Schema.NullOr(Schema.String)
+}) {}
