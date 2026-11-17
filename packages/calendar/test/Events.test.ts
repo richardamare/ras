@@ -6,9 +6,11 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as Calendar from "../src/Calendar.ts"
+import * as Domain from "../src/Domain.ts"
 import * as Events from "../src/Events.ts"
 import * as Module from "../src/Module.ts"
 import * as Outlook from "../src/Outlook.ts"
+import * as Reclaim from "../src/Reclaim.ts"
 import * as Sample from "../src/Sample.ts"
 
 const today = Effect.map(DateTime.now, Time.pragueDateOf)
@@ -206,5 +208,49 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event writes", (t
         SELECT before, after FROM global_audit_entries WHERE action = 'calendar.event.replied'`
       assert.deepStrictEqual(audit, [{ before: '{"rsvp":"needsAction"}', after: '{"rsvp":"declined"}' }])
     })
+  )
+
+  test.effect(
+    "writes a work block's event busy, its notes carrying the block's marker, and shows the event as the block's",
+    () =>
+      Effect.gen(function* () {
+        const events = yield* Events.Events
+        const block = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+        const span = {
+          start: yield* Time.toInstant(local("2027-01-15T09:00")),
+          end: yield* Time.toInstant(local("2027-01-15T10:30"))
+        }
+        const id = yield* events.placeBlock(Sample.personal, { id: block, title: "ras: Plan the week", span })
+        const [placed] = yield* calls
+        const write = (placed as Extract<Outlook.Call, { _tag: "Create" }>).write
+        assert.deepStrictEqual(
+          [write.subject, write.body?.content, write.showAs, write.transactionId],
+          ["ras: Plan the week", `ras-block:${block}`, "busy", block]
+        )
+        yield* events.moveBlock(id, { id: block, title: "ras: Plan the week", span })
+        yield* events.removeBlock(id)
+        assert.deepStrictEqual(
+          (yield* calls).map((call) => call._tag),
+          ["Change", "Cancel"]
+        )
+        assert.strictEqual(
+          yield* code(events.placeBlock(Sample.work, { id: block, title: "x", span })),
+          "calendar.calendar.readonly"
+        )
+        const entry = Reclaim.entryOf({
+          key: "101/e",
+          calendarId: 101,
+          title: "ras: Plan the week",
+          description: `Bring the list.\n\nras-block:${block}`,
+          eventDate: { type: "FixedDateTimeRange", start: "2027-01-15T08:00:00Z", end: "2027-01-15T09:30:00Z" },
+          status: "CONFIRMED",
+          freeBusy: "BUSY",
+          selfOrganized: true,
+          canRsvp: false,
+          reclaimData: { reclaimEventType: "USER" }
+        })
+        const shown = Domain.eventOf(entry)
+        assert.deepStrictEqual([shown.block, shown.notes], [block, "Bring the list."])
+      })
   )
 })

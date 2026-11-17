@@ -93,4 +93,11 @@ describe("the calendar rules", () => {
       "calendar.event.not-invitation"
     )
   })
+
+  it("refuses a change to a work block's event, sending it to the block", () => {
+    const block = { ...event("plain"), notes: Option.some("ras-block:0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b") }
+    const refused = Option.getOrThrow(Rules.refusal({ _tag: "Change", calendar: outlook, event: block }))
+    assert.strictEqual(refused.code, "calendar.event.block")
+    assert.strictEqual(code({ _tag: "Cancel", calendar: outlook, event: block }), "calendar.event.block")
+  })
 })

@@ -3588,6 +3588,17 @@
             ],
             "description": "The original a copy was written from."
           },
+          "block": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The work block whose event this is."
+          },
           "draft": {
             "anyOf": [
               {
@@ -3631,6 +3642,7 @@
           "notes",
           "attendees",
           "copyOf",
+          "block",
           "draft"
         ],
         "additionalProperties": false
