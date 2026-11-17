@@ -128,7 +128,7 @@ One MCP server at `/mcp`. One tool per outcome, simple arguments, `readOnlyHint`
 
 ## Time
 
-The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague local time; the database stores UTC instants. Reclaim takes UTC with milliseconds (`2026-10-22T07:00:00.000Z`) and answers 400 to any other form. Graph gets plain events in `Europe/Prague`, never UTC, so a series keeps its clock across a daylight-saving change. An all-day event is midnight to midnight in Prague. A clock without a date, or a local time that does not exist on that day, is refused before any call leaves the API.
+The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague local time; the database stores UTC instants. Reclaim's `GET /api/events/v2` takes Prague days (`start=2026-10-22&end=2026-10-29`) and answers 400 to an instant. Graph gets plain events in `Europe/Prague`, never UTC, so a series keeps its clock across a daylight-saving change. An all-day event is midnight to midnight in Prague. A clock without a date, or a local time that does not exist on that day, is refused before any call leaves the API.
 
 ## Code
 
@@ -138,7 +138,7 @@ The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague
 - **One client per outside system** (Reclaim, Graph, IMAP, git) with retries on 429 and 5xx honouring `Retry-After`. The Reclaim client is written by hand against what Reclaim sends; its OpenAPI document fails validation and mistypes events and calendars.
 - **Errors**: an outside failure maps to a typed error with a plain reason; HTTP answers it as Problem Details and MCP as a tool error. The transport cause stays in the log.
 - **Contract**: `HttpApi` generates `.oas/api.json`, CI fails when it differs from the committed one, and the console's client is generated from it.
-- **Sample mode**: each source has an in-memory sample with invented data, chosen by configuration, so tests, the console and the connector run without real accounts.
+- **Sample mode**: each source has an in-memory sample with invented data, chosen by `RAS_SAMPLE`, so tests, the console and the connector run without real accounts.
 
 ## Running it
 
