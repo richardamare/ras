@@ -15,7 +15,8 @@
     "space": "Space",
     "project": "Project",
     "title": "Task",
-    "next": "Next block"
+    "next": "Next block",
+    "progress": "Progress"
   },
   "status": {
     "inbox": "Inbox",
@@ -42,5 +43,22 @@
   "tasks": {
     "title": "Tasks",
     "none": "No tasks yet."
+  },
+  "projectStatus": {
+    "active": "Active",
+    "paused": "Paused",
+    "done": "Done"
+  },
+  "projects": {
+    "title": "Projects",
+    "none": "No projects yet.",
+    "notFound": "The project is gone.",
+    "progress": "{{done}} of {{total}}",
+    "due": "Due {{deadline}}",
+    "spent": "{{spent}} spent",
+    "tasks": "Tasks",
+    "upcoming": "Upcoming blocks",
+    "noBlocks": "No blocks planned.",
+    "draft": "draft"
   }
 }
