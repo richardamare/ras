@@ -426,6 +426,8 @@ describe("the work API", () => {
         assert.notStrictEqual(stopped.state, "running")
         assert.isNull(yield* client.work.running())
         assert.strictEqual(yield* Suite.refusal(client.work.stop()), "work.block.idle")
+        // A stopped block lasts a minute at least; removing it frees that minute for the other tests' timers.
+        yield* client.work.remove({ params: { id: stopped.id } })
       })
     )
 
