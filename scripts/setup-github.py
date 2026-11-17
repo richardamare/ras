@@ -50,6 +50,7 @@ LABELS = {
     "tech-debt": ("c2e0c6", "Refactor, cleanup or tooling"),
     "dependencies": ("0366d6", "Dependency update"),
     "blocked": ("e99695", "Waiting on a decision or an outside dependency"),
+    "release": ("ededed", "Sets the version of a release; left out of the release notes"),
 }
 
 # Actor 5 is the repository admin role, which apply_admins leaves to the person running this script.
