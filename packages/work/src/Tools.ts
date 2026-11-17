@@ -63,8 +63,10 @@ export const toolkit = Toolkit.make(
     destructive: false
   }),
   Global.writeTool("delete_task", {
-    description: "Deletes a task with its comments and links.",
+    description:
+      "Deletes a task with its comments, links and blocks that have not started. A task with work begun on it keeps its time: it is moved to done instead, and the answer is the task.",
     parameters: TaskRef,
+    success: Schema.NullOr(Domain.Task),
     destructive: true
   }),
   Global.writeTool("comment_task", {
@@ -147,7 +149,7 @@ export const handlers = toolkit.toLayer(
       update_project: ({ agent, project, ...change }) => board.changeProject(project, change).pipe(actingAs(agent)),
       add_task: ({ agent, ...task }) => board.addTask(task).pipe(actingAs(agent)),
       update_task: ({ agent, task, ...change }) => board.changeTask(task, change).pipe(actingAs(agent)),
-      delete_task: ({ agent, task }) => board.deleteTask(task).pipe(actingAs(agent)),
+      delete_task: ({ agent, task }) => board.deleteTask(task).pipe(Effect.map(Option.getOrNull), actingAs(agent)),
       comment_task: ({ agent, task, ...comment }) => board.comment(task, comment).pipe(actingAs(agent)),
       link_task: ({ agent, task, url }) => board.link(task, url).pipe(actingAs(agent)),
       unlink_task: ({ agent, task, url }) => board.unlink(task, url).pipe(actingAs(agent)),
