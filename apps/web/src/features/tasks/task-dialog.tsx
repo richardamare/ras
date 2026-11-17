@@ -5,9 +5,9 @@ import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
 import * as Button from "@/components/ui/button"
+import * as Dialog from "@/components/ui/dialog"
 import * as Select from "@/components/ui/select"
 import * as Separator from "@/components/ui/separator"
-import * as Sheet from "@/components/ui/sheet"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Textarea from "@/components/ui/textarea"
 import * as TaskBits from "@/features/tasks/task-bits"
@@ -58,7 +58,7 @@ function Details({ id }: { id: string }) {
   }
 
   return (
-    <div className="grid gap-5 overflow-y-auto px-4 pb-6">
+    <Dialog.DialogBody className="grid gap-5 pb-1">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-3">
         <Field label={t("fields.status")}>
           <Select.Select value={found.status} onValueChange={(value) => move(value as Work.Status)}>
@@ -170,20 +170,20 @@ function Details({ id }: { id: string }) {
           </Button.Button>
         </form>
       </section>
-    </div>
+    </Dialog.DialogBody>
   )
 }
 
-/** A task with its body, comments and links, opened beside the list it came from. */
-export function TaskSheet({ id, title, onClose }: { id: string | null; title: string; onClose: () => void }) {
+/** A task with its body, comments and links, opened over the page it came from. */
+export function TaskDialog({ id, title, onClose }: { id: string | null; title: string; onClose: () => void }) {
   return (
-    <Sheet.Sheet open={id !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <Sheet.SheetContent className="data-[side=right]:sm:max-w-lg">
-        <Sheet.SheetHeader>
-          <Sheet.SheetTitle>{title}</Sheet.SheetTitle>
-        </Sheet.SheetHeader>
+    <Dialog.Dialog open={id !== null} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.DialogContent className="sm:max-w-xl" aria-describedby={undefined}>
+        <Dialog.DialogHeader>
+          <Dialog.DialogTitle>{title}</Dialog.DialogTitle>
+        </Dialog.DialogHeader>
         {id !== null && <Details id={id} />}
-      </Sheet.SheetContent>
-    </Sheet.Sheet>
+      </Dialog.DialogContent>
+    </Dialog.Dialog>
   )
 }

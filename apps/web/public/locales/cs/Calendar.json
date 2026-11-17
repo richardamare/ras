@@ -70,7 +70,8 @@
     "discard": "Zahodit návrh",
     "confirm": "Potvrdit návrh",
     "organizer": "organizátor",
-    "yourReply": "Tvoje odpověď: {{reply}}"
+    "yourReply": "Tvoje odpověď: {{reply}}",
+    "close": "Zavřít"
   },
   "showAs": {
     "busy": "Zaneprázdněn",
@@ -90,5 +91,17 @@
     "accepted": "Přijato",
     "tentative": "Možná",
     "declined": "Odmítnuto"
+  },
+  "item": {
+    "edit": "Upravit",
+    "openTask": "Otevřít úkol",
+    "removeBlock": "Odebrat blok",
+    "close": "Zavřít",
+    "state": {
+      "draft": "Návrh pracovního bloku",
+      "planned": "Naplánovaný pracovní blok",
+      "running": "Pracovní blok právě běží",
+      "done": "Dokončený pracovní blok"
+    }
   }
 }

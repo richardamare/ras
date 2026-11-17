@@ -12,7 +12,7 @@ import * as PageHeader from "@/components/page-header"
 import * as Columns from "@/features/board/columns"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskSheet from "@/features/tasks/task-sheet"
+import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
@@ -251,7 +251,7 @@ export function BoardPage() {
           setMove(null)
         }}
       />
-      <TaskSheet.TaskSheet id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
+      <TaskDialog.TaskDialog id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
     </div>
   )
 }

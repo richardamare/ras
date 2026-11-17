@@ -11,7 +11,7 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Progress from "@/features/projects/progress"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskSheet from "@/features/tasks/task-sheet"
+import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
@@ -106,7 +106,7 @@ export function ProjectPage({ id }: { id: string }) {
           </Card.CardContent>
         </Card.Card>
       </div>
-      <TaskSheet.TaskSheet id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
+      <TaskDialog.TaskDialog id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
     </div>
   )
 }

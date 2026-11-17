@@ -11,7 +11,7 @@ import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Summary from "@/features/home/summary"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskSheet from "@/features/tasks/task-sheet"
+import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
@@ -276,7 +276,7 @@ export function HomePage() {
           </div>
         </>
       )}
-      <TaskSheet.TaskSheet id={shown?.id ?? null} title={shown?.title ?? ""} onClose={() => setShown(null)} />
+      <TaskDialog.TaskDialog id={shown?.id ?? null} title={shown?.title ?? ""} onClose={() => setShown(null)} />
     </div>
   )
 }

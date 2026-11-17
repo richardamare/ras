@@ -66,7 +66,8 @@
     "discard": "Discard draft",
     "confirm": "Confirm draft",
     "organizer": "organizer",
-    "yourReply": "Your reply: {{reply}}"
+    "yourReply": "Your reply: {{reply}}",
+    "close": "Close"
   },
   "showAs": {
     "busy": "Busy",
@@ -86,5 +87,17 @@
     "accepted": "Accepted",
     "tentative": "Maybe",
     "declined": "Declined"
+  },
+  "item": {
+    "edit": "Edit",
+    "openTask": "Open task",
+    "removeBlock": "Remove block",
+    "close": "Close",
+    "state": {
+      "draft": "Draft work block",
+      "planned": "Planned work block",
+      "running": "Work block running now",
+      "done": "Finished work block"
+    }
   }
 }

@@ -11,11 +11,12 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as DraftControls from "@/features/calendar/draft-controls"
 import * as EventDialog from "@/features/calendar/event-dialog"
 import * as Grid from "@/features/calendar/grid"
+import * as ItemPopover from "@/features/calendar/item-popover"
 import * as MonthGrid from "@/features/calendar/month-grid"
 import * as Pointer from "@/features/calendar/pointer"
 import * as TasksPanel from "@/features/calendar/tasks-panel"
 import * as TimeGrid from "@/features/calendar/time-grid"
-import * as TaskSheet from "@/features/tasks/task-sheet"
+import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
@@ -60,7 +61,9 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
   const [drafting, setDrafting] = React.useState(false)
   const [planner, setPlanner] = React.useState(false)
   const [dialog, setDialog] = React.useState<EventDialog.DialogState | null>(null)
+  const [opened, setOpened] = React.useState<ItemPopover.Opened | null>(null)
   const [task, setTask] = React.useState<{ id: string; title: string } | null>(null)
+  const clicked = React.useRef<DOMRect | null>(null)
 
   const settle = {
     onSuccess: () => client.invalidateQueries(),
@@ -84,9 +87,7 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
   }
 
   const open = (item: Grid.Item) => {
-    if (item.kind === "event") return setDialog({ kind: "event", event: item.event })
-    const found = (blocks.data ?? []).find((block) => block.id === item.block.id)
-    setTask({ id: item.block.task, title: found?.title ?? item.block.title })
+    if (clicked.current !== null) setOpened({ item, at: clicked.current })
   }
 
   const grid = () => {
@@ -219,14 +220,31 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
             fetching && "opacity-60"
           )}
           aria-busy={fetching}
+          onClickCapture={(event) => {
+            clicked.current = (event.target as HTMLElement).closest("button")?.getBoundingClientRect() ?? null
+          }}
         >
           {grid()}
         </div>
         {planner && view !== "month" && <TasksPanel.TasksPanel onClose={() => setPlanner(false)} />}
       </div>
 
+      <ItemPopover.ItemPopover
+        opened={opened}
+        calendars={allCalendars}
+        colorOf={colorOf}
+        onClose={() => setOpened(null)}
+        onEdit={(event) => {
+          setOpened(null)
+          setDialog({ kind: "edit", event })
+        }}
+        onOpenTask={(block) => {
+          setOpened(null)
+          setTask({ id: block.task, title: block.title })
+        }}
+      />
       <EventDialog.EventDialog state={dialog} calendars={allCalendars} onClose={() => setDialog(null)} />
-      <TaskSheet.TaskSheet id={task?.id ?? null} title={task?.title ?? ""} onClose={() => setTask(null)} />
+      <TaskDialog.TaskDialog id={task?.id ?? null} title={task?.title ?? ""} onClose={() => setTask(null)} />
     </div>
   )
 }
