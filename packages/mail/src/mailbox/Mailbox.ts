@@ -9,7 +9,7 @@ import * as Base64 from "effect/encoding/Base64"
 import * as Imap from "imapflow"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 import * as Text from "./Text.ts"
 
 type Read<A> = Effect.Effect<A, Errors.NotFound | Errors.Invalid | Errors.SourceFailed>

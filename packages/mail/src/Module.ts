@@ -1,6 +1,6 @@
 import * as Module from "@ras/kernel/Module"
 import * as Sample from "@ras/kernel/Sample"
-import * as Mailbox from "./Mailbox.ts"
+import * as Mailbox from "./mailbox/Mailbox.ts"
 import * as Tools from "./Tools.ts"
 
 /** iCloud Mail, or in sample mode the invented mailbox. */

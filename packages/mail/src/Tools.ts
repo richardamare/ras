@@ -3,7 +3,7 @@ import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
 import * as Domain from "./Domain.ts"
-import * as Mailbox from "./Mailbox.ts"
+import * as Mailbox from "./mailbox/Mailbox.ts"
 
 const MessageRef = Schema.Struct({
   message: Domain.MessageId.annotate({ description: "The id search_mail or recent_mail gave." })

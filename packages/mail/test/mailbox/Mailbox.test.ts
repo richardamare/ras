@@ -6,10 +6,10 @@ import * as Base64 from "effect/encoding/Base64"
 import * as Result from "effect/Result"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../src/Domain.ts"
-import * as Mailbox from "../src/Mailbox.ts"
-import * as Module from "../src/Module.ts"
-import * as Text from "../src/Text.ts"
+import * as Domain from "../../src/Domain.ts"
+import * as Mailbox from "../../src/mailbox/Mailbox.ts"
+import * as Module from "../../src/Module.ts"
+import * as Text from "../../src/mailbox/Text.ts"
 
 const failure = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.map(Effect.flip(effect), (error) => error._tag)
