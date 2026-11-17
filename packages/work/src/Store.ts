@@ -1,4 +1,5 @@
 import * as Arr from "effect/Array"
+import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -289,3 +290,89 @@ export const insertLink = (task: Domain.TaskId, url: string) =>
 
 export const deleteLink = (task: Domain.TaskId, url: string) =>
   write(SqlClient.SqlClient.use((sql) => sql`DELETE FROM work_links WHERE task_id = ${task} AND url = ${url}`))
+
+/** A block as its row keeps it: no end while it runs, no event while it is a draft. */
+export interface BlockRow {
+  readonly id: Domain.BlockId
+  readonly task: Domain.TaskId
+  readonly title: string
+  readonly calendar: Calendar.CalendarId
+  readonly start: DateTime.Utc
+  readonly end: Option.Option<DateTime.Utc>
+  readonly event: Option.Option<string>
+}
+
+const BlockColumns = Schema.Struct({
+  id: Domain.BlockId,
+  task: Domain.TaskId,
+  taskTitle: Schema.String,
+  project: Schema.NullOr(Schema.String),
+  calendar: Calendar.CalendarId,
+  start: Time.Instant,
+  end: Schema.NullOr(Time.Instant),
+  event: Schema.NullOr(Schema.String)
+})
+
+const blocksWhere = (where: (sql: SqlClient.SqlClient) => ReturnType<SqlClient.SqlClient["unsafe"]>) =>
+  rows(
+    BlockColumns,
+    SqlClient.SqlClient.use(
+      (sql) => sql`
+        SELECT b.id, b.task_id AS task, t.title AS "taskTitle", p.name AS project, b.calendar_id AS calendar,
+               b.start_at AS start, b.end_at AS "end", b.event_id AS event
+        FROM work_blocks b
+        JOIN work_tasks t ON t.id = b.task_id
+        LEFT JOIN work_projects p ON p.id = t.project_id
+        WHERE ${where(sql)}
+        ORDER BY b.start_at`
+    )
+  ).pipe(
+    Effect.map(
+      Arr.map((row): BlockRow => ({
+        id: row.id,
+        task: row.task,
+        title: row.project === null ? row.taskTitle : `${row.project}: ${row.taskTitle}`,
+        calendar: row.calendar,
+        start: row.start,
+        end: Option.fromNullOr(row.end),
+        event: Option.fromNullOr(row.event)
+      }))
+    )
+  )
+
+export const blockById = (id: string) =>
+  Effect.map(
+    blocksWhere((sql) => sql`b.id = ${id}`),
+    Arr.head
+  )
+
+export const runningBlock = Effect.map(
+  blocksWhere((sql) => sql`b.end_at IS NULL`),
+  Arr.head
+)
+
+/** The blocks that overlap the span; a running block takes its time until `now`. */
+export const blocks = (span: { readonly start: string; readonly end: string }, now: string) =>
+  blocksWhere((sql) => sql`b.start_at < ${span.end} AND COALESCE(b.end_at, ${now}) > ${span.start}`)
+
+export const blockDrafts = (span: { readonly start: string; readonly end: string }) =>
+  blocksWhere((sql) => sql`b.event_id IS NULL AND b.start_at < ${span.end} AND b.end_at > ${span.start}`)
+
+export const blocksOfTask = (task: Domain.TaskId) => blocksWhere((sql) => sql`b.task_id = ${task}`)
+
+const iso = (instant: Option.Option<DateTime.Utc>) => Option.getOrNull(Option.map(instant, DateTime.formatIso))
+
+export const saveBlock = (block: BlockRow) =>
+  write(
+    SqlClient.SqlClient.use(
+      (sql) => sql`
+        INSERT INTO work_blocks (id, task_id, calendar_id, start_at, end_at, event_id)
+        VALUES (${block.id}, ${block.task}, ${block.calendar}, ${DateTime.formatIso(block.start)}, ${iso(block.end)},
+                ${Option.getOrNull(block.event)})
+        ON CONFLICT (id) DO UPDATE SET
+          start_at = excluded.start_at, end_at = excluded.end_at, event_id = excluded.event_id`
+    )
+  )
+
+export const deleteBlock = (id: Domain.BlockId) =>
+  write(SqlClient.SqlClient.use((sql) => sql`DELETE FROM work_blocks WHERE id = ${id}`))

@@ -62,5 +62,21 @@ export const migrations: Module.Migrations = {
         url TEXT NOT NULL,
         PRIMARY KEY (task_id, url)
       ) STRICT`
+  }),
+  "0002_create_blocks": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient
+    yield* sql`
+      CREATE TABLE work_blocks (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL REFERENCES work_tasks (id),
+        calendar_id INTEGER NOT NULL,
+        start_at TEXT NOT NULL,
+        end_at TEXT,
+        event_id TEXT,
+        CHECK (end_at IS NOT NULL OR event_id IS NOT NULL)
+      ) STRICT`
+    yield* sql`CREATE INDEX work_blocks_task ON work_blocks (task_id)`
+    yield* sql`CREATE INDEX work_blocks_span ON work_blocks (start_at, end_at)`
+    yield* sql`CREATE UNIQUE INDEX work_blocks_one_running ON work_blocks ((1)) WHERE end_at IS NULL`
   })
 }
