@@ -279,6 +279,81 @@
         }
       }
     },
+    "/global/clients": {
+      "get": {
+        "tags": ["global"],
+        "operationId": "global.clients",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/McpClientEncoded"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global/clients/{id}/revoke": {
+      "post": {
+        "tags": ["global"],
+        "operationId": "global.revokeClient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/calendar/calendars": {
       "get": {
         "tags": ["calendar"],
@@ -4757,6 +4832,39 @@
           }
         },
         "required": ["id", "name", "color", "writable", "enabled"],
+        "additionalProperties": false
+      },
+      "McpClientEncoded": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "connected": {
+            "type": "string"
+          },
+          "used": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it last renewed its access."
+          }
+        },
+        "required": ["id", "name", "scopes", "connected", "used"],
         "additionalProperties": false
       },
       "ConnectionEncoded": {

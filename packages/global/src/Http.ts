@@ -11,6 +11,7 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Module from "@ras/kernel/Module"
 import * as Actor from "./Actor.ts"
 import * as Agents from "./Agents.ts"
+import * as Clients from "./Clients.ts"
 import * as Graph from "./Graph.ts"
 import * as Store from "./Store.ts"
 
@@ -56,6 +57,13 @@ export const group = HttpApiGroup.make("global")
       error: Errors.Refused
     })
   )
+  .add(HttpApiEndpoint.get("clients", "/clients", { success: Schema.Array(Clients.Client) }))
+  .add(
+    HttpApiEndpoint.post("revokeClient", "/clients/:id/revoke", {
+      params: { id: Schema.String },
+      error: Errors.NotFound
+    })
+  )
   .prefix("/global")
 
 export const me = Effect.map(Effect.service(Actor.CurrentActor), (actor) => ({
@@ -67,6 +75,7 @@ export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) =
   Effect.gen(function* () {
     const agents = yield* Agents.Agents
     const graph = yield* Graph.Graph
+    const clients = yield* Clients.Clients
     return endpoints
       .handle("graph", () => Effect.map(graph.connection, Option.getOrNull))
       .handle("connectGraph", () => Effect.map(graph.connect, (url) => ({ url: url.href })))
@@ -74,5 +83,7 @@ export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) =
       .handle("agents", () => agents.list)
       .handle("addAgent", ({ payload }) => agents.add(payload.slug, payload.name))
       .handle("archiveAgent", ({ params }) => agents.archive(params.slug))
+      .handle("clients", () => clients.list)
+      .handle("revokeClient", ({ params }) => clients.revoke(params.id))
   })
 )

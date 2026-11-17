@@ -110,3 +110,50 @@ export const takeGraphAttempt = (state: string) =>
     Effect.map((rows) => Option.fromUndefinedOr(rows[0])),
     Effect.orDie
   )
+
+const ClientRow = Schema.Struct({
+  id: Schema.String,
+  name: Schema.NullOr(Schema.String),
+  scopes: Schema.fromJsonString(Schema.Array(Schema.String)),
+  connected: Schema.DateTimeUtcFromString,
+  used: Schema.NullOr(Schema.DateTimeUtcFromString)
+})
+
+/** The MCP clients the owner consented to, newest first, with when each last renewed its access. */
+export const consentedClients = SqlClient.SqlClient.use(
+  (sql) => sql`
+    SELECT c.clientId AS id, k.name, c.scopes, MIN(c.createdAt) AS connected,
+           (SELECT MAX(t.createdAt) FROM global_oauth_refresh_tokens t WHERE t.clientId = c.clientId) AS used
+    FROM global_oauth_consents c
+    LEFT JOIN global_oauth_clients k ON k.clientId = c.clientId
+    GROUP BY c.clientId
+    ORDER BY connected DESC`
+).pipe(Effect.flatMap(Schema.decodeUnknownEffect(Schema.Array(ClientRow))), Effect.orDie)
+
+/** The name of a client the owner `user` consented to; none for a client without a consent. */
+export const consentedClient = (clientId: string, user: string) =>
+  SqlClient.SqlClient.use(
+    (sql) => sql<{ readonly name: string | null }>`
+      SELECT k.name FROM global_oauth_consents c
+      LEFT JOIN global_oauth_clients k ON k.clientId = c.clientId
+      WHERE c.clientId = ${clientId} AND c.userId = ${user}
+      LIMIT 1`
+  ).pipe(
+    Effect.map((rows) => Option.map(Option.fromUndefinedOr(rows[0]), (row) => row.name ?? clientId)),
+    Effect.orDie
+  )
+
+/**
+ * Drops a client's consents and stored access tokens and revokes its refresh tokens, so it signs in and consents
+ * again. A JWT access token stays valid until it expires; the connector refuses it once the consent is gone.
+ */
+export const revokeClient = (clientId: string, at: string) =>
+  Writes.write(
+    SqlClient.SqlClient.use((sql) =>
+      Effect.all([
+        sql`DELETE FROM global_oauth_consents WHERE clientId = ${clientId}`,
+        sql`DELETE FROM global_oauth_access_tokens WHERE clientId = ${clientId}`,
+        sql`UPDATE global_oauth_refresh_tokens SET revoked = ${at} WHERE clientId = ${clientId} AND revoked IS NULL`
+      ])
+    ).pipe(Effect.asVoid, Effect.orDie)
+  )

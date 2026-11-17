@@ -259,6 +259,17 @@ export type CalendarEncoded = {
     enabled: boolean;
 };
 
+export type McpClientEncoded = {
+    id: string;
+    name: string;
+    scopes: Array<string>;
+    connected: string;
+    /**
+     * When it last renewed its access.
+     */
+    used: string | null;
+};
+
 export type ConnectionEncoded = {
     account: string;
     connected: string;
@@ -444,6 +455,62 @@ export type GlobalConnectGraphResponses = {
 };
 
 export type GlobalConnectGraphResponse = GlobalConnectGraphResponses[keyof GlobalConnectGraphResponses];
+
+export type GlobalClientsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/global/clients';
+};
+
+export type GlobalClientsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+};
+
+export type GlobalClientsError = GlobalClientsErrors[keyof GlobalClientsErrors];
+
+export type GlobalClientsResponses = {
+    /**
+     * Success
+     */
+    200: Array<McpClientEncoded>;
+};
+
+export type GlobalClientsResponse = GlobalClientsResponses[keyof GlobalClientsResponses];
+
+export type GlobalRevokeClientData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/global/clients/{id}/revoke';
+};
+
+export type GlobalRevokeClientErrors = {
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+    /**
+     * NotFound
+     */
+    404: NotFoundEncoded;
+};
+
+export type GlobalRevokeClientError = GlobalRevokeClientErrors[keyof GlobalRevokeClientErrors];
+
+export type GlobalRevokeClientResponses = {
+    /**
+     * <No Content>
+     */
+    204: void;
+};
+
+export type GlobalRevokeClientResponse = GlobalRevokeClientResponses[keyof GlobalRevokeClientResponses];
 
 export type CalendarCalendarsData = {
     body?: never;
