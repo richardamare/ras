@@ -56,5 +56,14 @@ export const client = (cookie: string) =>
     })
   })
 
+/** The typed client, signed in as the owner. */
+export const owner = Effect.flatMap(sessionCookie, client)
+
+/** What a call that must fail failed with: a refusal's code, or another error's tag. */
+export const refusal = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.map(Effect.flip(effect), (error) =>
+    "code" in error && typeof error.code === "string" ? error.code : error._tag
+  )
+
 /** A fresh title, so tests sharing the one ras never meet each other's data. */
 export const unique = (what: string) => `${what} ${crypto.randomUUID().slice(0, 8)}`
