@@ -5,17 +5,17 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Semaphore from "effect/Semaphore"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
 import * as Calendar from "./Calendar.ts"
+import type * as CalendarRepository from "./CalendarRepository.ts"
 import * as Domain from "./Domain.ts"
+import * as DraftRepository from "./DraftRepository.ts"
 import * as Outlook from "./Outlook.ts"
 import * as Reclaim from "./Reclaim.ts"
 import * as Rules from "./Rules.ts"
-import * as Store from "./Store.ts"
 
 /** When an event happens, in Prague local time: a start and an end, or whole days from the first to the last. */
 export type When =
@@ -164,7 +164,7 @@ const refusedBy = (write: Rules.Write) =>
 const refuse = (code: string, reason: string, instead: string) =>
   Effect.fail(new Errors.Refused({ code: `calendar.${code}`, reason, instead }))
 
-const graphCalendar = (target: Store.Connected) =>
+const graphCalendar = (target: CalendarRepository.Connected) =>
   Option.match(target.source.providerId, {
     onNone: () =>
       refuse(
@@ -273,8 +273,7 @@ export class Events extends Context.Service<
       const outlook = yield* Outlook.Outlook
       const one = yield* Semaphore.make(1)
       const writes = yield* Global.Writes
-      const sql = yield* SqlClient.SqlClient
-      const db = Effect.provideService(SqlClient.SqlClient, sql)
+      const drafts = yield* DraftRepository.DraftRepository
       const now = Effect.map(DateTime.now, DateTime.formatIso)
 
       const audit = <A>(
@@ -318,7 +317,7 @@ export class Events extends Context.Service<
         })
 
       /** The Graph id a change to the event takes: its own, or its occurrence's when it is part of a series. */
-      const graphEvent = (found: { readonly calendar: Store.Connected; readonly entry: Domain.Entry }) =>
+      const graphEvent = (found: { readonly calendar: CalendarRepository.Connected; readonly entry: Domain.Entry }) =>
         Effect.flatMap(reclaim.providerId(found.calendar.source, found.entry.ref.id), (series) =>
           found.entry.recurring
             ? outlook.occurrence(series, Time.toPragueLocal(found.entry.span.start))
@@ -327,7 +326,7 @@ export class Events extends Context.Service<
 
       /** Writes a new plain event into its calendar, which the rules allowed. */
       const write = (
-        chosen: Store.Connected,
+        chosen: CalendarRepository.Connected,
         fields: Parameters<typeof fieldsOf>[0] & { readonly title: string },
         when: When,
         recurrence: Outlook.Recurrence | undefined,
@@ -351,7 +350,7 @@ export class Events extends Context.Service<
           )
         })
 
-      const saveDraft = (action: Global.Action, draft: Store.Draft, before: Option.Option<Domain.Event>) =>
+      const saveDraft = (action: Global.Action, draft: DraftRepository.Draft, before: Option.Option<Domain.Event>) =>
         Effect.gen(function* () {
           const event = Domain.eventOf(Calendar.entryOfDraft(draft))
           const shown = Option.match(before, {
@@ -363,12 +362,11 @@ export class Events extends Context.Service<
           })
           return yield* writes.run(
             action,
-            Effect.as(db(Store.saveDraft(draft, yield* now)), { result: event, subject: `draft/${draft.id}`, ...shown })
+            Effect.as(drafts.save(draft, yield* now), { result: event, subject: `draft/${draft.id}`, ...shown })
           )
         })
 
-      const storedDraft = (id: Domain.DraftId) =>
-        Effect.flatMap(db(Store.draftById(id)), Errors.orNotFound("draft", id))
+      const storedDraft = (id: Domain.DraftId) => Effect.flatMap(drafts.byId(id), Errors.orNotFound("draft", id))
 
       return Events.of({
         create: (input) =>
@@ -448,7 +446,7 @@ export class Events extends Context.Service<
               const draft = found.entry.draft.id
               return yield* writes.run(
                 "calendar.draft.discarded",
-                Effect.as(db(Store.deleteDraft(draft)), {
+                Effect.as(drafts.delete(draft), {
                   result: undefined,
                   subject: `draft/${draft}`,
                   before: Option.some(before),
@@ -512,7 +510,7 @@ export class Events extends Context.Service<
             )
             return yield* writes.run(
               "calendar.draft.confirmed",
-              Effect.as(db(Store.deleteDraft(stored.id)), {
+              Effect.as(drafts.delete(stored.id), {
                 result: written,
                 subject: `draft/${stored.id}`,
                 before: Option.some(Global.snapshot(Domain.Event, Domain.eventOf(found.entry))),
@@ -521,16 +519,14 @@ export class Events extends Context.Service<
             )
           }).pipe(one.withPermit),
 
-        drafts: Effect.map(db(Store.allDrafts), (found) =>
-          found.map((draft) => Domain.eventOf(Calendar.entryOfDraft(draft)))
-        ),
+        drafts: Effect.map(drafts.all, (found) => found.map((draft) => Domain.eventOf(Calendar.entryOfDraft(draft)))),
 
         discardDrafts: Effect.gen(function* () {
-          const found = yield* db(Store.allDrafts)
+          const found = yield* drafts.all
           if (found.length === 0) return 0
           return yield* writes.run(
             "calendar.draft.discarded",
-            Effect.as(db(Store.deleteAllDrafts), {
+            Effect.as(drafts.deleteAll, {
               result: found.length,
               subject: "drafts",
               before: Option.some({ drafts: found.map((draft) => draft.title) }),

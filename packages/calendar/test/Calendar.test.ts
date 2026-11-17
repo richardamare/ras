@@ -12,7 +12,10 @@ import * as KernelModule from "@ras/kernel/Module"
 import * as Time from "@ras/kernel/Time"
 import * as BusyTime from "../src/BusyTime.ts"
 import * as Calendar from "../src/Calendar.ts"
+import * as CalendarRepository from "../src/CalendarRepository.ts"
 import * as Domain from "../src/Domain.ts"
+import * as DraftRepository from "../src/DraftRepository.ts"
+import * as EventCacheRepository from "../src/EventCacheRepository.ts"
 import * as Migrations from "../src/Migrations.ts"
 import * as Module from "../src/Module.ts"
 import * as Outlook from "../src/Outlook.ts"
@@ -233,7 +236,16 @@ describe("refreshes after writes", () => {
         })
       )
       const calendarLayer = Layer.effect(Calendar.Calendar, Calendar.Calendar.make).pipe(
-        Layer.provide(Layer.mergeAll(counting, Outlook.sample, BusyTime.BusyTime.none)),
+        Layer.provide(
+          Layer.mergeAll(
+            counting,
+            Outlook.sample,
+            BusyTime.BusyTime.none,
+            CalendarRepository.CalendarRepository.layer,
+            EventCacheRepository.EventCacheRepository.layer,
+            DraftRepository.DraftRepository.layer
+          )
+        ),
         Layer.provideMerge(Testing.layer([tables]))
       )
       const [soon, later] = yield* Effect.gen(function* () {
