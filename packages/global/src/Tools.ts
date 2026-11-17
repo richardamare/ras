@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema"
 import * as Tool from "effect/ai/Tool"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Errors from "@ras/kernel/Errors"
+import * as Untrusted from "@ras/kernel/Untrusted"
 import * as Actor from "./audit/Actor.ts"
 import * as Agents from "./agents/Agents.ts"
 import * as Http from "./Http.ts"
@@ -27,7 +28,17 @@ const agent = Schema.optionalKey(Actor.AgentSlug).annotate({
   description: "The agent this call acts as, such as `scheduler`. Omit it when acting as the owner."
 })
 
-/** A tool that writes. Its parameters carry the optional `agent`; the handler passes it to `actingAs`. */
+/** Fenced text came out of a read, so a write that carries it would copy outside text in; the owner states it instead. */
+const unfenced = Schema.makeFilter(
+  (parameters: object) =>
+    !Untrusted.holdsFence(parameters) ||
+    `The arguments hold text fenced by ${Untrusted.open}, which ras does not copy into a write. Ask the owner to state the value.`
+)
+
+/**
+ * A tool that writes. Its parameters carry the optional `agent`, which the handler passes to `actingAs`, and are
+ * refused when they hold fenced text.
+ */
 export const write = <
   const Name extends string,
   const Fields extends Schema.Struct.Fields,
@@ -43,7 +54,7 @@ export const write = <
 ) =>
   Tool.make(name, {
     description: options.description,
-    parameters: Schema.Struct({ ...options.parameters, agent }),
+    parameters: Schema.Struct({ ...options.parameters, agent }).check(unfenced),
     ...(options.success === undefined ? {} : { success: options.success }),
     failure: Errors.Failure,
     dependencies: [Actor.CurrentActor]

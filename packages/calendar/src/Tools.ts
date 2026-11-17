@@ -2,6 +2,7 @@ import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Effect from "effect/Effect"
 import * as Global from "@ras/global"
+import * as Untrusted from "@ras/kernel/Untrusted"
 import * as Calendars from "./calendars/Calendars.ts"
 import * as Busy from "./calendars/Busy.ts"
 import * as Calendar from "./calendars/Calendar.ts"
@@ -88,6 +89,22 @@ export const toolkit = Toolkit.make(
   })
 )
 
+/** Every field an event's organizer or attendees could have written, fenced for the model. */
+const fencedEvent = (event: Event.Event) =>
+  new Event.Event({
+    ...event,
+    title: Untrusted.fence(event.title),
+    location: Untrusted.fenceNullable(event.location),
+    category: Untrusted.fenceNullable(event.category),
+    notes: Untrusted.fenceNullable(event.notes),
+    attendees: event.attendees.map(
+      (attendee) => new Event.Attendee({ ...attendee, name: Untrusted.fenceNullable(attendee.name) })
+    )
+  })
+
+const fencedConflict = (conflict: Busy.Conflict) =>
+  new Busy.Conflict({ ...conflict, first: fencedEvent(conflict.first), second: fencedEvent(conflict.second) })
+
 export const handlers = toolkit.toLayer(
   Effect.gen(function* () {
     const calendar = yield* Calendars.Calendar
@@ -95,13 +112,14 @@ export const handlers = toolkit.toLayer(
     const actingAs = yield* Global.actingAs
     return {
       list_calendars: () => calendar.calendars(false),
-      search_calendar: (window) => calendar.events(window),
-      calendar_event: ({ event }) => calendar.event(event),
+      search_calendar: (window) => Effect.map(calendar.events(window), (found) => found.map(fencedEvent)),
+      calendar_event: ({ event }) => Effect.map(calendar.event(event), fencedEvent),
       find_free_time: ({ minimum, ...window }) => calendar.freeTime(window, minimum),
-      find_conflicts: (window) => calendar.conflicts(window),
+      find_conflicts: (window) => Effect.map(calendar.conflicts(window), (found) => found.map(fencedConflict)),
       work_hours: ({ month, categories }) => calendar.workHours(month, categories ?? []),
       create_event: ({ agent, ...event }) => events.create(event).pipe(actingAs(agent)),
-      change_event: ({ agent, event, ...change }) => events.change(event, change).pipe(actingAs(agent)),
+      change_event: ({ agent, event, ...change }) =>
+        events.change(event, change).pipe(Effect.map(fencedEvent), actingAs(agent)),
       cancel_event: ({ agent, event }) => events.cancel(event).pipe(actingAs(agent)),
       reply_to_event: ({ agent, event, reply }) => events.reply(event, reply).pipe(actingAs(agent))
     }
