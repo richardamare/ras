@@ -12,6 +12,7 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
+import * as BusyTime from "./BusyTime.ts"
 import * as Domain from "./Domain.ts"
 import * as Outlook from "./Outlook.ts"
 import * as Reclaim from "./Reclaim.ts"
@@ -75,6 +76,25 @@ export const entryOfDraft = (draft: Store.Draft): Domain.Entry => ({
   draft: { id: draft.id, refusal: draft.refusal }
 })
 
+/** A block draft as the calendar shows it: a draft of its calendar, marked as the block's. */
+export const entryOfBlockDraft = (draft: BusyTime.BlockDraft): Domain.Entry => ({
+  ref: { calendar: draft.calendar, date: Time.pragueDateOf(draft.span.start), id: `block-draft-${draft.id}` },
+  title: draft.title,
+  span: draft.span,
+  allDay: false,
+  kind: "plain",
+  showAs: "busy",
+  rsvp: "none",
+  cancelled: false,
+  recurring: false,
+  location: Option.none(),
+  category: Option.none(),
+  notes: Option.some(Domain.blockMarker(draft.id)),
+  attendees: [],
+  copyOf: Option.none(),
+  draft: { id: Domain.DraftId.make(draft.id), refusal: Option.none() }
+})
+
 const draftOf = (id: string) =>
   id.startsWith("draft-") ? Option.some(Domain.DraftId.make(id.slice(6))) : Option.none()
 
@@ -122,6 +142,7 @@ export class Calendar extends Context.Service<
     const sql = yield* SqlClient.SqlClient
     const reclaim = yield* Reclaim.Reclaim
     const outlook = yield* Outlook.Outlook
+    const busy = yield* BusyTime.BusyTime
     const writes = yield* Global.Writes
     const db = Effect.provideService(SqlClient.SqlClient, sql)
     const one = yield* Semaphore.make(1)
@@ -183,7 +204,8 @@ export class Calendar extends Context.Service<
       Effect.gen(function* () {
         const found = yield* read(span)
         const drafts = Arr.map(yield* db(Store.drafts(span)), entryOfDraft)
-        return originals([...found, ...drafts], yield* shown).toSorted(byStart)
+        const blocks = Arr.map(yield* busy.drafts(span), entryOfBlockDraft)
+        return originals([...found, ...drafts, ...blocks], yield* shown).toSorted(byStart)
       })
 
     const quietly = sync.pipe(
@@ -258,20 +280,22 @@ export class Calendar extends Context.Service<
           const ref = Domain.eventRef(id)
           const day = { start: Time.pragueMidnight(ref.date), end: Time.pragueMidnight(Time.addDays(ref.date, 1)) }
           const all = yield* connected
-          const entry = yield* Option.match(draftOf(ref.id), {
-            onNone: () =>
-              Effect.map(read(day), (found) =>
-                Arr.findFirst(
-                  found,
-                  (entry) =>
-                    entry.ref.calendar === ref.calendar && entry.ref.id === ref.id && entry.ref.date === ref.date
-                )
-              ),
-            onSome: (draft) =>
-              Effect.map(db(Store.draftById(draft)), (found) =>
-                Option.filter(Option.map(found, entryOfDraft), (entry) => entry.ref.calendar === ref.calendar)
-              )
-          })
+          const entry = ref.id.startsWith("block-draft-")
+            ? Arr.findFirst(Arr.map(yield* busy.drafts(day), entryOfBlockDraft), (found) => found.ref.id === ref.id)
+            : yield* Option.match(draftOf(ref.id), {
+                onNone: () =>
+                  Effect.map(read(day), (found) =>
+                    Arr.findFirst(
+                      found,
+                      (entry) =>
+                        entry.ref.calendar === ref.calendar && entry.ref.id === ref.id && entry.ref.date === ref.date
+                    )
+                  ),
+                onSome: (draft) =>
+                  Effect.map(db(Store.draftById(draft)), (found) =>
+                    Option.filter(Option.map(found, entryOfDraft), (entry) => entry.ref.calendar === ref.calendar)
+                  )
+              })
           const calendar = Arr.findFirst(all, (found) => found.calendar.id === ref.calendar)
           if (Option.isNone(entry) || Option.isNone(calendar))
             return yield* new Errors.NotFound({ subject: "event", id })

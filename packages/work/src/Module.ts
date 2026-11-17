@@ -1,3 +1,4 @@
+import * as Calendar from "@ras/calendar"
 import * as Module from "@ras/kernel/Module"
 import * as Board from "./Board.ts"
 import * as Http from "./Http.ts"
@@ -8,6 +9,7 @@ export const module = Module.make({
   name: "work",
   migrations: Migrations.migrations,
   services: Board.Board.layer,
+  ports: Calendar.BusyTime.none,
   http: { group: Http.group, handlers: Http.handlers },
   tools: { toolkit: Tools.toolkit, handlers: Tools.handlers }
 })
