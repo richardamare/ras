@@ -445,10 +445,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "role": {
-                    "type": "string",
-                    "enum": ["personal", "work", "copy", "unmarked"]
-                  },
                   "enabled": {
                     "type": "boolean",
                     "description": "A calendar turned off is neither shown nor written."
@@ -632,7 +628,7 @@
                     "type": "integer",
                     "maximum": 9007199254740991,
                     "exclusiveMinimum": 0,
-                    "description": "A personal calendar; the one personal calendar when there is only one."
+                    "description": "A writable calendar; left out, the one writable calendar when there is only one."
                   },
                   "start": {
                     "type": "string",
@@ -3666,15 +3662,15 @@
           "color": {
             "type": "string"
           },
-          "role": {
-            "type": "string",
-            "enum": ["personal", "work", "copy", "unmarked"]
+          "writable": {
+            "type": "boolean",
+            "description": "A calendar of the Outlook account connected to ras, which takes plain events; any other only takes replies to invitations."
           },
           "enabled": {
             "type": "boolean"
           }
         },
-        "required": ["id", "name", "color", "role", "enabled"],
+        "required": ["id", "name", "color", "writable", "enabled"],
         "additionalProperties": false
       },
       "ConnectionEncoded": {

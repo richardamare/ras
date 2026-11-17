@@ -19,8 +19,8 @@ const CalendarRow = Schema.Struct({
   name: Schema.String,
   color: Schema.String,
   account: Schema.Int,
+  email: Schema.String,
   providerId: Schema.NullOr(Schema.String),
-  role: Domain.Role,
   enabled: Schema.BooleanFromBit
 })
 
@@ -30,40 +30,41 @@ export interface Connected {
   readonly source: Reclaim.SourceCalendar
 }
 
-/** The calendars Reclaim listed in the last sync, in its order. */
-export const connected = rows(
-  CalendarRow,
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      SELECT id, name, color, account, provider_id AS "providerId", role, enabled
-      FROM calendar_calendars WHERE connected = 1 ORDER BY position`
+/** The calendars Reclaim listed in the last sync, in its order; those of the `writable` account take plain events. */
+export const connected = (writable: Option.Option<string>) =>
+  rows(
+    CalendarRow,
+    SqlClient.SqlClient.use(
+      (sql) => sql`
+        SELECT id, name, color, account, email, provider_id AS "providerId", enabled
+        FROM calendar_calendars WHERE connected = 1 ORDER BY position`
+    )
+  ).pipe(
+    Effect.map(
+      Arr.map((row): Connected => ({
+        calendar: new Domain.Calendar({
+          id: row.id,
+          name: row.name,
+          color: row.color,
+          writable: Option.exists(writable, (account) => account.toLowerCase() === row.email.toLowerCase()),
+          enabled: row.enabled
+        }),
+        source: {
+          id: row.id,
+          name: row.name,
+          color: row.color,
+          account: row.account,
+          email: row.email,
+          providerId: Option.fromNullOr(row.providerId)
+        }
+      }))
+    )
   )
-).pipe(
-  Effect.map(
-    Arr.map((row): Connected => ({
-      calendar: new Domain.Calendar({
-        id: row.id,
-        name: row.name,
-        color: row.color,
-        role: row.role,
-        enabled: row.enabled
-      }),
-      source: {
-        id: row.id,
-        name: row.name,
-        color: row.color,
-        account: row.account,
-        providerId: Option.fromNullOr(row.providerId)
-      }
-    }))
-  )
-)
 
 export const changeCalendar = (calendar: Domain.Calendar) =>
   Global.write(
     SqlClient.SqlClient.use(
-      (sql) =>
-        sql`UPDATE calendar_calendars SET role = ${calendar.role}, enabled = ${calendar.enabled ? 1 : 0} WHERE id = ${calendar.id}`
+      (sql) => sql`UPDATE calendar_calendars SET enabled = ${calendar.enabled ? 1 : 0} WHERE id = ${calendar.id}`
     ).pipe(Effect.asVoid, Effect.orDie)
   )
 
@@ -150,11 +151,11 @@ export const replace = (
       yield* Effect.forEach(
         calendars,
         (calendar, position) => sql`
-          INSERT INTO calendar_calendars (id, name, color, account, provider_id, position, connected)
-          VALUES (${calendar.id}, ${calendar.name}, ${calendar.color}, ${calendar.account},
+          INSERT INTO calendar_calendars (id, name, color, account, email, provider_id, position, connected)
+          VALUES (${calendar.id}, ${calendar.name}, ${calendar.color}, ${calendar.account}, ${calendar.email},
                   ${Option.getOrNull(calendar.providerId)}, ${position}, 1)
           ON CONFLICT (id) DO UPDATE SET
-            name = excluded.name, color = excluded.color, account = excluded.account,
+            name = excluded.name, color = excluded.color, account = excluded.account, email = excluded.email,
             provider_id = excluded.provider_id, position = excluded.position, connected = 1`,
         { discard: true }
       )

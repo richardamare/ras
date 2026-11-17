@@ -22,10 +22,10 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event drafts", (t
   test.effect("keeps a draft in ras, shown as a draft and taking its time, and writes nothing to Outlook", () =>
     Effect.gen(function* () {
       const calendar = yield* Calendar.Calendar
-      yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
       yield* Ref.set(Outlook.sampleCalls, [])
       const created = yield* (yield* Events.Events).create({
         title: "Focus",
+        calendar: Sample.personal,
         start: local("2027-01-15T09:00"),
         draft: true
       })
@@ -48,6 +48,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event drafts", (t
       const refused = yield* code(
         (yield* Events.Events).create({
           title: "x",
+          calendar: Sample.personal,
           start: local("2027-01-15T09:00"),
           draft: true,
           repeat: { every: "day" }
@@ -85,12 +86,17 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event drafts", (t
     Effect.gen(function* () {
       const calendar = yield* Calendar.Calendar
       const events = yield* Events.Events
-      const created = yield* events.create({ title: "Review", start: local("2027-01-15T09:00"), draft: true })
-      yield* calendar.changeCalendar(Sample.personal, { role: "copy" })
-      assert.strictEqual(yield* code(events.confirm(created.draft!)), "calendar.calendar.copy")
+      const created = yield* events.create({
+        title: "Review",
+        calendar: Sample.personal,
+        start: local("2027-01-15T09:00"),
+        draft: true
+      })
+      yield* calendar.changeCalendar(Sample.personal, { enabled: false })
+      assert.strictEqual(yield* code(events.confirm(created.draft!)), "calendar.calendar.off")
+      yield* calendar.changeCalendar(Sample.personal, { enabled: true })
       const [kept] = yield* calendar.events(morning)
-      assert.include(kept!.draft!.refusal!, "is a copy written by Calendar Sync")
-      yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
+      assert.include(kept!.draft!.refusal!, "is turned off in ras")
       yield* events.cancel(kept!.id)
       assert.deepStrictEqual(yield* calendar.events(morning), [])
       assert.deepStrictEqual(yield* calls, [])

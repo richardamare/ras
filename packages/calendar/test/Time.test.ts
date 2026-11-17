@@ -30,7 +30,7 @@ const personal = new Domain.Calendar({
   id: Domain.CalendarId.make(1),
   name: "Personal",
   color: "#000000",
-  role: "personal",
+  writable: true,
   enabled: true
 })
 

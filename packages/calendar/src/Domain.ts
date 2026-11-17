@@ -8,13 +8,6 @@ import * as Time from "@ras/kernel/Time"
 export const CalendarId = Schema.Int.check(Schema.isGreaterThan(0)).pipe(Schema.brand("CalendarId"))
 export type CalendarId = typeof CalendarId.Type
 
-/**
- * `personal` is a calendar of the owner's Outlook account, which Graph writes; `work` is reached only through Reclaim;
- * `copy` is written by Calendar Sync; `unmarked` has no role yet and takes nothing.
- */
-export const Role = Schema.Literals(["personal", "work", "copy", "unmarked"])
-export type Role = typeof Role.Type
-
 /** Who owns an event: its calendar's own account, someone who invited it, Calendar Sync, or Reclaim itself. */
 export const Kind = Schema.Literals(["plain", "invitation", "copy", "reclaim"])
 export type Kind = typeof Kind.Type
@@ -54,12 +47,14 @@ export class Calendar extends Schema.Class<Calendar>("Calendar")({
   id: CalendarId,
   name: Schema.String,
   color: Schema.String,
-  role: Role,
+  writable: Schema.Boolean.annotate({
+    description:
+      "A calendar of the Outlook account connected to ras, which takes plain events; any other only takes replies to invitations."
+  }),
   enabled: Schema.Boolean
 }) {}
 
 export const CalendarChange = Schema.Struct({
-  role: Schema.optionalKey(Role),
   enabled: Schema.optionalKey(Schema.Boolean).annotate({
     description: "A calendar turned off is neither shown nor written."
   })
@@ -233,7 +228,7 @@ const When = {
 export const NewEvent = Schema.Struct({
   title: Schema.String.check(Schema.isNonEmpty()),
   calendar: Schema.optionalKey(CalendarId).annotate({
-    description: "A personal calendar; the one personal calendar when there is only one."
+    description: "A writable calendar; left out, the one writable calendar when there is only one."
   }),
   ...When,
   location: Schema.optionalKey(Schema.String),

@@ -62,5 +62,10 @@ export const migrations: Module.Migrations = {
         refusal TEXT,
         created_at TEXT NOT NULL
       ) STRICT`
-  )
+  ),
+  "0003_derive_writable_calendars": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient
+    yield* sql`ALTER TABLE calendar_calendars DROP COLUMN role`
+    yield* sql`ALTER TABLE calendar_calendars ADD COLUMN email TEXT NOT NULL DEFAULT ''`
+  })
 }

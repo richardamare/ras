@@ -231,7 +231,7 @@ const viewOf = (when: When) =>
 export class Events extends Context.Service<
   Events,
   {
-    /** Writes a plain event into a personal calendar, or keeps it in ras as a draft. */
+    /** Writes a plain event into a writable calendar, or keeps it in ras as a draft. */
     readonly create: (event: Domain.NewEvent) => Write<Domain.Created>
     /** Changes a plain event in its calendar, or a draft in ras. */
     readonly change: (id: Domain.EventId, change: Domain.EventChange) => Write<Domain.Event>
@@ -270,7 +270,7 @@ export class Events extends Context.Service<
           })
         )
 
-      /** The calendar a new event goes to: the one named, or the one personal calendar there is. */
+      /** The calendar a new event goes to: the one named, or the one writable calendar there is. */
       const target = (named: Domain.CalendarId | undefined) =>
         Effect.gen(function* () {
           const all = yield* calendar.connected
@@ -281,17 +281,17 @@ export class Events extends Context.Service<
               onSome: Effect.succeed
             })
           }
-          const personal = all.filter((entry) => entry.calendar.enabled && entry.calendar.role === "personal")
-          if (personal.length === 1) return personal[0]!
-          return yield* personal.length === 0
+          const writable = all.filter((entry) => entry.calendar.enabled && entry.calendar.writable)
+          if (writable.length === 1) return writable[0]!
+          return yield* writable.length === 0
             ? refuse(
                 "calendar.none",
-                "No calendar is marked personal yet, so ras has nowhere to write the event.",
-                "Mark the Outlook calendar personal under Settings, Calendars."
+                "No calendar of the Outlook account connected to ras is on, so ras has nowhere to write the event.",
+                "Connect Outlook under Settings, Connections, or turn one of its calendars on."
               )
             : refuse(
                 "calendar.choose",
-                `More than one calendar is personal: ${personal.map((entry) => `"${entry.calendar.name}"`).join(", ")}.`,
+                `More than one calendar takes events: ${writable.map((entry) => `"${entry.calendar.name}"`).join(", ")}.`,
                 "Name the calendar the event goes in."
               )
         })

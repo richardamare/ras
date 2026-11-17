@@ -13,6 +13,7 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
 import * as Domain from "./Domain.ts"
+import * as Outlook from "./Outlook.ts"
 import * as Reclaim from "./Reclaim.ts"
 import * as Store from "./Store.ts"
 import * as WorkHours from "./WorkHours.ts"
@@ -120,6 +121,7 @@ export class Calendar extends Context.Service<
   static readonly make = Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
     const reclaim = yield* Reclaim.Reclaim
+    const outlook = yield* Outlook.Outlook
     const writes = yield* Global.Writes
     const db = Effect.provideService(SqlClient.SqlClient, sql)
     const one = yield* Semaphore.make(1)
@@ -149,7 +151,10 @@ export class Calendar extends Context.Service<
       Option.isSome(state) ? Effect.succeed(state) : Effect.andThen(sync, db(Store.sync))
     )
 
-    const connected = Effect.andThen(filled, db(Store.connected))
+    const connected = Effect.andThen(
+      filled,
+      Effect.flatMap(outlook.account, (account) => db(Store.connected(account)))
+    )
 
     const shown = Effect.map(connected, (all) =>
       Arr.map(
