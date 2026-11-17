@@ -6,6 +6,7 @@ import * as Global from "@ras/global"
 import * as Blocks from "./Blocks.ts"
 import * as Board from "./Board.ts"
 import * as Domain from "./Domain.ts"
+import * as Drafts from "./Drafts.ts"
 
 const TaskRef = { task: Domain.TaskId }
 
@@ -120,6 +121,13 @@ export const toolkit = Toolkit.make(
     description: "Removes a block that is not running, with its event.",
     parameters: { block: Domain.BlockId },
     destructive: true
+  }),
+  Global.writeTool("confirm_drafts", {
+    description:
+      "Writes drafts into their calendars: the drafts named, every draft of a Prague day, or with neither every draft. Event drafts and block drafts alike. A draft its calendar refuses stays a draft, and the answer says why.",
+    parameters: Domain.ConfirmDrafts.fields,
+    success: Domain.DraftsConfirmed,
+    destructive: false
   })
 )
 
@@ -127,6 +135,7 @@ export const handlers = toolkit.toLayer(
   Effect.gen(function* () {
     const board = yield* Board.Board
     const blocks = yield* Blocks.Blocks
+    const drafts = yield* Drafts.Drafts
     const actingAs = yield* Global.actingAs
     return {
       spaces: () => board.spaces,
@@ -147,7 +156,8 @@ export const handlers = toolkit.toLayer(
       stop_work: ({ agent }) => blocks.stop.pipe(actingAs(agent)),
       log_work: ({ agent, ...input }) => blocks.log(input).pipe(actingAs(agent)),
       move_work: ({ agent, ...input }) => blocks.move(input).pipe(actingAs(agent)),
-      remove_work: ({ agent, block }) => blocks.remove(block).pipe(actingAs(agent))
+      remove_work: ({ agent, block }) => blocks.remove(block).pipe(actingAs(agent)),
+      confirm_drafts: ({ agent, ...selection }) => drafts.confirm(selection).pipe(actingAs(agent))
     }
   })
 )

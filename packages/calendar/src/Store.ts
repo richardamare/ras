@@ -233,6 +233,12 @@ const draftsWhere = (where: (sql: SqlClient.SqlClient) => ReturnType<SqlClient.S
 export const drafts = (span: Domain.Span) =>
   draftsWhere((sql) => sql`start_at < ${DateTime.formatIso(span.end)} AND end_at > ${DateTime.formatIso(span.start)}`)
 
+export const allDrafts = draftsWhere((sql) => sql`1 = 1`)
+
+export const deleteAllDrafts = Global.write(
+  SqlClient.SqlClient.use((sql) => sql`DELETE FROM calendar_drafts`).pipe(Effect.asVoid, Effect.orDie)
+)
+
 export const draftById = (id: Domain.DraftId) =>
   Effect.map(
     draftsWhere((sql) => sql`id = ${id}`),

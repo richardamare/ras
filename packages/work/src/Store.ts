@@ -376,3 +376,9 @@ export const saveBlock = (block: BlockRow) =>
 
 export const deleteBlock = (id: Domain.BlockId) =>
   write(SqlClient.SqlClient.use((sql) => sql`DELETE FROM work_blocks WHERE id = ${id}`))
+
+export const allBlockDrafts = blocksWhere((sql) => sql`b.event_id IS NULL`)
+
+export const deleteBlockDrafts = write(
+  SqlClient.SqlClient.use((sql) => sql`DELETE FROM work_blocks WHERE event_id IS NULL`)
+)
