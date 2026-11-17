@@ -11,9 +11,9 @@ import * as Flag from "effect/cli/Flag"
 import * as Prompt from "effect/cli/Prompt"
 import * as Global from "@ras/global"
 import * as Package from "../../../package.json" with { type: "json" }
-import * as Api from "./Api.ts"
-import * as Backup from "./Backup.ts"
-import * as Server from "./Server.ts"
+import * as Api from "./composition/Api.ts"
+import * as Backup from "./backup/Backup.ts"
+import * as Server from "./server/Server.ts"
 
 const database = Flag.String("database").pipe(
   Flag.withDescription("The SQLite file, created when missing."),

@@ -9,10 +9,10 @@ import * as HttpStaticServer from "effect/http/HttpStaticServer"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Global from "@ras/global"
 import * as Module from "@ras/kernel/Module"
-import * as Api from "./Api.ts"
-import * as Backup from "./Backup.ts"
+import * as Api from "../composition/Api.ts"
+import * as Backup from "../backup/Backup.ts"
 import * as Mcp from "./Mcp.ts"
-import * as Modules from "./Modules.ts"
+import * as Modules from "../composition/Modules.ts"
 
 const health = HttpRouter.add("GET", "/health", HttpServerResponse.jsonUnsafe({ ok: true }))
 
@@ -23,7 +23,7 @@ const health = HttpRouter.add("GET", "/health", HttpServerResponse.jsonUnsafe({ 
 const webConsole = Layer.unwrap(
   Effect.gen(function* () {
     const path = yield* Path.Path
-    const root = yield* Effect.orDie(path.fromFileUrl(new URL("../../web/dist", import.meta.url)))
+    const root = yield* Effect.orDie(path.fromFileUrl(new URL("../../../web/dist", import.meta.url)))
     return HttpStaticServer.layer({ root, spa: true, cacheControl: "no-cache" })
   })
 )

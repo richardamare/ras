@@ -1,7 +1,7 @@
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Global from "@ras/global"
 import * as Module from "@ras/kernel/Module"
-import * as Package from "../../../package.json" with { type: "json" }
+import * as Package from "../../../../package.json" with { type: "json" }
 import * as Modules from "./Modules.ts"
 
 export const Api = Module.api(Modules.modules)
