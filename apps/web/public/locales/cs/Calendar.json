@@ -95,6 +95,7 @@
   "item": {
     "edit": "Upravit",
     "openTask": "Otevřít úkol",
+    "moveBlock": "Přesunout",
     "removeBlock": "Odebrat blok",
     "close": "Zavřít",
     "state": {
@@ -103,6 +104,11 @@
       "running": "Pracovní blok právě běží",
       "done": "Dokončený pracovní blok"
     }
+  },
+  "blockMove": {
+    "title": "Přesunout pracovní blok",
+    "submit": "Přesunout",
+    "endBeforeStart": "Konec musí být po začátku."
   },
   "repeat": {
     "label": "Opakování",

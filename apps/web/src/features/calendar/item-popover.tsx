@@ -7,6 +7,7 @@ import * as Sonner from "sonner"
 import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Popover from "@/components/ui/popover"
+import * as BlockMoveDialog from "@/features/calendar/block-move-dialog"
 import * as Skeleton from "@/components/ui/skeleton"
 import type * as Grid from "@/features/calendar/grid"
 import * as Pointer from "@/features/calendar/pointer"
@@ -194,6 +195,7 @@ function BlockCard({
   const client = ReactQuery.useQueryClient()
   const when = useWhen()
   const task = ReactQuery.useQuery(Queries.workTaskOptions({ path: { id: block.task } }))
+  const moveDialog = BlockMoveDialog.useBlockMoveDialog()
   const remove = ReactQuery.useMutation({
     ...Queries.workRemoveMutation(),
     onSuccess: () => {
@@ -241,6 +243,19 @@ function BlockCard({
           >
             <LucideReact.Trash2Icon />
           </IconButton.IconButton>
+        )}
+        {(block.state === "planned" || block.state === "draft") && (
+          <Button.Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              moveDialog.open({ block })
+              onDone()
+            }}
+          >
+            <LucideReact.CalendarClockIcon />
+            {t("item.moveBlock")}
+          </Button.Button>
         )}
         <Button.Button size="sm" className="ms-auto" onClick={onOpenTask}>
           {t("item.openTask")}
