@@ -1,0 +1,40 @@
+{
+  "owner": "Ty",
+  "failed": "Změna se neuložila.",
+  "notFound": "Úkol už neexistuje.",
+  "noBody": "Zatím bez zadání.",
+  "comment": "Komentář",
+  "addComment": "Přidat komentář",
+  "fields": {
+    "status": "Stav",
+    "assignee": "Řešitel",
+    "priority": "Priorita",
+    "deadline": "Termín",
+    "spent": "Stráveno",
+    "estimate": "Odhad",
+    "space": "Prostor",
+    "project": "Projekt"
+  },
+  "status": {
+    "inbox": "Inbox",
+    "todo": "K udělání",
+    "in_progress": "Rozpracované",
+    "blocked": "Blokované",
+    "review": "Ke kontrole",
+    "done": "Hotovo"
+  },
+  "priority": {
+    "urgent": "Naléhavá",
+    "high": "Vysoká",
+    "normal": "Běžná",
+    "low": "Nízká"
+  },
+  "board": {
+    "title": "Nástěnka",
+    "all": "{{what}}: vše",
+    "moveTitle": "Přesunout „{{task}}“ do stavu {{status}}",
+    "whatIsNeeded": "Napiš, co je potřeba.",
+    "whatToCheck": "Napiš, co zkontrolovat.",
+    "move": "Přesunout"
+  }
+}

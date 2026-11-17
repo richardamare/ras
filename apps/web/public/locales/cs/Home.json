@@ -9,13 +9,5 @@
     "thisWeek": "Termín tento týden",
     "none": "Nic nemá termín."
   },
-  "waiting": { "title": "Čeká na tebe", "none": "Nic na tebe nečeká." },
-  "status": {
-    "inbox": "Inbox",
-    "todo": "K udělání",
-    "in_progress": "Rozpracované",
-    "blocked": "Blokované",
-    "review": "Ke kontrole",
-    "done": "Hotovo"
-  }
+  "waiting": { "title": "Čeká na tebe", "none": "Nic na tebe nečeká." }
 }

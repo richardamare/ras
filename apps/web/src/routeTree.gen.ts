@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
+import { Route as ShellBoardRouteImport } from './routes/_shell/board'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
@@ -21,24 +22,32 @@ const ShellIndexRoute = ShellIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellBoardRoute = ShellBoardRouteImport.update({
+  id: '/board',
+  path: '/board',
+  getParentRoute: () => ShellRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
+  '/board': typeof ShellBoardRoute
 }
 export interface FileRoutesByTo {
+  '/board': typeof ShellBoardRoute
   '/': typeof ShellIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_shell': typeof ShellRouteWithChildren
+  '/_shell/board': typeof ShellBoardRoute
   '/_shell/': typeof ShellIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/board'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/_shell' | '/_shell/'
+  to: '/board' | '/'
+  id: '__root__' | '/_shell' | '/_shell/board' | '/_shell/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -61,14 +70,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellIndexRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/board': {
+      id: '/_shell/board'
+      path: '/board'
+      fullPath: '/board'
+      preLoaderRoute: typeof ShellBoardRouteImport
+      parentRoute: typeof ShellRoute
+    }
   }
 }
 
 interface ShellRouteChildren {
+  ShellBoardRoute: typeof ShellBoardRoute
   ShellIndexRoute: typeof ShellIndexRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
+  ShellBoardRoute: ShellBoardRoute,
   ShellIndexRoute: ShellIndexRoute,
 }
 

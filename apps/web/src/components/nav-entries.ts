@@ -24,5 +24,13 @@ export type NavSection = {
 export const useNavSections = (): NavSection[] => {
   const { t } = ReactI18next.useTranslation("@Sidebar")
 
-  return [{ label: t("sectionConsole"), entries: [{ to: "/", label: t("home"), icon: LucideReact.HouseIcon }] }]
+  return [
+    {
+      label: t("sectionConsole"),
+      entries: [
+        { to: "/", label: t("home"), icon: LucideReact.HouseIcon },
+        { to: "/board", label: t("board"), icon: LucideReact.KanbanIcon }
+      ]
+    }
+  ]
 }

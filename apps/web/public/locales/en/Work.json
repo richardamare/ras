@@ -1,0 +1,40 @@
+{
+  "owner": "You",
+  "failed": "The change was not saved.",
+  "notFound": "The task is gone.",
+  "noBody": "No brief yet.",
+  "comment": "Comment",
+  "addComment": "Add comment",
+  "fields": {
+    "status": "Status",
+    "assignee": "Assignee",
+    "priority": "Priority",
+    "deadline": "Deadline",
+    "spent": "Time spent",
+    "estimate": "Estimate",
+    "space": "Space",
+    "project": "Project"
+  },
+  "status": {
+    "inbox": "Inbox",
+    "todo": "To do",
+    "in_progress": "In progress",
+    "blocked": "Blocked",
+    "review": "Review",
+    "done": "Done"
+  },
+  "priority": {
+    "urgent": "Urgent",
+    "high": "High",
+    "normal": "Normal",
+    "low": "Low"
+  },
+  "board": {
+    "title": "Board",
+    "all": "{{what}}: all",
+    "moveTitle": "Move “{{task}}” to {{status}}",
+    "whatIsNeeded": "Say what is needed.",
+    "whatToCheck": "Say what to check.",
+    "move": "Move"
+  }
+}
