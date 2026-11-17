@@ -220,6 +220,36 @@ describe("the console's calendar", () => {
       })
     )
 
+    it.effect("fills the column of a day a busy all-day event takes, and leaves a free one's day as it is", () =>
+      Effect.gen(function* () {
+        const date = yield* day(5)
+        const page = yield* Suite.signedInPage
+        const filled = Effect.gen(function* () {
+          yield* page.goto(`/calendar?view=week&date=${date}`)
+          yield* page.getByText("Holiday").first().waitFor()
+          return yield* Effect.promise(() =>
+            page.raw
+              .locator(`[data-day-column="${date}"]`)
+              .evaluate((column) => column.classList.contains("calendar-day-fill"))
+          )
+        })
+        assert.isFalse(yield* filled)
+
+        // The sample's Holiday is free, so the API's answer marks it busy on its way to the page.
+        yield* Effect.promise(() =>
+          page.raw.route("**/calendar/events?*", async (route) => {
+            const response = await route.fetch()
+            const events: ReadonlyArray<{ readonly title: string }> = await response.json()
+            await route.fulfill({
+              response,
+              json: events.map((event) => (event.title === "Holiday" ? { ...event, showAs: "busy" } : event))
+            })
+          })
+        )
+        assert.isTrue(yield* filled)
+      })
+    )
+
     it.effect("plans a task by dragging it from the planner onto a day", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

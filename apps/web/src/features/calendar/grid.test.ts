@@ -126,6 +126,23 @@ Vitest.describe("the calendar's columns", () => {
     Vitest.expect(columns.map(Grid.hasDrafts)).toEqual([true, true, false])
   })
 
+  Vitest.test("a busy or away all-day event fills its day, and a free, tentative or cancelled one does not", () => {
+    const columns = Grid.dayColumns(
+      [
+        event({ id: "free", allDay: true, showAs: "free", start: "2026-11-17T00:00", end: "2026-11-20T00:00" }),
+        event({ id: "holiday", allDay: true, start: "2026-11-17T00:00", end: "2026-11-18T00:00" }),
+        event({ id: "away", allDay: true, showAs: "oof", start: "2026-11-18T00:00", end: "2026-11-19T00:00" }),
+        event({ id: "maybe", allDay: true, showAs: "tentative", start: "2026-11-19T00:00", end: "2026-11-20T00:00" }),
+        event({ id: "off", allDay: true, cancelled: true, start: "2026-11-19T00:00", end: "2026-11-20T00:00" }),
+        event({ id: "meeting", start: "2026-11-20T09:00", end: "2026-11-20T10:00" })
+      ],
+      [],
+      ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"],
+      "2026-11-17T08:00"
+    )
+    Vitest.expect(columns.map((column) => Grid.dayFill(column)?.id)).toEqual(["holiday", "away", undefined, undefined])
+  })
+
   Vitest.test("a block's own event is left out for the block", () => {
     Vitest.expect(
       Grid.shownEvents([event({ id: "a" }), event({ id: "b", block: "block" })]).map((one) => one.id)

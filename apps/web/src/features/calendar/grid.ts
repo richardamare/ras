@@ -140,6 +140,10 @@ export const dayColumns = (
     }
   })
 
+/** The all-day event that takes the whole day, so its colour fills the day's column: the first one shown as busy or away. */
+export const dayFill = (column: DayColumn) =>
+  column.allDay.find((event) => !event.cancelled && (event.showAs === "busy" || event.showAs === "oof"))
+
 export const isDraft = (item: Item) =>
   item.kind === "event" ? item.event.draft !== null : item.block.state === "draft"
 
