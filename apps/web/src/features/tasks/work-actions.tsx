@@ -266,7 +266,7 @@ export function TaskMenu({ task }: { task: Target }) {
             <LucideReact.EllipsisIcon />
           </IconButton.IconButton>
         </DropdownMenu.DropdownMenuTrigger>
-        <DropdownMenu.DropdownMenuContent align="end">
+        <DropdownMenu.DropdownMenuContent align="end" className="w-auto min-w-44 whitespace-nowrap">
           {runs && (
             <DropdownMenu.DropdownMenuItem onSelect={clock.stop}>
               <LucideReact.SquareIcon />
