@@ -6,6 +6,8 @@
   "calendar": "Calendar",
   "projects": "Projects",
   "settings": "Settings",
+  "settingsGeneral": "General",
+  "settingsCalendars": "Calendars",
   "collapseSidebar": "Collapse sidebar",
   "expandSidebar": "Expand sidebar"
 }

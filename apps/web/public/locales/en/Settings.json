@@ -17,10 +17,12 @@
   },
   "calendars": {
     "title": "Calendars",
-    "description": "Calendars of the connected Outlook account take events and blocks; the others are only shown.",
+    "description": "Calendars of the connected Outlook account take events and blocks; the others are only shown. A calendar that is off is left out of free time and takes no writes; one hidden from the calendar screen stays on.",
     "writable": "Writable",
     "readonly": "Read only",
-    "shown": "Shown"
+    "enabled": "On",
+    "onScreen": "On the calendar screen",
+    "none": "No calendar is synced yet."
   },
   "connections": {
     "title": "Connections",

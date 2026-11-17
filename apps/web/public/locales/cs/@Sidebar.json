@@ -6,6 +6,8 @@
   "calendar": "Kalendář",
   "projects": "Projekty",
   "settings": "Nastavení",
+  "settingsGeneral": "Obecné",
+  "settingsCalendars": "Kalendáře",
   "collapseSidebar": "Sbalit postranní panel",
   "expandSidebar": "Rozbalit postranní panel"
 }
