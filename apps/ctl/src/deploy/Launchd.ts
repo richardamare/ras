@@ -3,7 +3,7 @@ import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Schedule from "effect/Schedule"
 import type * as Layout from "./Layout.ts"
-import * as Shell from "./Shell.ts"
+import * as Shell from "../shell/Shell.ts"
 
 export const api = "com.richardamare.ras"
 export const ctl = "com.richardamare.ras.ctl"

@@ -4,7 +4,7 @@ import * as FileSystem from "effect/FileSystem"
 import * as Option from "effect/Option"
 import * as Order from "effect/Order"
 import * as Path from "effect/Path"
-import * as Shell from "./Shell.ts"
+import * as Shell from "../shell/Shell.ts"
 
 /** Written last into a release, so a half-installed folder has none. */
 export const marker = "release"

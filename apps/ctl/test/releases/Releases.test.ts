@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest"
-import * as Launchd from "../src/Launchd.ts"
-import * as Releases from "../src/Releases.ts"
+import * as Launchd from "../../src/deploy/Launchd.ts"
+import * as Releases from "../../src/releases/Releases.ts"
 
 describe("the releases", () => {
   it("expires all but the linked releases and the newest three", () => {
