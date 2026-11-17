@@ -37,6 +37,9 @@ export class Locator {
   last() {
     return new Locator(this.raw.last())
   }
+  nth(index: number) {
+    return new Locator(this.raw.nth(index))
+  }
 
   click() {
     return Effect.promise(() => this.raw.click())
@@ -44,12 +47,21 @@ export class Locator {
   fill(value: string) {
     return Effect.promise(() => this.raw.fill(value))
   }
+  get blur() {
+    return Effect.promise(() => this.raw.blur())
+  }
   waitFor(options?: Parameters<Playwright.Locator["waitFor"]>[0]) {
     return Effect.promise(() => this.raw.waitFor(options))
   }
   /** Drags this element onto `target` with the browser's own drag and drop. */
   dragTo(target: Locator) {
     return Effect.promise(() => this.raw.dragTo(target.raw))
+  }
+  /** The current values of the inputs this matches, in order. */
+  get inputValues() {
+    return Effect.promise(() =>
+      this.raw.evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value))
+    )
   }
   get count() {
     return Effect.promise(() => this.raw.count())
@@ -78,6 +90,9 @@ export class Page {
   /** Opens `path` on the page's origin, or a whole URL. */
   goto(path: string) {
     return Effect.asVoid(Effect.promise(() => this.raw.goto(path)))
+  }
+  get reload() {
+    return Effect.asVoid(Effect.promise(() => this.raw.reload()))
   }
   waitForURL(matches: (url: URL) => boolean) {
     return Effect.promise(() => this.raw.waitForURL(matches))
