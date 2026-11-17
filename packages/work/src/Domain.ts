@@ -1,4 +1,5 @@
 import * as Schema from "effect/Schema"
+import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
@@ -41,8 +42,8 @@ export class Space extends Schema.Class<Space>("Space")({
   name: Schema.String,
   color: Color,
   position: Schema.Int,
-  /** The calendar its work blocks are written to, chosen once calendars exist. */
-  calendar: Schema.NullOr(Schema.String),
+  /** The calendar its work blocks are written to, one of the connected Outlook account. */
+  calendar: Schema.NullOr(Calendar.CalendarId),
   default: Schema.Boolean,
   archived: Schema.Boolean
 }) {}
@@ -101,6 +102,9 @@ export const SpaceChange = Schema.Struct({
   name: Schema.optionalKey(Schema.String.check(Schema.isNonEmpty())),
   color: Schema.optionalKey(Color),
   position: Schema.optionalKey(Schema.Int),
+  calendar: Schema.optionalKey(Schema.NullOr(Calendar.CalendarId)).annotate({
+    description: "The calendar the space's work blocks are written to, one of the connected Outlook account."
+  }),
   default: Schema.optionalKey(Schema.Literal(true)).annotate({ description: "Makes this the default space." })
 })
 

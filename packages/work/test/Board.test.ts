@@ -3,6 +3,7 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as TestClock from "effect/testing/TestClock"
 import * as Global from "@ras/global"
+import * as CalendarTesting from "@ras/calendar/testing"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as Board from "../src/Board.ts"
@@ -18,7 +19,7 @@ const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A
 const asAgent = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.flatMap(Global.actingAs, (actingAs) => actingAs(scheduler)(effect))
 
-layer(Testing.layer([Module.module]))("the board", (test) => {
+layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sample))("the board", (test) => {
   test.effect("hands a task to an agent's poll, and back to the owner in review with the agent's comment", () =>
     Effect.gen(function* () {
       const board = yield* Board.Board
@@ -120,6 +121,19 @@ layer(Testing.layer([Module.module]))("the board", (test) => {
       yield* board.comment(task.id, { text: "Started." })
       yield* board.deleteTask(task.id)
       assert.strictEqual(yield* code(board.task(task.id)), "NotFound")
+    })
+  )
+  test.effect("writes a space's work blocks to a calendar of the connected account and refuses any other", () =>
+    Effect.gen(function* () {
+      const board = yield* Board.Board
+      const [personal] = yield* board.spaces
+      assert.strictEqual(
+        yield* code(board.changeSpace(personal!.id, { calendar: CalendarTesting.work })),
+        "work.space.calendar"
+      )
+      const changed = yield* board.changeSpace(personal!.id, { calendar: CalendarTesting.personal })
+      assert.strictEqual(changed.calendar, CalendarTesting.personal)
+      assert.strictEqual((yield* board.spaces)[0]!.calendar, CalendarTesting.personal)
     })
   )
 })

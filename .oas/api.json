@@ -1516,6 +1516,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -1608,6 +1618,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -1627,6 +1647,19 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
+                  },
+                  "calendar": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "maximum": 9007199254740991,
+                        "exclusiveMinimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The calendar the space's work blocks are written to, one of the connected Outlook account."
                   },
                   "default": {
                     "type": "boolean",
@@ -1706,6 +1739,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -1808,6 +1851,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -1916,6 +1969,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         }
       },
@@ -1982,6 +2045,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -2150,6 +2223,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         }
       },
@@ -2205,6 +2288,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -2341,6 +2434,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         }
       },
@@ -2407,6 +2510,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -2556,6 +2669,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         }
       }
@@ -2624,6 +2747,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -2717,6 +2850,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
                 }
               }
             }
@@ -2814,6 +2957,16 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
           }
         }
       }
@@ -2830,6 +2983,23 @@
           }
         },
         "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "SourceFailedEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["SourceFailed"]
+          },
+          "source": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "source", "reason"],
         "additionalProperties": false
       },
       "InvalidEncoded": {
@@ -3262,7 +3432,9 @@
           "calendar": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer",
+                "maximum": 9007199254740991,
+                "exclusiveMinimum": 0
               },
               {
                 "type": "null"
@@ -3277,23 +3449,6 @@
           }
         },
         "required": ["id", "name", "color", "position", "calendar", "default", "archived"],
-        "additionalProperties": false
-      },
-      "SourceFailedEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["SourceFailed"]
-          },
-          "source": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          }
-        },
-        "required": ["_tag", "source", "reason"],
         "additionalProperties": false
       },
       "CreatedEncoded": {

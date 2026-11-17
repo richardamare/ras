@@ -4,6 +4,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Struct from "effect/Struct"
 import * as SqlClient from "effect/sql/SqlClient"
+import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Time from "@ras/kernel/Time"
 import * as Domain from "./Domain.ts"
@@ -24,10 +25,13 @@ const SpaceRow = Schema.Struct({
   name: Schema.String,
   color: Domain.Color,
   position: Schema.Int,
-  calendar: Schema.NullOr(Schema.String),
+  calendar: Schema.NullOr(Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId))),
   default: Schema.BooleanFromBit,
   archived: Schema.BooleanFromBit
 })
+
+/** The column keeps the calendar's id as text. */
+const calendarText = (space: Domain.Space) => (space.calendar === null ? null : String(space.calendar))
 
 const spaceColumns = (sql: SqlClient.SqlClient) =>
   sql`SELECT id, name, color, position, calendar, is_default AS "default", archived_at IS NOT NULL AS archived FROM work_spaces`
@@ -53,7 +57,7 @@ export const insertSpace = (space: Domain.Space) =>
     SqlClient.SqlClient.use(
       (sql) => sql`
         INSERT INTO work_spaces (id, name, color, position, calendar, is_default)
-        VALUES (${space.id}, ${space.name}, ${space.color}, ${space.position}, ${space.calendar}, 0)`
+        VALUES (${space.id}, ${space.name}, ${space.color}, ${space.position}, ${calendarText(space)}, 0)`
     )
   )
 
@@ -65,7 +69,7 @@ export const updateSpace = (space: Domain.Space) =>
         yield* sql`
           UPDATE work_spaces
           SET name = ${space.name}, color = ${space.color}, position = ${space.position},
-              is_default = ${space.default ? 1 : 0}
+              calendar = ${calendarText(space)}, is_default = ${space.default ? 1 : 0}
           WHERE id = ${space.id}`
       })
     )

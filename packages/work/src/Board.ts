@@ -4,6 +4,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as SqlClient from "effect/sql/SqlClient"
+import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
@@ -11,7 +12,11 @@ import * as Time from "@ras/kernel/Time"
 import * as Domain from "./Domain.ts"
 import * as Store from "./Store.ts"
 
-type Write<A> = Effect.Effect<A, Errors.Refused | Errors.NotFound | Errors.Invalid, Global.CurrentActor>
+type Write<A> = Effect.Effect<
+  A,
+  Errors.Refused | Errors.NotFound | Errors.Invalid | Errors.SourceFailed,
+  Global.CurrentActor
+>
 type Read<A> = Effect.Effect<A, Errors.NotFound | Errors.Invalid>
 
 const now = Effect.map(DateTime.now, DateTime.formatIso)
@@ -71,6 +76,7 @@ export class Board extends Context.Service<
       const sql = yield* SqlClient.SqlClient
       const writes = yield* Global.Writes
       const agents = yield* Global.Agents
+      const calendar = yield* Calendar.Calendar
       const db = Effect.provideService(SqlClient.SqlClient, sql)
 
       const space = (id: string) => db(Store.spaceById(id)).pipe(orNotFound<Domain.Space>("space", id))
@@ -98,6 +104,20 @@ export class Board extends Context.Service<
             ? refuse("work.space.archived", `The space ${found.name} is archived.`, "Put the work in another space.")
             : Effect.succeed(found)
         )
+
+      /** A calendar work blocks can go to: connected, on, and writable. */
+      const personal = (id: Calendar.CalendarId) =>
+        Effect.gen(function* () {
+          const found = (yield* calendar.calendars(true)).find((entry) => entry.id === id)
+          if (found === undefined) return yield* new Errors.NotFound({ subject: "calendar", id: String(id) })
+          if (!found.writable || !found.enabled)
+            return yield* refuse(
+              "work.space.calendar",
+              `"${found.name}" is ${found.enabled ? "not in the Outlook account connected to ras" : "turned off"}, and work blocks go only to a calendar ras writes.`,
+              "Choose a calendar of the connected Outlook account that is on."
+            )
+          return found
+        })
 
       const assignable = (person: Domain.Person) =>
         person === "owner" ? Effect.void : Effect.asVoid(agents.active(person))
@@ -152,6 +172,7 @@ export class Board extends Context.Service<
                 `The space ${before.name} is archived, so it cannot be the default.`
               )
             }
+            if (change.calendar !== undefined && change.calendar !== null) yield* personal(change.calendar)
             const after = new Domain.Space({ ...before, ...change, default: change.default ?? before.default })
             const diff = Global.changed(Global.snapshot(Domain.Space, before), Global.snapshot(Domain.Space, after))
             return yield* run(
