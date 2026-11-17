@@ -80,6 +80,8 @@ export class Blocks extends Context.Service<
       readonly from: Time.PragueLocal
       readonly to: Time.PragueLocal
     }) => Effect.Effect<ReadonlyArray<Block.Block>, Errors.Invalid>
+    /** A task's blocks, earliest first. */
+    readonly ofTask: (task: Task.TaskId) => Effect.Effect<ReadonlyArray<Block.Block>, Errors.NotFound>
     readonly running: Effect.Effect<Option.Option<Block.Block>>
     /**
      * Adds a block of an open task from its start to its end, past, future or across now; a draft has no event until it
@@ -215,6 +217,13 @@ export class Blocks extends Context.Service<
               DateTime.formatIso(now)
             )
             return found.map((row) => view(row, now))
+          }),
+
+        ofTask: (task) =>
+          Effect.gen(function* () {
+            yield* Effect.flatMap(tasks.byId(task), Errors.orNotFound("task", task))
+            const now = yield* DateTime.now
+            return (yield* storedBlocks.ofTask(task)).map((row) => view(row, now))
           }),
 
         running: Effect.gen(function* () {
