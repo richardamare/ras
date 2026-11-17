@@ -357,8 +357,8 @@ export class Board extends Context.Service<
         deleteTask: (id) =>
           Effect.gen(function* () {
             const { summary, body } = yield* stored(id)
-            const now = yield* DateTime.now
-            if ((yield* storedBlocks.ofTask(id)).some((row) => Blocks.started(row, now)))
+            const current = yield* DateTime.now
+            if ((yield* storedBlocks.ofTask(id)).some((row) => Blocks.started(row, current)))
               return Option.some(yield* changeTask(id, { status: "done" }))
             yield* blocks.release(id)
             yield* run(

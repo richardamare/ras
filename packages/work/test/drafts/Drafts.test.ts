@@ -13,7 +13,7 @@ import * as Module from "../../src/Module.ts"
 
 const inHours = (hours: number) => Effect.map(DateTime.now, (now) => Time.toPragueLocal(DateTime.add(now, { hours })))
 
-const day = (local: Time.PragueLocal) => Time.PragueDate.make(local.slice(0, 10))
+const dayOf = (local: Time.PragueLocal) => Time.PragueDate.make(local.slice(0, 10))
 
 /** A block draft and an event draft a day apart, and one more event draft beside the first. */
 const setUp = Effect.gen(function* () {
@@ -37,7 +37,7 @@ const setUp = Effect.gen(function* () {
     draft: true
   })
   yield* Ref.set(CalendarTesting.sampleCalls, [])
-  return { block, call: call.draft!, later: later.draft!, day: day(start) }
+  return { block, call: call.draft!, later: later.draft!, day: dayOf(start) }
 })
 
 const creates = Effect.map(Ref.getAndSet(CalendarTesting.sampleCalls, []), (calls) =>

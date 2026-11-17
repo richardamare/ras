@@ -251,9 +251,9 @@ describe("refreshes after writes", () => {
         const calendar = yield* Calendars.Calendar
         yield* Effect.forEach(Arr.range(1, 10), () => calendar.refresh, { discard: true })
         yield* TestClock.adjust("1 second")
-        const soon = yield* Ref.get(syncs)
+        const afterBurst = yield* Ref.get(syncs)
         yield* TestClock.adjust("1 minute")
-        return [soon, yield* Ref.get(syncs)] as const
+        return [afterBurst, yield* Ref.get(syncs)] as const
       }).pipe(Effect.provide(calendarLayer))
       assert.isAtLeast(soon, 1)
       assert.isAtMost(soon, 2)

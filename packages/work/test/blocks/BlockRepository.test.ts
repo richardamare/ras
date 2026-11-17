@@ -78,6 +78,8 @@ const withTask = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     return yield* effect
   }).pipe(Effect.provide(repositories))
 
+const span = (start: string, end: string) => ({ start, end })
+
 const ids = (blocks: ReadonlyArray<BlockRepository.StoredBlock>) => Arr.map(blocks, (each) => each.id)
 
 describe("BlockRepository", () => {
@@ -87,7 +89,6 @@ describe("BlockRepository", () => {
         const running = block(1, "2026-11-18T08:00:00Z", Option.none(), Option.some("event-1"))
         yield* save(running)
         const stored = yield* BlockRepository.BlockRepository
-        const span = (start: string, end: string) => ({ start, end })
         assert.deepStrictEqual(
           ids(yield* stored.overlapping(span("2026-11-18T09:00:00Z", "2026-11-18T10:00:00Z"), "2026-11-18T09:30:00Z")),
           [running.id]

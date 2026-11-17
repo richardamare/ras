@@ -21,6 +21,36 @@ interface Pending {
   >
 }
 
+const chosen = (all: ReadonlyArray<Pending>, selection: Confirmation.ConfirmDrafts) =>
+  Effect.gen(function* () {
+    const { day, drafts } = selection
+    if (drafts !== undefined && day !== undefined)
+      return yield* new Errors.Invalid({ reason: "Name the drafts or a day, not both." })
+    if (day !== undefined) return all.filter((draft) => draft.start.startsWith(day))
+    if (drafts === undefined) return all
+    const missing = drafts.filter((id) => !all.some((draft) => draft.id === id))
+    if (missing.length > 0)
+      return yield* new Errors.Invalid({
+        reason: `Not a draft: ${missing.join(", ")}. Find the drafts with search_calendar.`
+      })
+    return all.filter((draft) => drafts.includes(draft.id))
+  })
+
+const outcome = (draft: Pending) =>
+  draft.confirm.pipe(
+    Effect.as(Option.none<string>()),
+    Effect.catch((error) => Effect.succeed(Option.some(error.message))),
+    Effect.map(
+      (refusal) =>
+        new Confirmation.DraftOutcome({
+          id: draft.id,
+          title: draft.title,
+          start: draft.start,
+          refusal: Option.getOrNull(refusal)
+        })
+    )
+  )
+
 /** Event drafts and block drafts, confirmed or discarded together. */
 export class Drafts extends Context.Service<
   Drafts,
@@ -56,36 +86,6 @@ export class Drafts extends Context.Service<
         }))
         return [...eventDrafts, ...blockDrafts].toSorted((a, b) => a.start.localeCompare(b.start))
       })
-
-      const chosen = (all: ReadonlyArray<Pending>, selection: Confirmation.ConfirmDrafts) =>
-        Effect.gen(function* () {
-          const { day, drafts } = selection
-          if (drafts !== undefined && day !== undefined)
-            return yield* new Errors.Invalid({ reason: "Name the drafts or a day, not both." })
-          if (day !== undefined) return all.filter((draft) => draft.start.startsWith(day))
-          if (drafts === undefined) return all
-          const missing = drafts.filter((id) => !all.some((draft) => draft.id === id))
-          if (missing.length > 0)
-            return yield* new Errors.Invalid({
-              reason: `Not a draft: ${missing.join(", ")}. Find the drafts with search_calendar.`
-            })
-          return all.filter((draft) => drafts.includes(draft.id))
-        })
-
-      const outcome = (draft: Pending) =>
-        draft.confirm.pipe(
-          Effect.as(Option.none<string>()),
-          Effect.catch((error) => Effect.succeed(Option.some(error.message))),
-          Effect.map(
-            (refusal) =>
-              new Confirmation.DraftOutcome({
-                id: draft.id,
-                title: draft.title,
-                start: draft.start,
-                refusal: Option.getOrNull(refusal)
-              })
-          )
-        )
 
       return Drafts.of({
         confirm: (selection) =>

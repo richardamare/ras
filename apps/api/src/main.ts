@@ -95,7 +95,7 @@ const graph = Command.make("graph").pipe(
   Command.withDescription("Connects the owner's Outlook account, whose calendars Graph writes."),
   Command.withSubcommands([
     Command.make("connect", { database }, (flags) =>
-      Global.Graph.use((graph) => graph.connect).pipe(
+      Global.Graph.use((outlookGraph) => outlookGraph.connect).pipe(
         Effect.flatMap((url) => Console.log(`Open this within ten minutes and allow ras the calendar:\n${url.href}`)),
         Effect.provide(outlook(flags.database))
       )
@@ -103,7 +103,7 @@ const graph = Command.make("graph").pipe(
       Command.withDescription("Prints the Microsoft sign-in that connects Outlook; ras's callback stores the tokens.")
     ),
     Command.make("status", { database }, (flags) =>
-      Global.Graph.use((graph) => graph.connection).pipe(
+      Global.Graph.use((outlookGraph) => outlookGraph.connection).pipe(
         Effect.flatMap((connection) =>
           Console.log(
             Option.match(connection, {
