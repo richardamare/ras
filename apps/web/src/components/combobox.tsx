@@ -8,6 +8,10 @@ import * as Utils from "@/lib/utils"
 
 export type Option = { readonly value: string; readonly label: string }
 
+/** An option stays when its label holds what was typed; its value is an id and never matches. */
+export const filter = (_value: string, search: string, keywords?: ReadonlyArray<string>) =>
+  keywords?.some((label) => label.toLowerCase().includes(search.trim().toLowerCase())) === true ? 1 : 0
+
 /** A select whose options are narrowed by typing their label. */
 export function Combobox({
   label,
@@ -41,7 +45,7 @@ export function Combobox({
         <LucideReact.ChevronDownIcon className="pointer-events-none size-4 shrink-0 text-muted-foreground" />
       </Popover.PopoverTrigger>
       <Popover.PopoverContent align="start" className="w-auto max-w-sm min-w-(--radix-popover-trigger-width) p-0">
-        <Command.Command>
+        <Command.Command filter={filter}>
           <Command.CommandInput placeholder={t("search")} />
           <Command.CommandList>
             <Command.CommandEmpty>{t("noResults")}</Command.CommandEmpty>
