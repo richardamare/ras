@@ -268,6 +268,79 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("edits a task's title, brief, project, priority, deadline, estimate and links in its dialog", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const project = yield* client.work.addProject({ payload: { name: Suite.unique("Home"), space: space.id } })
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Draft"), body: "Old brief." } })
+        const read = client.work.task({ params: { id: task.id } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog")
+        yield* dialog.getByText("Old brief.").waitFor()
+
+        const title = Suite.unique("Renamed")
+        yield* dialog.getByRole("button", { name: "Edit title and brief" }).click()
+        yield* dialog.getByLabel("Task", { exact: true }).fill(title)
+        yield* dialog.getByLabel("Brief", { exact: true }).fill("New brief.")
+        yield* dialog.getByRole("button", { name: "Save" }).click()
+        yield* becomes(read, (found) => found.title === title && found.body === "New brief.")
+        yield* page.getByRole("dialog", { name: title }).getByText("New brief.").waitFor()
+
+        yield* choose(page, dialog, "Project", project.name)
+        yield* becomes(read, (found) => found.project === project.id)
+        yield* choose(page, dialog, "Priority", "Urgent")
+        yield* becomes(read, (found) => found.priority === "urgent")
+
+        yield* dialog.getByLabel("Deadline").fill("2031-03-14")
+        yield* becomes(read, (found) => found.deadline === "2031-03-14")
+
+        yield* dialog.getByLabel("Estimate").fill("1:30")
+        yield* dialog.getByLabel("Estimate").blur
+        yield* becomes(read, (found) => found.estimate === 90)
+
+        const issue = "https://github.com/acme/app/issues/7"
+        yield* dialog.getByLabel("GitHub issue or pull request").fill(issue)
+        yield* dialog.getByRole("button", { name: "Attach" }).click()
+        yield* becomes(read, (found) => found.links.includes(issue))
+        yield* dialog.getByRole("button", { name: `Detach ${issue}` }).click()
+        yield* becomes(read, (found) => found.links.length === 0)
+      })
+    )
+
+    it.effect("deletes a task from its dialog, and moves one with work done on it to Done instead", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const project = yield* client.work.addProject({ payload: { name: Suite.unique("Bin"), space: space.id } })
+        const idle = yield* client.work.addTask({ payload: { title: Suite.unique("Idle"), project: project.id } })
+        const worked = yield* client.work.addTask({ payload: { title: Suite.unique("Worked"), project: project.id } })
+        const end = Time.toPragueLocal(DateTime.subtract(yield* DateTime.now, { days: 1 }))
+        yield* client.work.log({ payload: { task: worked.id, end, minutes: 30 } })
+        const page = yield* Suite.signedInPage
+
+        const remove = (task: typeof idle) =>
+          Effect.gen(function* () {
+            yield* page.goto(`/tasks?task=${task.id}`)
+            yield* page.getByRole("dialog", { name: task.title }).getByRole("button", { name: "Delete task" }).click()
+            yield* page
+              .getByRole("dialog", { name: `Delete “${task.title}”?` })
+              .getByRole("button", { name: "Delete" })
+              .click()
+            yield* page.getByRole("dialog", { name: task.title }).waitFor({ state: "detached" })
+          })
+
+        yield* remove(idle)
+        yield* page.getByText(`${idle.title} is deleted.`).waitFor()
+        yield* becomes(client.work.tasks({ query: {} }), (tasks) => !tasks.some((one) => one.id === idle.id))
+
+        yield* remove(worked)
+        yield* page.getByText(`${worked.title} has work on it, so it moved to Done.`).waitFor()
+        yield* becomes(client.work.task({ params: { id: worked.id } }), (found) => found.status === "done")
+      })
+    )
+
     it.effect("shows a project's progress, its tasks and its upcoming blocks", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

@@ -89,5 +89,27 @@
     "reopen": "Reopen",
     "undo": "Undo",
     "closed": "{{title}} is done."
+  },
+  "edit": {
+    "button": "Edit title and brief",
+    "save": "Save",
+    "cancel": "Cancel",
+    "badEstimate": "Type the estimate as 1:30 or as minutes."
+  },
+  "links": {
+    "title": "Links",
+    "url": "GitHub issue or pull request",
+    "placeholder": "https://github.com/owner/repo/issues/1",
+    "add": "Attach",
+    "remove": "Detach {{url}}"
+  },
+  "delete": {
+    "button": "Delete task",
+    "title": "Delete “{{title}}”?",
+    "description": "Its comments, links and planned blocks go with it. A task with work already done on it keeps its time and moves to Done instead.",
+    "confirm": "Delete",
+    "keep": "Keep task",
+    "deleted": "{{title}} is deleted.",
+    "closed": "{{title}} has work on it, so it moved to Done."
   }
 }

@@ -91,5 +91,27 @@
     "reopen": "Znovu otevřít",
     "undo": "Vrátit",
     "closed": "Hotovo: {{title}}"
+  },
+  "edit": {
+    "button": "Upravit název a zadání",
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "badEstimate": "Odhad zadejte jako 1:30 nebo v minutách."
+  },
+  "links": {
+    "title": "Odkazy",
+    "url": "GitHub issue nebo pull request",
+    "placeholder": "https://github.com/owner/repo/issues/1",
+    "add": "Připojit",
+    "remove": "Odpojit {{url}}"
+  },
+  "delete": {
+    "button": "Smazat úkol",
+    "title": "Smazat „{{title}}“?",
+    "description": "Smažou se i jeho komentáře, odkazy a naplánované bloky. Úkol, na kterém už se pracovalo, si odpracovaný čas ponechá a místo smazání se přesune do Hotovo.",
+    "confirm": "Smazat",
+    "keep": "Ponechat úkol",
+    "deleted": "Smazáno: {{title}}",
+    "closed": "Na úkolu {{title}} se už pracovalo, proto se přesunul do Hotovo."
   }
 }
