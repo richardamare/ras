@@ -23,7 +23,7 @@ const replies = ["accept", "tentative", "decline"] as const
 const line = (icon: React.ReactNode, children: React.ReactNode) => (
   <div className="flex items-start gap-2.5">
     <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">{icon}</span>
-    <div className="min-w-0 flex-1">{children}</div>
+    <div className="min-w-0 flex-1 break-words">{children}</div>
   </div>
 )
 
