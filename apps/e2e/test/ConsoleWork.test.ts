@@ -247,6 +247,29 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("truncates a long deadline title on the home page and keeps its status in the card", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const due = yield* client.work.addTask({
+          payload: { title: Suite.unique(`Long${" deadline".repeat(20)}`), deadline: yield* today }
+        })
+        const page = yield* Suite.signedInPage
+        yield* Effect.promise(() => page.raw.setViewportSize({ width: 1280, height: 720 }))
+        yield* page.goto("/")
+        const title = page.getByText(due.title).first()
+        yield* title.waitFor()
+
+        const overflow = yield* Effect.promise(() =>
+          title.raw.evaluate((text) => {
+            const row = text.closest("button")!
+            const card = text.closest('[data-slot="card"]')!
+            return row.getBoundingClientRect().right - card.getBoundingClientRect().right
+          })
+        )
+        assert.isAtMost(overflow, 0)
+      })
+    )
+
     it.effect("lists today's deadlines, what waits in review and today's calendar on the home page", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
