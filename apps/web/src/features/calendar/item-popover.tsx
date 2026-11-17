@@ -8,6 +8,7 @@ import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Popover from "@/components/ui/popover"
 import * as BlockMoveDialog from "@/features/calendar/block-move-dialog"
+import * as DraftControls from "@/features/calendar/draft-controls"
 import * as Skeleton from "@/components/ui/skeleton"
 import type * as Grid from "@/features/calendar/grid"
 import * as Pointer from "@/features/calendar/pointer"
@@ -15,6 +16,7 @@ import * as Url from "@/features/calendar/url"
 import * as Completion from "@/features/tasks/completion"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as WorkActions from "@/features/tasks/work-actions"
+import * as WorkLog from "@/features/tasks/work-log"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
@@ -194,19 +196,13 @@ function BlockCard({
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   const work = ReactI18next.useTranslation("Work").t
-  const client = ReactQuery.useQueryClient()
   const when = useWhen()
   const task = ReactQuery.useQuery(Queries.workTaskOptions({ path: { id: block.task } }))
   const moveDialog = BlockMoveDialog.useBlockMoveDialog()
   const clock = WorkActions.useClock()
-  const remove = ReactQuery.useMutation({
-    ...Queries.workRemoveMutation(),
-    onSuccess: () => {
-      onDone()
-      return client.invalidateQueries()
-    },
-    onError: (error) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
-  })
+  const remove = WorkLog.useRemoveBlock()
+  const confirm = DraftControls.useConfirmDrafts(onDone)
+  const running = block.state === "running"
 
   return (
     <>
@@ -237,31 +233,48 @@ function BlockCard({
           )
         )}
       </div>
-      <div className="flex items-center gap-1.5 border-t pt-2.5">
-        {(block.state === "planned" || block.state === "draft") && (
-          <IconButton.IconButton
-            label={t("item.removeBlock")}
-            className="me-auto text-destructive"
-            disabled={remove.isPending}
-            onClick={() => remove.mutate({ path: { id: block.id } })}
-          >
-            <LucideReact.Trash2Icon />
-          </IconButton.IconButton>
+      <div className="flex flex-wrap items-center gap-1.5 border-t pt-2.5">
+        {!running && (
+          <>
+            <IconButton.IconButton
+              label={t("item.removeBlock")}
+              className="me-auto text-destructive"
+              onClick={() => {
+                remove(block)
+                onDone()
+              }}
+            >
+              <LucideReact.Trash2Icon />
+            </IconButton.IconButton>
+            <Button.Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                moveDialog.open({ block })
+                onDone()
+              }}
+            >
+              <LucideReact.CalendarClockIcon />
+              {t("item.moveBlock")}
+            </Button.Button>
+          </>
         )}
-        {(block.state === "planned" || block.state === "draft") && (
+        {block.state === "draft" && (
           <Button.Button
             size="sm"
             variant="outline"
-            onClick={() => {
-              moveDialog.open({ block })
-              onDone()
-            }}
+            disabled={confirm.isPending}
+            onClick={() =>
+              confirm.mutate({
+                body: { drafts: [block.id] as unknown as NonNullable<Api.WorkConfirmDraftsData["body"]["drafts"]> }
+              })
+            }
           >
-            <LucideReact.CalendarClockIcon />
-            {t("item.moveBlock")}
+            <LucideReact.CheckIcon />
+            {t("event.confirm")}
           </Button.Button>
         )}
-        {block.state === "running" ? (
+        {running ? (
           <Button.Button size="sm" variant="outline" disabled={clock.busy} onClick={clock.stop}>
             <LucideReact.SquareIcon />
             {work("work.stop")}

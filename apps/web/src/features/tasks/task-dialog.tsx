@@ -21,6 +21,7 @@ import * as Utils from "@/lib/utils"
 import * as CopyLink from "@/components/copy-link"
 import * as TaskUrl from "@/features/tasks/url"
 import * as WorkActions from "@/features/tasks/work-actions"
+import * as WorkLog from "@/features/tasks/work-log"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -183,6 +184,10 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
           <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("links.title")}</h3>
           <TaskEdit.Links task={found} />
         </section>
+        <section className="grid gap-2">
+          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("log.title")}</h3>
+          <WorkLog.WorkLog task={id} />
+        </section>
         <Separator.Separator />
         <section className="grid gap-3">
           <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -245,7 +250,7 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
   )
 }
 
-/** The task the address names, over whichever page is open, where its fields, brief and links are edited and it is commented on. */
+/** The task the address names, over whichever page is open, where its fields, brief, links and work blocks are edited and it is commented on. */
 export function TaskDialog() {
   const [{ task, comment }, set] = TaskUrl.useTaskParams()
   return (

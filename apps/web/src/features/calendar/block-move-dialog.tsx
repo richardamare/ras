@@ -24,7 +24,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-/** Moves a planned or draft work block to another day or time, typed rather than dragged. */
+/** Moves or resizes a work block that is not running, typed rather than dragged. */
 export function BlockMoveDialog({
   open,
   onOpenChange,

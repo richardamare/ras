@@ -402,6 +402,42 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("lists a task's work blocks in its dialog, changes a finished block's time and removes it", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Logged"), space: space.id } })
+        const past = Time.addDays(yield* today, -3)
+        const ahead = Time.addDays(yield* today, 40)
+        const at = (date: string, clock: string) => Time.PragueLocal.make(`${date}T${clock}`)
+        yield* client.work.add({ payload: { task: task.id, start: at(past, "08:00"), end: at(past, "09:00") } })
+        yield* client.work.add({ payload: { task: task.id, start: at(ahead, "10:00"), end: at(ahead, "10:30") } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog", { name: task.title })
+        const row = (text: string) => dialog.getByRole("listitem").filter({ hasText: text })
+
+        yield* row("10:00–10:30").getByText("Planned").waitFor()
+        yield* row("08:00–09:00").getByText("Done").waitFor()
+        yield* row("08:00–09:00").getByRole("button", { name: "Change time" }).click()
+        const move = page.getByRole("dialog", { name: "Move work block" })
+        yield* move.getByLabel("End").fill("10:15")
+        yield* move.getByRole("button", { name: "Move" }).click()
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent === 135)
+        yield* row("08:00–10:15").getByText("2:15").waitFor()
+
+        yield* row("08:00–10:15").getByRole("button", { name: "Remove block" }).click()
+        const confirm = page.getByRole("dialog", { name: "Remove this block?" })
+        yield* confirm.getByRole("button", { name: "Remove block" }).click()
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent === 0)
+        const left = yield* client.work.taskBlocks({ params: { id: task.id } })
+        assert.deepStrictEqual(
+          left.map((block) => block.start),
+          [at(ahead, "10:00")]
+        )
+      })
+    )
+
     it.effect("shows a project's progress, its tasks and its upcoming blocks", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
