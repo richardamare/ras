@@ -24,7 +24,7 @@ const replies = ["accept", "tentative", "decline"] as const
 const line = (icon: React.ReactNode, children: React.ReactNode) => (
   <div className="flex items-start gap-2.5">
     <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">{icon}</span>
-    <div className="min-w-0 flex-1 break-words">{children}</div>
+    <div className="min-w-0 flex-1 wrap-anywhere">{children}</div>
   </div>
 )
 
@@ -50,7 +50,7 @@ function Heading({ color, title, detail }: { color: string; title: string; detai
     <div className="flex items-start gap-2.5 pe-14">
       <span className="mt-1 h-3.5 w-1 shrink-0 rounded-full" style={{ background: color }} aria-hidden="true" />
       <div className="grid min-w-0 gap-0.5">
-        <h2 className="font-heading leading-snug font-medium break-words">{title}</h2>
+        <h2 className="font-heading leading-snug font-medium wrap-anywhere">{title}</h2>
         <p className="text-xs text-muted-foreground">{detail}</p>
       </div>
     </div>
