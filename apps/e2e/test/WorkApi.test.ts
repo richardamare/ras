@@ -291,14 +291,16 @@ describe("the work API", () => {
       })
     )
 
-    it.effect("plans a block, lists it, moves it and removes it, and refuses an overlap and the past", () =>
+    it.effect("adds a block, one overlapping it, lists them, moves one and removes them", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
         const space = yield* workSpace
         const task = yield* client.work.addTask({ payload: { title: Suite.unique("Planned"), space: space.id } })
         const date = yield* day(30)
 
-        const block = yield* client.work.plan({ payload: { task: task.id, start: at(date, "09:00"), minutes: 60 } })
+        const block = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "10:00") }
+        })
         assert.deepInclude(block, {
           task: task.id,
           calendar: personal,
@@ -307,18 +309,13 @@ describe("the work API", () => {
         })
         assert.strictEqual(block.state, "planned")
 
+        const overlapping = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:30"), end: at(date, "10:00") }
+        })
         const listed = yield* client.work.blocks({ query: { from: at(date, "00:00"), to: at(date, "23:59") } })
-        assert.isTrue(listed.some((found) => found.id === block.id))
-
-        assert.strictEqual(
-          yield* Suite.refusal(client.work.plan({ payload: { task: task.id, start: at(date, "09:30"), minutes: 30 } })),
-          "work.block.overlap"
-        )
-        assert.strictEqual(
-          yield* Suite.refusal(
-            client.work.plan({ payload: { task: task.id, start: at(yield* day(-1), "09:00"), minutes: 30 } })
-          ),
-          "work.block.past"
+        assert.includeMembers(
+          listed.map((found) => found.id),
+          [block.id, overlapping.id]
         )
 
         const moved = yield* client.work.move({
@@ -328,12 +325,13 @@ describe("the work API", () => {
         assert.deepInclude(moved, { start: at(date, "14:00"), end: at(date, "15:30") })
 
         yield* client.work.remove({ params: { id: block.id } })
+        yield* client.work.remove({ params: { id: overlapping.id } })
         const after = yield* client.work.blocks({ query: { from: at(date, "00:00"), to: at(date, "23:59") } })
-        assert.isFalse(after.some((found) => found.id === block.id))
+        assert.isFalse(after.some((found) => found.task === task.id))
       })
     )
 
-    it.effect("refuses to plan work in a space without a calendar, on a done task and on an agent's task", () =>
+    it.effect("refuses to add work in a space without a calendar, on a done task and on an agent's task", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
         const date = yield* day(31)
@@ -341,7 +339,7 @@ describe("the work API", () => {
         const uncalendared = yield* client.work.addTask({ payload: { title: Suite.unique("Bare"), space: bare.id } })
         assert.strictEqual(
           yield* Suite.refusal(
-            client.work.plan({ payload: { task: uncalendared.id, start: at(date, "09:00"), minutes: 30 } })
+            client.work.add({ payload: { task: uncalendared.id, start: at(date, "09:00"), end: at(date, "09:30") } })
           ),
           "work.block.calendar"
         )
@@ -350,7 +348,9 @@ describe("the work API", () => {
         const done = yield* client.work.addTask({ payload: { title: Suite.unique("Done"), space: space.id } })
         yield* client.work.changeTask({ params: { id: done.id }, payload: { status: "done" } })
         assert.strictEqual(
-          yield* Suite.refusal(client.work.plan({ payload: { task: done.id, start: at(date, "10:00"), minutes: 30 } })),
+          yield* Suite.refusal(
+            client.work.add({ payload: { task: done.id, start: at(date, "10:00"), end: at(date, "10:30") } })
+          ),
           "work.block.done"
         )
 
@@ -362,7 +362,7 @@ describe("the work API", () => {
         })
         assert.strictEqual(
           yield* Suite.refusal(
-            client.work.plan({ payload: { task: theirs.id, start: at(date, "11:00"), minutes: 30 } })
+            client.work.add({ payload: { task: theirs.id, start: at(date, "11:00"), end: at(date, "11:30") } })
           ),
           "work.block.agent"
         )
@@ -376,11 +376,11 @@ describe("the work API", () => {
         const task = yield* client.work.addTask({ payload: { title: Suite.unique("Drafted"), space: space.id } })
         const date = yield* day(32)
 
-        const first = yield* client.work.plan({
-          payload: { task: task.id, start: at(date, "09:00"), minutes: 30, draft: true }
+        const first = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "09:30"), draft: true }
         })
-        const second = yield* client.work.plan({
-          payload: { task: task.id, start: at(date, "10:00"), minutes: 30, draft: true }
+        const second = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "10:00"), end: at(date, "10:30"), draft: true }
         })
         assert.deepStrictEqual([first.state, second.state], ["draft", "draft"])
 
@@ -426,13 +426,11 @@ describe("the work API", () => {
         assert.notStrictEqual(stopped.state, "running")
         assert.isNull(yield* client.work.running())
         assert.strictEqual(yield* Suite.refusal(client.work.stop()), "work.block.idle")
-        // A stopped block lasts a minute at least; removing it frees that minute for the other tests' timers.
-        yield* client.work.remove({ params: { id: stopped.id } })
       })
     )
 
     it.effect(
-      "logs work that happened, counts it as time spent, closes rather than deletes its task, and refuses the future",
+      "adds work that happened and work across now, counts what has ended, moves it anywhere, and closes rather than deletes its task",
       () =>
         Effect.gen(function* () {
           const client = yield* Suite.owner
@@ -440,27 +438,32 @@ describe("the work API", () => {
           const task = yield* client.work.addTask({ payload: { title: Suite.unique("Logged"), space: space.id } })
           const yesterday = yield* day(-1)
 
-          const logged = yield* client.work.log({
-            payload: { task: task.id, end: at(yesterday, "17:00"), minutes: 45 }
+          const logged = yield* client.work.add({
+            payload: { task: task.id, start: at(yesterday, "16:15"), end: at(yesterday, "17:00") }
           })
           assert.deepInclude(logged, { state: "done", start: at(yesterday, "16:15"), end: at(yesterday, "17:00") })
           assert.strictEqual((yield* client.work.task({ params: { id: task.id } })).spent, 45)
 
-          assert.strictEqual(
-            yield* Suite.refusal(
-              client.work.log({ payload: { task: task.id, end: at(yield* day(1), "17:00"), minutes: 30 } })
-            ),
-            "work.block.future"
-          )
-          assert.strictEqual(
-            yield* Suite.refusal(
-              client.work.move({
-                params: { id: logged.id },
-                payload: { start: at(yield* day(2), "09:00"), end: at(yield* day(2), "10:00") }
-              })
-            ),
-            "work.block.future"
-          )
+          const now = yield* DateTime.now
+          const across = yield* client.work.add({
+            payload: {
+              task: task.id,
+              start: Time.toPragueLocal(DateTime.subtract(now, { minutes: 20 })),
+              end: Time.toPragueLocal(DateTime.add(now, { minutes: 10 }))
+            }
+          })
+          assert.strictEqual(across.state, "planned")
+          assert.strictEqual((yield* client.work.task({ params: { id: task.id } })).spent, 45)
+
+          const moved = yield* client.work.move({
+            params: { id: logged.id },
+            payload: { start: at(yield* day(2), "09:00"), end: at(yield* day(2), "10:00") }
+          })
+          assert.strictEqual(moved.state, "planned")
+          yield* client.work.move({
+            params: { id: logged.id },
+            payload: { start: at(yesterday, "16:15"), end: at(yesterday, "17:00") }
+          })
 
           const kept = yield* client.work.deleteTask({ params: { id: task.id } })
           assert.deepInclude(kept, { id: task.id, status: "done" })

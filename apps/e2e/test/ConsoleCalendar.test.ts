@@ -275,7 +275,9 @@ describe("the console's calendar", () => {
         const space = yield* workSpace
         const task = yield* client.work.addTask({ payload: { title: Suite.unique("Blocked out"), space: space.id } })
         const date = yield* day(61)
-        const block = yield* client.work.plan({ payload: { task: task.id, start: at(date, "09:00"), minutes: 60 } })
+        const block = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "10:00") }
+        })
         const page = yield* Suite.signedInPage
         yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
 

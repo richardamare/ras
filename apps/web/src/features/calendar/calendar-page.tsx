@@ -72,7 +72,7 @@ export function CalendarPage() {
     onSuccess: () => client.invalidateQueries(),
     onError: (error: unknown) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
   }
-  const plan = ReactQuery.useMutation({ ...Queries.workPlanMutation(), ...settle })
+  const plan = ReactQuery.useMutation({ ...Queries.workAddMutation(), ...settle })
   const moveBlock = ReactQuery.useMutation({ ...Queries.workMoveMutation(), ...settle })
   const moveEvent = ReactQuery.useMutation({ ...Queries.calendarChangeEventMutation(), ...settle })
   const confirmDay = DraftControls.useConfirmDrafts()
@@ -129,16 +129,7 @@ export function CalendarPage() {
         onOpen={open}
         onCreate={(placement) => eventDialog.open({ state: { kind: "create", placement, draft: drafting } })}
         onMove={move}
-        onPlanTask={(id, placement) =>
-          plan.mutate({
-            body: {
-              task: id,
-              start: Pointer.span(placement).start,
-              minutes: placement.end - placement.start,
-              draft: drafting
-            }
-          })
-        }
+        onPlanTask={(id, placement) => plan.mutate({ body: { task: id, ...Pointer.span(placement), draft: drafting } })}
         onConfirmDay={(day) => {
           if (!confirmDay.isPending) confirmDay.mutate({ body: { day } })
         }}

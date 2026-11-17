@@ -85,8 +85,10 @@ An agent learns about its work by polling: its routine calls `tasks` with its as
 
 A work block is a row and a plain event in its space's calendar, titled with the project and the task, carrying the block's marker in its notes so the calendar opens the task from it. Every change to a block changes its event in the same action; a block the calendar refuses is not saved.
 
-- **Plan** a block at a start and length, or as a draft. **Start** writes the event from now; **stop** ends it at the real time; one block runs at a time. **Log** time already worked with its end. **Move, resize, remove** a block only through the block, never as a plain event.
-- **A block draft** is a block flagged as a draft with no event. A running or logged block is never a draft.
+- **Add** a block from a start to an end, or as a draft. The block may lie in the past, in the future or across now. **Start** writes the event from now; **stop** ends it at the real time; one block runs at a time. **Move, resize, remove** a block only through the block, never as a plain event.
+- **Blocks may overlap**, each other and any event. Each counts toward its own task's time spent.
+- **A block's state follows the clock.** A block with an event is `planned` until its end, then `done`.
+- **A block draft** is a block flagged as a draft with no event. A running block is never a draft.
 - **Drafts are confirmed together.** `confirm_drafts` writes given drafts, a day's drafts or all of them, events and blocks alike, each through the path a new one takes, and lists the refused ones with the reason. Discarding deletes every draft.
 
 ## memory
@@ -111,13 +113,13 @@ iCloud Mail, read-only. `search_mail` finds messages by query; `recent_mail` lis
 
 One MCP server at `/mcp`. One tool per outcome, simple arguments, `readOnlyHint` on every read, refusals that say what to do next, every write audited. Tools that write take the optional `agent` argument.
 
-| Module   | Reads                                                                                                        | Writes                                                                                                                                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| global   | `whoami`, `agents`                                                                                           |                                                                                                                                                                                                                         |
-| calendar | `list_calendars`, `search_calendar`, `calendar_event`, `find_free_time`, `find_conflicts`, `work_hours`      | `create_event`, `change_event`, `cancel_event`, `reply_to_event`                                                                                                                                                        |
-| work     | `spaces`, `projects`, `project`, `tasks` (filters: status, assignee, space, project, `updatedSince`), `task` | `add_project`, `update_project`, `add_task`, `update_task`, `delete_task`, `comment_task`, `link_task`, `unlink_task`, `plan_work`, `confirm_drafts`, `log_work`, `start_work`, `stop_work`, `move_work`, `remove_work` |
-| memory   | `memory_index`, `memory_read`, `memory_search`                                                               | `memory_write`, `memory_delete`                                                                                                                                                                                         |
-| mail     | `search_mail`, `recent_mail`, `mail_message`, `mail_attachments`                                             |                                                                                                                                                                                                                         |
+| Module   | Reads                                                                                                        | Writes                                                                                                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| global   | `whoami`, `agents`                                                                                           |                                                                                                                                                                                                            |
+| calendar | `list_calendars`, `search_calendar`, `calendar_event`, `find_free_time`, `find_conflicts`, `work_hours`      | `create_event`, `change_event`, `cancel_event`, `reply_to_event`                                                                                                                                           |
+| work     | `spaces`, `projects`, `project`, `tasks` (filters: status, assignee, space, project, `updatedSince`), `task` | `add_project`, `update_project`, `add_task`, `update_task`, `delete_task`, `comment_task`, `link_task`, `unlink_task`, `add_work`, `confirm_drafts`, `start_work`, `stop_work`, `move_work`, `remove_work` |
+| memory   | `memory_index`, `memory_read`, `memory_search`                                                               | `memory_write`, `memory_delete`                                                                                                                                                                            |
+| mail     | `search_mail`, `recent_mail`, `mail_message`, `mail_attachments`                                             |                                                                                                                                                                                                            |
 
 ## The console
 

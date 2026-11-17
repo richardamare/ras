@@ -196,8 +196,12 @@ describe("the console's work pages", () => {
         const second = yield* client.work.addTask({ payload: { title: Suite.unique("Second"), project: project.id } })
         yield* client.work.changeTask({ params: { id: second.id }, payload: { status: "done" } })
         const date = Time.addDays(yield* today, 50)
-        yield* client.work.plan({
-          payload: { task: first.id, start: Time.PragueLocal.make(`${date}T09:00`), minutes: 45 }
+        yield* client.work.add({
+          payload: {
+            task: first.id,
+            start: Time.PragueLocal.make(`${date}T09:00`),
+            end: Time.PragueLocal.make(`${date}T09:45`)
+          }
         })
         const page = yield* Suite.signedInPage
         yield* page.goto("/projects")

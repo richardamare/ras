@@ -3231,7 +3231,7 @@
       },
       "post": {
         "tags": ["work"],
-        "operationId": "work.plan",
+        "operationId": "work.add",
         "parameters": [],
         "security": [],
         "responses": {
@@ -3310,18 +3310,15 @@
                   "start": {
                     "type": "string"
                   },
-                  "minutes": {
-                    "type": "integer",
-                    "minimum": 5,
-                    "maximum": 720,
-                    "description": "Minutes, from 5 to 720."
+                  "end": {
+                    "type": "string"
                   },
                   "draft": {
                     "type": "boolean",
                     "description": "Keeps the block in ras, taking its time, until confirm_drafts writes its event."
                   }
                 },
-                "required": ["task", "start", "minutes"],
+                "required": ["task", "start", "end"],
                 "additionalProperties": false
               }
             }
@@ -3523,105 +3520,6 @@
               }
             }
           }
-        }
-      }
-    },
-    "/work/blocks/log": {
-      "post": {
-        "tags": ["work"],
-        "operationId": "work.log",
-        "parameters": [],
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Block",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BlockEncoded"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvalidEncoded"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "NotFound",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundEncoded"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Refused",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefusedEncoded"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "SourceFailed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceFailedEncoded"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "task": {
-                    "type": "string",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
-                    "format": "uuid"
-                  },
-                  "end": {
-                    "type": "string",
-                    "description": "When the work ended; not in the future."
-                  },
-                  "minutes": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 720,
-                    "description": "Minutes, from 1 to 720."
-                  }
-                },
-                "required": ["task", "end", "minutes"],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
         }
       }
     },

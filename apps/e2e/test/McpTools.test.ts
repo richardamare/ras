@@ -219,7 +219,7 @@ describe("the MCP tools", () => {
       })
     )
 
-    it.effect("plans, moves, drafts, confirms and removes work blocks", () =>
+    it.effect("adds, moves, drafts, confirms and removes work blocks, overlapping ones too", () =>
       Effect.gen(function* () {
         const session = yield* Mcp.allowed("Block tools")
         const space = yield* workSpace
@@ -228,8 +228,8 @@ describe("the MCP tools", () => {
 
         const planned = yield* Mcp.call(
           session,
-          "plan_work",
-          { task: task.id, start: at(date, "09:00"), minutes: 60 },
+          "add_work",
+          { task: task.id, start: at(date, "09:00"), end: at(date, "10:00") },
           Block
         )
         assert.strictEqual(planned.state, "planned")
@@ -240,15 +240,18 @@ describe("the MCP tools", () => {
           Block
         )
         assert.deepInclude(moved, { start: at(date, "10:00"), end: at(date, "11:00") })
-        assert.include(
-          yield* Mcp.refusal(session, "plan_work", { task: task.id, start: at(date, "10:30"), minutes: 30 }),
-          "already takes"
+        const overlapping = yield* Mcp.call(
+          session,
+          "add_work",
+          { task: task.id, start: at(date, "10:30"), end: at(date, "11:30") },
+          Block
         )
+        assert.strictEqual(overlapping.state, "planned")
 
         const drafted = yield* Mcp.call(
           session,
-          "plan_work",
-          { task: task.id, start: at(date, "14:00"), minutes: 30, draft: true },
+          "add_work",
+          { task: task.id, start: at(date, "14:00"), end: at(date, "14:30"), draft: true },
           Block
         )
         assert.strictEqual(drafted.state, "draft")
@@ -259,11 +262,12 @@ describe("the MCP tools", () => {
         )
 
         yield* Mcp.run(session, "remove_work", { block: planned.id })
+        yield* Mcp.run(session, "remove_work", { block: overlapping.id })
         yield* Mcp.run(session, "remove_work", { block: drafted.id })
       })
     )
 
-    it.effect("starts, stops and logs work, and counts it as time spent", () =>
+    it.effect("starts and stops work, adds work that already happened, and counts it as time spent", () =>
       Effect.gen(function* () {
         const session = yield* Mcp.allowed("Timer tools")
         const space = yield* workSpace
@@ -274,14 +278,12 @@ describe("the MCP tools", () => {
         const stopped = yield* Mcp.call(session, "stop_work", {}, Block)
         assert.strictEqual(stopped.id, started.id)
         assert.include(yield* Mcp.refusal(session, "stop_work", {}), "No work is running")
-        // A stopped block lasts a minute at least; removing it frees that minute for the other tests' timers.
-        yield* Mcp.run(session, "remove_work", { block: stopped.id })
 
         const yesterday = yield* day(-1)
         const logged = yield* Mcp.call(
           session,
-          "log_work",
-          { task: task.id, end: at(yesterday, "18:00"), minutes: 30 },
+          "add_work",
+          { task: task.id, start: at(yesterday, "17:30"), end: at(yesterday, "18:00") },
           Block
         )
         assert.deepInclude(logged, { state: "done", start: at(yesterday, "17:30") })

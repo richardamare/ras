@@ -93,10 +93,10 @@ export const toolkit = Toolkit.make(
     success: Task.Task,
     destructive: false
   }),
-  Global.writeTool("plan_work", {
+  Global.writeTool("add_work", {
     description:
-      "Plans a block of work on one of the owner's open tasks, at a Prague local start and a length, as an event in its space's calendar. With `draft` the block stays in ras, taking its time, until confirm_drafts writes it.",
-    parameters: Block.PlanWork.fields,
+      "Adds a block of work on one of the owner's open tasks, from a Prague local start to an end, as an event in its space's calendar. The block may lie in the past, in the future or across now, and may overlap other blocks; it counts as time spent once it has ended. With `draft` the block stays in ras, taking its time, until confirm_drafts writes it.",
+    parameters: Block.AddWork.fields,
     success: Block.Block,
     destructive: false
   }),
@@ -112,15 +112,8 @@ export const toolkit = Toolkit.make(
     success: Block.Block,
     destructive: false
   }),
-  Global.writeTool("log_work", {
-    description: "Records work on a task that already happened: its Prague local end and its length in minutes.",
-    parameters: Block.LogWork.fields,
-    success: Block.Block,
-    destructive: false
-  }),
   Global.writeTool("move_work", {
-    description:
-      "Moves or resizes a block that is not running, with its event. A planned block stays from now on; work that has ended stays in the past.",
+    description: "Moves or resizes a block that is not running, with its event, to any Prague local start and end.",
     parameters: Block.MoveWork.fields,
     success: Block.Block,
     destructive: false
@@ -159,10 +152,9 @@ export const handlers = toolkit.toLayer(
       comment_task: ({ agent, task, ...comment }) => board.comment(task, comment).pipe(actingAs(agent)),
       link_task: ({ agent, task, url }) => board.link(task, url).pipe(actingAs(agent)),
       unlink_task: ({ agent, task, url }) => board.unlink(task, url).pipe(actingAs(agent)),
-      plan_work: ({ agent, ...input }) => blocks.plan(input).pipe(actingAs(agent)),
+      add_work: ({ agent, ...input }) => blocks.add(input).pipe(actingAs(agent)),
       start_work: ({ agent, task }) => blocks.start(task).pipe(actingAs(agent)),
       stop_work: ({ agent }) => blocks.stop.pipe(actingAs(agent)),
-      log_work: ({ agent, ...input }) => blocks.log(input).pipe(actingAs(agent)),
       move_work: ({ agent, ...input }) => blocks.move(input).pipe(actingAs(agent)),
       remove_work: ({ agent, block }) => blocks.remove(block).pipe(actingAs(agent)),
       confirm_drafts: ({ agent, ...selection }) => drafts.confirm(selection).pipe(actingAs(agent))
