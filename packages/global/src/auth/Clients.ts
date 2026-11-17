@@ -4,10 +4,10 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
-import type * as Actor from "./Actor.ts"
+import type * as Actor from "../audit/Actor.ts"
 import * as Client from "./Client.ts"
 import * as OAuthClientRepository from "./OAuthClientRepository.ts"
-import * as Writes from "./Writes.ts"
+import * as Writes from "../audit/Writes.ts"
 
 /** The MCP clients the owner connected through the consent page. */
 export class Clients extends Context.Service<

@@ -6,9 +6,9 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Sql from "@ras/kernel/Sql"
-import * as Actor from "./Actor.ts"
+import * as Actor from "../audit/Actor.ts"
 import * as Agent from "./Agent.ts"
-import * as Writes from "./Writes.ts"
+import * as Writes from "../audit/Writes.ts"
 
 const AgentRow = Schema.Struct({ slug: Actor.AgentSlug, name: Schema.String, archived: Schema.BooleanFromBit })
 type AgentRow = typeof AgentRow.Type

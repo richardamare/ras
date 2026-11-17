@@ -6,7 +6,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Sql from "@ras/kernel/Sql"
-import * as Writes from "./Writes.ts"
+import * as Writes from "../audit/Writes.ts"
 
 export interface SealedTokens {
   readonly access: string

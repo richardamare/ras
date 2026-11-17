@@ -1,6 +1,6 @@
 import type * as Effect from "effect/Effect"
-import type * as AgentRepository from "../src/AgentRepository.ts"
-import type * as Actor from "../src/Actor.ts"
+import type * as AgentRepository from "../../src/agents/AgentRepository.ts"
+import type * as Actor from "../../src/audit/Actor.ts"
 
 declare const agents: AgentRepository.AgentRepository["Service"]
 declare const slug: Actor.AgentSlug

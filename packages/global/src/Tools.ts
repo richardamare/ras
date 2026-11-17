@@ -4,10 +4,10 @@ import * as Schema from "effect/Schema"
 import * as Tool from "effect/ai/Tool"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Errors from "@ras/kernel/Errors"
-import * as Actor from "./Actor.ts"
-import * as Agents from "./Agents.ts"
+import * as Actor from "./audit/Actor.ts"
+import * as Agents from "./agents/Agents.ts"
 import * as Http from "./Http.ts"
-import * as Agent from "./Agent.ts"
+import * as Agent from "./agents/Agent.ts"
 
 /** A tool that only reads. It fails only with the kernel's `Failure`. */
 export const read = <

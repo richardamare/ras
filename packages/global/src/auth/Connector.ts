@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
-import * as Actor from "./Actor.ts"
+import * as Actor from "../audit/Actor.ts"
 import * as Auth from "./Auth.ts"
 import * as OAuthClientRepository from "./OAuthClientRepository.ts"
 

@@ -6,7 +6,7 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Errors from "@ras/kernel/Errors"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
-import * as AgentRepository from "../src/AgentRepository.ts"
+import * as AgentRepository from "../../src/agents/AgentRepository.ts"
 
 const planner = Global.AgentSlug.make("planner")
 const probe = Global.AgentSlug.make("probe")

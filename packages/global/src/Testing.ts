@@ -5,7 +5,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import type * as SqlClient from "effect/sql/SqlClient"
 import * as Module from "@ras/kernel/Module"
-import * as Actor from "./Actor.ts"
+import * as Actor from "./audit/Actor.ts"
 import * as Http from "./Http.ts"
 import * as Global from "./Module.ts"
 

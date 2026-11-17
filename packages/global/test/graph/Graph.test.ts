@@ -10,10 +10,10 @@ import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
-import * as Graph from "../src/Graph.ts"
-import * as GraphTokenRepository from "../src/GraphTokenRepository.ts"
-import * as Testing from "../src/Testing.ts"
-import * as Writes from "../src/Writes.ts"
+import * as Graph from "../../src/graph/Graph.ts"
+import * as GraphTokenRepository from "../../src/graph/GraphTokenRepository.ts"
+import * as Testing from "../../src/Testing.ts"
+import * as Writes from "../../src/audit/Writes.ts"
 
 /** Microsoft's token endpoint as the test scripts it: each grant it saw, and the answer it gives. */
 class Microsoft extends Context.Service<

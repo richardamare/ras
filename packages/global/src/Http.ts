@@ -9,12 +9,12 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as Errors from "@ras/kernel/Errors"
 import * as Module from "@ras/kernel/Module"
-import * as Actor from "./Actor.ts"
-import * as Agents from "./Agents.ts"
-import * as Client from "./Client.ts"
-import * as Clients from "./Clients.ts"
-import * as Graph from "./Graph.ts"
-import * as Agent from "./Agent.ts"
+import * as Actor from "./audit/Actor.ts"
+import * as Agents from "./agents/Agents.ts"
+import * as Client from "./auth/Client.ts"
+import * as Clients from "./auth/Clients.ts"
+import * as Graph from "./graph/Graph.ts"
+import * as Agent from "./agents/Agent.ts"
 
 export class Authenticated extends HttpApiMiddleware.Service<Authenticated, { provides: Actor.CurrentActor }>()(
   "@ras/global/Authenticated",

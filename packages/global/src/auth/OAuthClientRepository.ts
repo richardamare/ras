@@ -8,7 +8,7 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
 import * as Client from "./Client.ts"
-import * as Writes from "./Writes.ts"
+import * as Writes from "../audit/Writes.ts"
 
 const ClientRow = Schema.Struct({
   id: Schema.String,

@@ -4,10 +4,10 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
-import * as Actor from "./Actor.ts"
+import * as Actor from "../audit/Actor.ts"
 import * as Agent from "./Agent.ts"
 import * as AgentRepository from "./AgentRepository.ts"
-import * as Writes from "./Writes.ts"
+import * as Writes from "../audit/Writes.ts"
 
 /** The named actors the owner's bots act as. An agent is archived, never deleted, so its history keeps its name. */
 export class Agents extends Context.Service<

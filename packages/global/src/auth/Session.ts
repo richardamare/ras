@@ -3,9 +3,9 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpApiError from "effect/http-api/HttpApiError"
-import * as Actor from "./Actor.ts"
+import * as Actor from "../audit/Actor.ts"
 import * as Auth from "./Auth.ts"
-import * as Http from "./Http.ts"
+import * as Http from "../Http.ts"
 
 const console = new Actor.Actor({ channel: { _tag: "Console" }, agent: Option.none() })
 

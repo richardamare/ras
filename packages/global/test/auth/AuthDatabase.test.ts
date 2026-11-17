@@ -4,7 +4,7 @@ import * as Fiber from "effect/Fiber"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Kysely from "kysely"
 import * as Testing from "@ras/global/testing"
-import * as AuthDatabase from "../src/AuthDatabase.ts"
+import * as AuthDatabase from "../../src/auth/AuthDatabase.ts"
 
 interface Tables {
   probes: { id: string }

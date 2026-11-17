@@ -4,7 +4,7 @@ import * as Option from "effect/Option"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
-import * as OAuthClientRepository from "../src/OAuthClientRepository.ts"
+import * as OAuthClientRepository from "../../src/auth/OAuthClientRepository.ts"
 
 const connect = (clientId: string, name: string) =>
   Effect.gen(function* () {

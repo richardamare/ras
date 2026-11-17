@@ -3,8 +3,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
 import * as Testing from "@ras/global/testing"
-import * as Auth from "../src/Auth.ts"
-import * as Owner from "../src/Owner.ts"
+import * as Auth from "../../src/auth/Auth.ts"
+import * as Owner from "../../src/auth/Owner.ts"
 
 const signIn = (email: string, password: string) =>
   Effect.flatMap(Effect.service(Auth.Auth), (auth) =>
