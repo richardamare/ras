@@ -677,6 +677,10 @@ export type CalendarCreateEventData = {
                 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday',
                 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
             ];
+            /**
+             * For a monthly or yearly repeat: on the start's day of the month (`date`, when omitted), or on its weekday at the same place in the month, such as the third Tuesday or the last Friday (`weekday`).
+             */
+            by?: 'date' | 'weekday';
             until?: string;
             /**
              * How many occurrences, the first included.

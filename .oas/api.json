@@ -756,6 +756,11 @@
                         },
                         "description": "The weekdays of a weekly repeat; the start's weekday when omitted."
                       },
+                      "by": {
+                        "type": "string",
+                        "enum": ["date", "weekday"],
+                        "description": "For a monthly or yearly repeat: on the start's day of the month (`date`, when omitted), or on its weekday at the same place in the month, such as the third Tuesday or the last Friday (`weekday`)."
+                      },
                       "until": {
                         "type": "string"
                       },

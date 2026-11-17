@@ -117,6 +117,12 @@ const weekdays: ReadonlyArray<EventWrites.Weekday> = [
 
 const weekdayOf = (date: Time.PragueDate) => weekdays[new Date(`${date}T00:00:00Z`).getUTCDay()]!
 
+/** Where the day falls among the month's days of its weekday; a day in the month's final week is its last. */
+const indexOf = (date: Time.PragueDate) =>
+  Time.addDays(date, 7).slice(5, 7) === date.slice(5, 7)
+    ? (["first", "second", "third", "fourth"] as const)[Math.floor((Number(date.slice(8, 10)) - 1) / 7)]!
+    : "last"
+
 /** Graph's patterned recurrence for a repeat, starting on the event's first day, its clock kept in Prague. */
 export const recurrenceOf = (
   start: Time.PragueDate,
@@ -127,6 +133,8 @@ export const recurrenceOf = (
       return yield* invalid("Give repeat until or count, not both.")
     if (repeat.on !== undefined && repeat.every !== "week")
       return yield* invalid("repeat on applies to a weekly repeat only.")
+    if (repeat.by !== undefined && repeat.every !== "month" && repeat.every !== "year")
+      return yield* invalid("repeat by applies to a monthly or yearly repeat only.")
     if (repeat.until !== undefined && days(start, repeat.until) < 0)
       return yield* invalid(`The repeat ends on ${repeat.until}, before the event starts.`)
     const weekday = weekdayOf(start)
@@ -144,9 +152,13 @@ export const recurrenceOf = (
               daysOfWeek: weekdays.filter((name) => (repeat.on ?? [weekday]).includes(name)),
               firstDayOfWeek: "monday"
             }
-          : repeat.every === "month"
-            ? { type: "absoluteMonthly", interval, dayOfMonth: day }
-            : { type: "absoluteYearly", interval, dayOfMonth: day, month }
+          : repeat.by === "weekday"
+            ? repeat.every === "month"
+              ? { type: "relativeMonthly", interval, daysOfWeek: [weekday], index: indexOf(start) }
+              : { type: "relativeYearly", interval, daysOfWeek: [weekday], index: indexOf(start), month }
+            : repeat.every === "month"
+              ? { type: "absoluteMonthly", interval, dayOfMonth: day }
+              : { type: "absoluteYearly", interval, dayOfMonth: day, month }
     const range: Outlook.Recurrence["range"] =
       repeat.until !== undefined
         ? { type: "endDate", startDate: start, endDate: repeat.until, recurrenceTimeZone: Outlook.timeZone }

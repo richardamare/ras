@@ -103,5 +103,138 @@
       "running": "Pracovní blok právě běží",
       "done": "Dokončený pracovní blok"
     }
+  },
+  "repeat": {
+    "label": "Opakování",
+    "preset": {
+      "never": "Neopakuje se",
+      "daily": "Každý den",
+      "workdays": "Každý pracovní den",
+      "weekly": "Každý týden {{weekday}}",
+      "monthly": "Každý měsíc {{where}}",
+      "yearly": "Každý rok {{where}}",
+      "custom": "Vlastní…"
+    },
+    "dayOn": {
+      "monday": "v pondělí",
+      "tuesday": "v úterý",
+      "wednesday": "ve středu",
+      "thursday": "ve čtvrtek",
+      "friday": "v pátek",
+      "saturday": "v sobotu",
+      "sunday": "v neděli"
+    },
+    "interval_one": "Opakovat každý",
+    "interval_few": "Opakovat každé",
+    "interval_many": "Opakovat každých",
+    "interval_other": "Opakovat každých",
+    "unitLabel": "Jednotka",
+    "unit": {
+      "day_one": "den",
+      "day_few": "dny",
+      "day_many": "dne",
+      "day_other": "dní",
+      "week_one": "týden",
+      "week_few": "týdny",
+      "week_many": "týdne",
+      "week_other": "týdnů",
+      "month_one": "měsíc",
+      "month_few": "měsíce",
+      "month_many": "měsíce",
+      "month_other": "měsíců",
+      "year_one": "rok",
+      "year_few": "roky",
+      "year_many": "roku",
+      "year_other": "let"
+    },
+    "on": "Ve dnech",
+    "when": "Kdy",
+    "short": {
+      "monday": "po",
+      "tuesday": "út",
+      "wednesday": "st",
+      "thursday": "čt",
+      "friday": "pá",
+      "saturday": "so",
+      "sunday": "ne"
+    },
+    "day": {
+      "monday": "pondělí",
+      "tuesday": "úterý",
+      "wednesday": "středa",
+      "thursday": "čtvrtek",
+      "friday": "pátek",
+      "saturday": "sobota",
+      "sunday": "neděle"
+    },
+    "place": {
+      "1": "1.",
+      "2": "2.",
+      "3": "3.",
+      "4": "4.",
+      "5": "poslední"
+    },
+    "monthly": {
+      "date": "dne {{date}}.",
+      "weekday": "{{place}} {{weekday}}"
+    },
+    "yearly": {
+      "date": "{{date}}. {{month}}",
+      "weekday": "{{place}} {{weekday}} {{month}}"
+    },
+    "monthOf": {
+      "1": "ledna",
+      "2": "února",
+      "3": "března",
+      "4": "dubna",
+      "5": "května",
+      "6": "června",
+      "7": "července",
+      "8": "srpna",
+      "9": "září",
+      "10": "října",
+      "11": "listopadu",
+      "12": "prosince"
+    },
+    "monthIn": {
+      "1": "v lednu",
+      "2": "v únoru",
+      "3": "v březnu",
+      "4": "v dubnu",
+      "5": "v květnu",
+      "6": "v červnu",
+      "7": "v červenci",
+      "8": "v srpnu",
+      "9": "v září",
+      "10": "v říjnu",
+      "11": "v listopadu",
+      "12": "v prosinci"
+    },
+    "ends": "Konec",
+    "end": {
+      "never": "Nikdy",
+      "until": "Dne",
+      "count": "Po"
+    },
+    "occurrences_one": "výskytu",
+    "occurrences_few": "výskytech",
+    "occurrences_many": "výskytech",
+    "occurrences_other": "výskytech",
+    "until": "Poslední den",
+    "count": "Počet výskytů",
+    "summary": {
+      "never": "Neopakuje se",
+      "every_one": "Každý {{unit}}",
+      "every_few": "Každé {{count}} {{unit}}",
+      "every_many": "Každých {{count}} {{unit}}",
+      "every_other": "Každých {{count}} {{unit}}",
+      "on": "v {{days}}",
+      "and": " a ",
+      "until": "do {{date}}",
+      "count_one": "jednou",
+      "count_few": "celkem {{count}}×",
+      "count_many": "celkem {{count}}×",
+      "count_other": "celkem {{count}}×"
+    }
   }
 }
