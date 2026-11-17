@@ -4,8 +4,8 @@
 import { queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { calendarCalendars, calendarCancelEvent, calendarChangeCalendar, calendarChangeEvent, calendarConfirmDraft, calendarConflicts, calendarCreateEvent, calendarEvent, calendarEvents, calendarFreeTime, calendarReplyToEvent, calendarWorkHours, globalAddAgent, globalAgents, globalArchiveAgent, globalConnectGraph, globalGraph, globalWhoami, type Options, workAddProject, workAddSpace, workAddTask, workArchiveSpace, workBlocks, workChangeProject, workChangeSpace, workChangeTask, workComment, workConfirmDrafts, workDeleteTask, workDiscardDrafts, workLink, workLog, workMove, workPlan, workProject, workProjects, workRemove, workRunning, workSpaces, workStart, workStop, workTask, workTasks, workUnlink } from '../sdk.gen';
-import type { CalendarCalendarsData, CalendarCalendarsError, CalendarCalendarsResponse, CalendarCancelEventData, CalendarCancelEventError, CalendarCancelEventResponse, CalendarChangeCalendarData, CalendarChangeCalendarError, CalendarChangeCalendarResponse, CalendarChangeEventData, CalendarChangeEventError, CalendarChangeEventResponse, CalendarConfirmDraftData, CalendarConfirmDraftError, CalendarConfirmDraftResponse, CalendarConflictsData, CalendarConflictsError, CalendarConflictsResponse, CalendarCreateEventData, CalendarCreateEventError, CalendarCreateEventResponse, CalendarEventData, CalendarEventError, CalendarEventResponse, CalendarEventsData, CalendarEventsError, CalendarEventsResponse, CalendarFreeTimeData, CalendarFreeTimeError, CalendarFreeTimeResponse, CalendarReplyToEventData, CalendarReplyToEventError, CalendarReplyToEventResponse, CalendarWorkHoursData, CalendarWorkHoursError, CalendarWorkHoursResponse, GlobalAddAgentData, GlobalAddAgentError, GlobalAddAgentResponse, GlobalAgentsData, GlobalAgentsError, GlobalAgentsResponse, GlobalArchiveAgentData, GlobalArchiveAgentError, GlobalArchiveAgentResponse, GlobalConnectGraphData, GlobalConnectGraphError, GlobalConnectGraphResponse, GlobalGraphData, GlobalGraphError, GlobalGraphResponse, GlobalWhoamiData, GlobalWhoamiError, GlobalWhoamiResponse, WorkAddProjectData, WorkAddProjectError, WorkAddProjectResponse, WorkAddSpaceData, WorkAddSpaceError, WorkAddSpaceResponse, WorkAddTaskData, WorkAddTaskError, WorkAddTaskResponse, WorkArchiveSpaceData, WorkArchiveSpaceError, WorkArchiveSpaceResponse, WorkBlocksData, WorkBlocksError, WorkBlocksResponse, WorkChangeProjectData, WorkChangeProjectError, WorkChangeProjectResponse, WorkChangeSpaceData, WorkChangeSpaceError, WorkChangeSpaceResponse, WorkChangeTaskData, WorkChangeTaskError, WorkChangeTaskResponse, WorkCommentData, WorkCommentError, WorkCommentResponse, WorkConfirmDraftsData, WorkConfirmDraftsError, WorkConfirmDraftsResponse, WorkDeleteTaskData, WorkDeleteTaskError, WorkDeleteTaskResponse, WorkDiscardDraftsData, WorkDiscardDraftsError, WorkDiscardDraftsResponse, WorkLinkData, WorkLinkError, WorkLinkResponse, WorkLogData, WorkLogError, WorkLogResponse, WorkMoveData, WorkMoveError, WorkMoveResponse, WorkPlanData, WorkPlanError, WorkPlanResponse, WorkProjectData, WorkProjectError, WorkProjectResponse, WorkProjectsData, WorkProjectsError, WorkProjectsResponse, WorkRemoveData, WorkRemoveError, WorkRemoveResponse, WorkRunningData, WorkRunningError, WorkRunningResponse, WorkSpacesData, WorkSpacesError, WorkSpacesResponse, WorkStartData, WorkStartError, WorkStartResponse, WorkStopData, WorkStopError, WorkStopResponse, WorkTaskData, WorkTaskError, WorkTaskResponse, WorkTasksData, WorkTasksError, WorkTasksResponse, WorkUnlinkData, WorkUnlinkError, WorkUnlinkResponse } from '../types.gen';
+import { calendarCalendars, calendarCancelEvent, calendarChangeCalendar, calendarChangeEvent, calendarConfirmDraft, calendarConflicts, calendarCreateEvent, calendarEvent, calendarEvents, calendarFreeTime, calendarReplyToEvent, calendarWorkHours, globalAddAgent, globalAgents, globalArchiveAgent, globalClients, globalConnectGraph, globalGraph, globalRevokeClient, globalWhoami, type Options, workAddProject, workAddSpace, workAddTask, workArchiveSpace, workBlocks, workChangeProject, workChangeSpace, workChangeTask, workComment, workConfirmDrafts, workDeleteTask, workDiscardDrafts, workLink, workLog, workMove, workPlan, workProject, workProjects, workRemove, workRunning, workSpaces, workStart, workStop, workTask, workTasks, workUnlink } from '../sdk.gen';
+import type { CalendarCalendarsData, CalendarCalendarsError, CalendarCalendarsResponse, CalendarCancelEventData, CalendarCancelEventError, CalendarCancelEventResponse, CalendarChangeCalendarData, CalendarChangeCalendarError, CalendarChangeCalendarResponse, CalendarChangeEventData, CalendarChangeEventError, CalendarChangeEventResponse, CalendarConfirmDraftData, CalendarConfirmDraftError, CalendarConfirmDraftResponse, CalendarConflictsData, CalendarConflictsError, CalendarConflictsResponse, CalendarCreateEventData, CalendarCreateEventError, CalendarCreateEventResponse, CalendarEventData, CalendarEventError, CalendarEventResponse, CalendarEventsData, CalendarEventsError, CalendarEventsResponse, CalendarFreeTimeData, CalendarFreeTimeError, CalendarFreeTimeResponse, CalendarReplyToEventData, CalendarReplyToEventError, CalendarReplyToEventResponse, CalendarWorkHoursData, CalendarWorkHoursError, CalendarWorkHoursResponse, GlobalAddAgentData, GlobalAddAgentError, GlobalAddAgentResponse, GlobalAgentsData, GlobalAgentsError, GlobalAgentsResponse, GlobalArchiveAgentData, GlobalArchiveAgentError, GlobalArchiveAgentResponse, GlobalClientsData, GlobalClientsError, GlobalClientsResponse, GlobalConnectGraphData, GlobalConnectGraphError, GlobalConnectGraphResponse, GlobalGraphData, GlobalGraphError, GlobalGraphResponse, GlobalRevokeClientData, GlobalRevokeClientError, GlobalRevokeClientResponse, GlobalWhoamiData, GlobalWhoamiError, GlobalWhoamiResponse, WorkAddProjectData, WorkAddProjectError, WorkAddProjectResponse, WorkAddSpaceData, WorkAddSpaceError, WorkAddSpaceResponse, WorkAddTaskData, WorkAddTaskError, WorkAddTaskResponse, WorkArchiveSpaceData, WorkArchiveSpaceError, WorkArchiveSpaceResponse, WorkBlocksData, WorkBlocksError, WorkBlocksResponse, WorkChangeProjectData, WorkChangeProjectError, WorkChangeProjectResponse, WorkChangeSpaceData, WorkChangeSpaceError, WorkChangeSpaceResponse, WorkChangeTaskData, WorkChangeTaskError, WorkChangeTaskResponse, WorkCommentData, WorkCommentError, WorkCommentResponse, WorkConfirmDraftsData, WorkConfirmDraftsError, WorkConfirmDraftsResponse, WorkDeleteTaskData, WorkDeleteTaskError, WorkDeleteTaskResponse, WorkDiscardDraftsData, WorkDiscardDraftsError, WorkDiscardDraftsResponse, WorkLinkData, WorkLinkError, WorkLinkResponse, WorkLogData, WorkLogError, WorkLogResponse, WorkMoveData, WorkMoveError, WorkMoveResponse, WorkPlanData, WorkPlanError, WorkPlanResponse, WorkProjectData, WorkProjectError, WorkProjectResponse, WorkProjectsData, WorkProjectsError, WorkProjectsResponse, WorkRemoveData, WorkRemoveError, WorkRemoveResponse, WorkRunningData, WorkRunningError, WorkRunningResponse, WorkSpacesData, WorkSpacesError, WorkSpacesResponse, WorkStartData, WorkStartError, WorkStartResponse, WorkStopData, WorkStopError, WorkStopResponse, WorkTaskData, WorkTaskError, WorkTaskResponse, WorkTasksData, WorkTasksError, WorkTasksResponse, WorkUnlinkData, WorkUnlinkError, WorkUnlinkResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -117,6 +117,35 @@ export const globalConnectGraphMutation = (options?: Partial<Options<GlobalConne
     const mutationOptions: UseMutationOptions<GlobalConnectGraphResponse, GlobalConnectGraphError, Options<GlobalConnectGraphData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await globalConnectGraph({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const globalClientsQueryKey = (options?: Options<GlobalClientsData>) => createQueryKey('globalClients', options);
+
+export const globalClientsOptions = (options?: Options<GlobalClientsData>) => queryOptions<GlobalClientsResponse, GlobalClientsError, GlobalClientsResponse, ReturnType<typeof globalClientsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await globalClients({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: globalClientsQueryKey(options)
+});
+
+export const globalRevokeClientMutation = (options?: Partial<Options<GlobalRevokeClientData>>): UseMutationOptions<GlobalRevokeClientResponse, GlobalRevokeClientError, Options<GlobalRevokeClientData>> => {
+    const mutationOptions: UseMutationOptions<GlobalRevokeClientResponse, GlobalRevokeClientError, Options<GlobalRevokeClientData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await globalRevokeClient({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

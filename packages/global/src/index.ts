@@ -1,5 +1,6 @@
 export { Actor, AgentSlug, Channel, CurrentActor } from "./Actor.ts"
 export { Agents } from "./Agents.ts"
+export { Client as McpClient, Clients } from "./Clients.ts"
 export { Agent } from "./Store.ts"
 export { Auth, settings, type Settings } from "./Auth.ts"
 export { middleware as connector } from "./Connector.ts"
