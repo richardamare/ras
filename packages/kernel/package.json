@@ -4,6 +4,7 @@
   "description": "Vocabulary every module shares. A file belongs here only when it holds no table, no stateful service and no outside system, and two or more modules use it.",
   "type": "module",
   "exports": {
+    "./Connections": "./src/Connections.ts",
     "./Errors": "./src/Errors.ts",
     "./Id": "./src/Id.ts",
     "./Module": "./src/Module.ts",

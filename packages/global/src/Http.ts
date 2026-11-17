@@ -7,6 +7,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiError from "effect/http-api/HttpApiError"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
+import * as Connections from "@ras/kernel/Connections"
 import * as Errors from "@ras/kernel/Errors"
 import * as Module from "@ras/kernel/Module"
 import * as Actor from "./audit/Actor.ts"
@@ -58,6 +59,20 @@ export const group = HttpApiGroup.make("global")
       error: Errors.Refused
     })
   )
+  .add(
+    HttpApiEndpoint.get("connections", "/connections", {
+      success: Schema.Array(Connections.Connection).annotate({
+        description:
+          "Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it."
+      })
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("checkConnection", "/connections/:kind/check", {
+      params: { kind: Connections.Kind },
+      success: Connections.Connection.annotate({ description: "The state after reaching it with its cheapest read." })
+    })
+  )
   .add(HttpApiEndpoint.get("clients", "/clients", { success: Schema.Array(Client.Client) }))
   .add(
     HttpApiEndpoint.post("revokeClient", "/clients/:id/revoke", {
@@ -77,9 +92,12 @@ export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) =
     const agents = yield* Agents.Agents
     const graph = yield* Graph.Graph
     const clients = yield* Clients.Clients
+    const connections = yield* Connections.Connections
     return endpoints
       .handle("graph", () => Effect.map(graph.connection, Option.getOrNull))
       .handle("connectGraph", () => Effect.map(graph.connect, (url) => ({ url: url.href })))
+      .handle("connections", () => connections.list)
+      .handle("checkConnection", ({ params }) => connections.check(params.kind))
       .handle("whoami", () => me)
       .handle("agents", () => agents.list)
       .handle("addAgent", ({ payload }) => agents.add(payload.slug, payload.name))

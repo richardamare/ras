@@ -279,6 +279,81 @@
         }
       }
     },
+    "/global/connections": {
+      "get": {
+        "tags": ["global"],
+        "operationId": "global.connections",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceConnectionEncoded"
+                  },
+                  "description": "Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global/connections/{kind}/check": {
+      "post": {
+        "tags": ["global"],
+        "operationId": "global.checkConnection",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": ["outlook", "reclaim", "icloud", "github"],
+              "description": "Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub."
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The state after reaching it with its cheapest read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceConnectionEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/global/clients": {
       "get": {
         "tags": ["global"],
@@ -4870,6 +4945,34 @@
           }
         },
         "required": ["id", "name", "scopes", "connected", "used"],
+        "additionalProperties": false
+      },
+      "SourceConnectionEncoded": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["outlook", "reclaim", "icloud", "github"],
+            "description": "Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["connected", "notConfigured", "failing", "sample"],
+            "description": "`notConfigured` when a setting or a sign-in is missing, `failing` when the last check could not reach it, `sample` when invented data stands in."
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account it is reached as when connected; otherwise what is missing or what failed."
+          }
+        },
+        "required": ["kind", "state", "detail"],
         "additionalProperties": false
       },
       "ConnectionEncoded": {
