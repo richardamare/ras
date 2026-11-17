@@ -55,5 +55,13 @@ export const migrations: Module.Migrations = {
   }),
   "0002_create_sign_in": SqlClient.SqlClient.use((sql) =>
     Effect.forEach(signIn, (statement) => sql.unsafe(statement), { discard: true })
+  ),
+  "0003_create_agents": SqlClient.SqlClient.use(
+    (sql) => sql`
+      CREATE TABLE global_agents (
+        slug TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        archived_at TEXT
+      ) STRICT`
   )
 }

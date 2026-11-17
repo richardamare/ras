@@ -76,7 +76,7 @@ describe("Auth", () => {
           )
         )
         const client = (yield* Effect.promise(() => response.json())) as { readonly scope: string }
-        assert.deepStrictEqual(client.scope.split(" ").sort(), ["email", "offline_access", "openid", "profile"])
+        assert.deepStrictEqual(client.scope.split(" ").toSorted(), ["email", "offline_access", "openid", "profile"])
       })
     )
   })

@@ -7,8 +7,11 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiError from "effect/http-api/HttpApiError"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
+import * as Errors from "@ras/kernel/Errors"
 import * as Module from "@ras/kernel/Module"
 import * as Actor from "./Actor.ts"
+import * as Agents from "./Agents.ts"
+import * as Store from "./Store.ts"
 
 export class Authenticated extends HttpApiMiddleware.Service<Authenticated, { provides: Actor.CurrentActor }>()(
   "@ras/global/Authenticated",
@@ -26,6 +29,21 @@ export const Me = Schema.Struct({ channel: Schema.String, agent: Schema.NullOr(S
 
 export const group = HttpApiGroup.make("global")
   .add(HttpApiEndpoint.get("whoami", "/me", { success: Me }))
+  .add(HttpApiEndpoint.get("agents", "/agents", { success: Schema.Array(Store.Agent) }))
+  .add(
+    HttpApiEndpoint.post("addAgent", "/agents", {
+      payload: Schema.Struct({ slug: Actor.AgentSlug, name: Schema.String.check(Schema.isNonEmpty()) }),
+      success: Store.Agent,
+      error: Errors.Refused
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("archiveAgent", "/agents/:slug/archive", {
+      params: { slug: Actor.AgentSlug },
+      success: Store.Agent,
+      error: Errors.NotFound
+    })
+  )
   .prefix("/global")
 
 export const me = Effect.map(Effect.service(Actor.CurrentActor), (actor) => ({
@@ -33,4 +51,13 @@ export const me = Effect.map(Effect.service(Actor.CurrentActor), (actor) => ({
   agent: Option.getOrNull(actor.agent)
 }))
 
-export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) => endpoints.handle("whoami", () => me))
+export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) =>
+  Effect.gen(function* () {
+    const agents = yield* Agents.Agents
+    return endpoints
+      .handle("whoami", () => me)
+      .handle("agents", () => agents.list)
+      .handle("addAgent", ({ payload }) => agents.add(payload.slug, payload.name))
+      .handle("archiveAgent", ({ params }) => agents.archive(params.slug))
+  })
+)

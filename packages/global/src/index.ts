@@ -1,4 +1,6 @@
 export { Actor, AgentSlug, Channel, CurrentActor } from "./Actor.ts"
+export { Agents } from "./Agents.ts"
+export { Agent } from "./Store.ts"
 export { Auth, settings, type Settings } from "./Auth.ts"
 export { middleware as connector } from "./Connector.ts"
 export { api, Authenticated } from "./Http.ts"

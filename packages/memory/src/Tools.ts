@@ -50,13 +50,14 @@ export const toolkit = Toolkit.make(
 export const handlers = toolkit.toLayer(
   Effect.gen(function* () {
     const memory = yield* Memory.Memory
+    const actingAs = yield* Global.actingAs
     return {
       memory_index: () => memory.index,
       memory_read: ({ names }) => memory.read(names),
       memory_search: ({ query, limit }) => memory.search(query, limit ?? 10),
       memory_write: ({ agent, version, ...draft }) =>
-        memory.write(draft, Option.fromUndefinedOr(version)).pipe(Global.actingAs(agent)),
-      memory_delete: ({ agent, name, version }) => memory.remove(name, version).pipe(Global.actingAs(agent))
+        memory.write(draft, Option.fromUndefinedOr(version)).pipe(actingAs(agent)),
+      memory_delete: ({ agent, name, version }) => memory.remove(name, version).pipe(actingAs(agent))
     }
   })
 )
