@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
-import type * as Playwright from "playwright"
+import type * as Browser from "./Browser.ts"
 import * as Ras from "./Ras.ts"
 import * as Suite from "./Suite.ts"
 
@@ -53,7 +53,7 @@ const pkce = () => {
  * Sends `page` through ras's authorization: the owner signs in on ras's sign-in page and gives `answer` on the consent
  * page. Returns the callback URL ras redirects to and the PKCE verifier.
  */
-export const authorize = (page: Playwright.Page, clientId: string, answer: "Allow" | "Deny") =>
+export const authorize = (page: Browser.Page, clientId: string, answer: "Allow" | "Deny") =>
   Effect.gen(function* () {
     const { url } = yield* Suite.Server
     const { verifier, challenge } = pkce()
@@ -69,16 +69,16 @@ export const authorize = (page: Playwright.Page, clientId: string, answer: "Allo
       resource: new URL("/mcp", url).href
     }).toString()
 
-    yield* Suite.use(() => page.goto(authorization.href))
-    yield* Suite.use(() => page.getByRole("heading", { name: "Sign in to ras" }).waitFor())
-    yield* Suite.use(() => page.getByLabel("Email").fill(Ras.owner.email))
-    yield* Suite.use(() => page.getByLabel("Password").fill(Ras.owner.password))
-    yield* Suite.use(() => page.getByRole("button", { name: "Sign in" }).click())
+    yield* page.goto(authorization.href)
+    yield* page.getByRole("heading", { name: "Sign in to ras" }).waitFor()
+    yield* page.getByLabel("Email").fill(Ras.owner.email)
+    yield* page.getByLabel("Password").fill(Ras.owner.password)
+    yield* page.getByRole("button", { name: "Sign in" }).click()
 
-    yield* Suite.use(() => page.getByRole("heading", { name: "Connect an app" }).waitFor())
-    yield* Suite.use(() => page.getByRole("button", { name: answer }).click())
-    yield* Suite.use(() => page.waitForURL((at) => at.pathname === callbackPath))
-    return { callback: new URL(page.url()), verifier }
+    yield* page.getByRole("heading", { name: "Connect an app" }).waitFor()
+    yield* page.getByRole("button", { name: answer }).click()
+    yield* page.waitForURL((at) => at.pathname === callbackPath)
+    return { callback: yield* page.url, verifier }
   })
 
 /** Redeems the authorization code for an access token to `/mcp`. */

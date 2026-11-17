@@ -108,20 +108,18 @@ describe("the MCP connector", () => {
         yield* Mcp.connect(token)
 
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/settings"))
+        yield* page.goto("/settings")
         const revoke = page.getByRole("button", { name: "Revoke" })
         const row = page
           .locator("div")
           .filter({ has: page.getByText(name, { exact: true }) })
           .filter({ has: revoke })
-        yield* Suite.use(() => row.last().getByRole("button", { name: "Revoke" }).click())
-        yield* Suite.use(() =>
-          page
-            .getByRole("dialog", { name: `Revoke ${name}?` })
-            .getByRole("button", { name: "Revoke" })
-            .click()
-        )
-        yield* Suite.use(() => page.getByText(name, { exact: true }).waitFor({ state: "detached" }))
+        yield* row.last().getByRole("button", { name: "Revoke" }).click()
+        yield* page
+          .getByRole("dialog", { name: `Revoke ${name}?` })
+          .getByRole("button", { name: "Revoke" })
+          .click()
+        yield* page.getByText(name, { exact: true }).waitFor({ state: "detached" })
 
         const refused = yield* Mcp.post(Option.some(token), Option.none(), { id: 1, method: "tools/list" })
         assert.strictEqual(refused.status, 401)

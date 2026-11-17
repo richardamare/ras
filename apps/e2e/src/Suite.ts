@@ -9,8 +9,8 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as HttpApiClient from "effect/http-api/HttpApiClient"
 import * as Api from "@ras/api/api"
-import * as Playwright from "playwright"
 import * as Vitest from "vitest"
+import * as Browser from "./Browser.ts"
 import * as Ras from "./Ras.ts"
 
 /** The ras the global setup started. */
@@ -18,44 +18,18 @@ export class Server extends Context.Service<Server, { readonly url: URL }>()("@r
   static readonly layer = Layer.sync(Server, () => ({ url: new URL(Vitest.inject("rasUrl")) }))
 }
 
-/** Headless Chromium, closed with the layer. */
-export class Browser extends Context.Service<Browser, Playwright.Browser>()("@ras/e2e/Browser") {
-  static readonly layer = Layer.effect(
-    Browser,
-    Effect.acquireRelease(
-      Effect.promise(() => Playwright.chromium.launch()),
-      (browser) => Effect.promise(() => browser.close())
-    )
-  )
-}
-
 /** Everything a test file needs: the server, Chromium, an HTTP client and the Bun platform. */
-export const layer = Layer.mergeAll(Server.layer, Browser.layer, FetchHttpClient.layer, BunServices.layer)
+export const layer = Layer.mergeAll(Server.layer, Browser.Browser.layer, FetchHttpClient.layer, BunServices.layer)
 
-/** Runs a Playwright call; its rejection fails the test. */
-export const use = <A>(f: () => Promise<A>) => Effect.promise(f)
-
-/** A page of its own browser context, in English, closed with the scope. Without a session it meets the sign-in. */
-export const page = Effect.gen(function* () {
-  const browser = yield* Browser
-  const { url } = yield* Server
-  const context = yield* Effect.acquireRelease(
-    use(() => browser.newContext({ baseURL: url.origin, locale: "en-US" })),
-    (opened) => use(() => opened.close())
-  )
-  context.setDefaultTimeout(10_000)
-  yield* use(() => context.addInitScript(() => window.localStorage.setItem("lang", "en")))
-  return yield* use(() => context.newPage())
-})
+/** A page of its own on the ras under test, closed with the scope. Without a session it meets the sign-in. */
+export const page = Effect.flatMap(Server, ({ url }) => Browser.open(url.origin))
 
 /** A page whose context holds the owner's session. */
 export const signedInPage = Effect.gen(function* () {
   const { url } = yield* Server
   const opened = yield* page
-  const response = yield* use(() =>
-    opened.request.post("/auth/sign-in/email", { data: Ras.owner, headers: { origin: url.origin } })
-  )
-  if (!response.ok()) return yield* Effect.die(new Error(`sign-in answered ${response.status()}`))
+  const status = yield* opened.post("/auth/sign-in/email", Ras.owner, { origin: url.origin })
+  if (status !== 200) return yield* Effect.die(new Error(`sign-in answered ${status}`))
   return opened
 })
 

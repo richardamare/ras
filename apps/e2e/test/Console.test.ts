@@ -9,42 +9,42 @@ describe("the console", () => {
     it.effect("shows the sign-in in place of a page, refuses a wrong password and opens the page after", () =>
       Effect.gen(function* () {
         const page = yield* Suite.page
-        yield* Suite.use(() => page.goto("/board"))
+        yield* page.goto("/board")
 
-        yield* Suite.use(() => page.getByLabel("Email").fill(Ras.owner.email))
-        yield* Suite.use(() => page.getByLabel("Password").fill("not-the-password"))
-        yield* Suite.use(() => page.getByRole("button", { name: "Sign in" }).click())
-        yield* Suite.use(() => page.getByText("The email or the password is wrong.").waitFor())
+        yield* page.getByLabel("Email").fill(Ras.owner.email)
+        yield* page.getByLabel("Password").fill("not-the-password")
+        yield* page.getByRole("button", { name: "Sign in" }).click()
+        yield* page.getByText("The email or the password is wrong.").waitFor()
 
-        yield* Suite.use(() => page.getByLabel("Password").fill(Ras.owner.password))
-        yield* Suite.use(() => page.getByRole("button", { name: "Sign in" }).click())
-        yield* Suite.use(() => page.getByRole("heading", { name: "Board", level: 1 }).waitFor())
-        assert.strictEqual(new URL(page.url()).pathname, "/board")
+        yield* page.getByLabel("Password").fill(Ras.owner.password)
+        yield* page.getByRole("button", { name: "Sign in" }).click()
+        yield* page.getByRole("heading", { name: "Board", level: 1 }).waitFor()
+        assert.strictEqual((yield* page.url).pathname, "/board")
       })
     )
 
     it.effect("moves between the pages from the sidebar", () =>
       Effect.gen(function* () {
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/"))
+        yield* page.goto("/")
         const sidebar = page.locator("[data-sidebar=sidebar]")
 
         yield* Effect.forEach(["Tasks", "Board", "Projects"], (name) =>
           Effect.andThen(
-            Suite.use(() => sidebar.getByRole("link", { name, exact: true }).click()),
-            Suite.use(() => page.getByRole("heading", { name, level: 1 }).waitFor())
+            sidebar.getByRole("link", { name, exact: true }).click(),
+            page.getByRole("heading", { name, level: 1 }).waitFor()
           )
         )
-        yield* Suite.use(() => sidebar.getByRole("button", { name: "Settings" }).click())
-        yield* Suite.use(() => sidebar.getByRole("link", { name: "General", exact: true }).click())
-        yield* Suite.use(() => page.getByText("MCP clients").waitFor())
-        assert.strictEqual(new URL(page.url()).pathname, "/settings")
-        yield* Suite.use(() => sidebar.getByRole("link", { name: "Calendars", exact: true }).click())
-        yield* Suite.use(() => page.getByText("On the calendar screen").first().waitFor())
-        assert.strictEqual(new URL(page.url()).pathname, "/settings/calendars")
-        yield* Suite.use(() => sidebar.getByRole("link", { name: "Connections", exact: true }).click())
-        yield* Suite.use(() => page.getByText("Sample data").first().waitFor())
-        assert.strictEqual(new URL(page.url()).pathname, "/settings/connections")
+        yield* sidebar.getByRole("button", { name: "Settings" }).click()
+        yield* sidebar.getByRole("link", { name: "General", exact: true }).click()
+        yield* page.getByText("MCP clients").waitFor()
+        assert.strictEqual((yield* page.url).pathname, "/settings")
+        yield* sidebar.getByRole("link", { name: "Calendars", exact: true }).click()
+        yield* page.getByText("On the calendar screen").first().waitFor()
+        assert.strictEqual((yield* page.url).pathname, "/settings/calendars")
+        yield* sidebar.getByRole("link", { name: "Connections", exact: true }).click()
+        yield* page.getByText("Sample data").first().waitFor()
+        assert.strictEqual((yield* page.url).pathname, "/settings/connections")
       })
     )
 
@@ -52,14 +52,14 @@ describe("the console", () => {
       Effect.gen(function* () {
         const page = yield* Suite.signedInPage
         const title = Suite.unique("Buy a new keyboard")
-        yield* Suite.use(() => page.goto("/board"))
+        yield* page.goto("/board")
 
-        yield* Suite.use(() => page.getByRole("button", { name: "New task" }).click())
+        yield* page.getByRole("button", { name: "New task" }).click()
         const dialog = page.getByRole("dialog")
-        yield* Suite.use(() => dialog.getByLabel("Task").fill(title))
-        yield* Suite.use(() => dialog.getByRole("button", { name: "Create task" }).click())
-        yield* Suite.use(() => page.getByText(`${title} is on the board.`).waitFor())
-        yield* Suite.use(() => page.getByRole("main").getByText(title).first().waitFor())
+        yield* dialog.getByLabel("Task").fill(title)
+        yield* dialog.getByRole("button", { name: "Create task" }).click()
+        yield* page.getByText(`${title} is on the board.`).waitFor()
+        yield* page.getByRole("main").getByText(title).first().waitFor()
 
         const client = yield* Suite.client(yield* Suite.sessionCookie)
         const tasks = yield* client.work.tasks({ query: {} })
@@ -74,12 +74,12 @@ describe("the console", () => {
       Effect.gen(function* () {
         const page = yield* Suite.signedInPage
         const slug = Global.AgentSlug.make(`console-${crypto.randomUUID().slice(0, 8)}`)
-        yield* Suite.use(() => page.goto("/settings"))
+        yield* page.goto("/settings")
 
-        yield* Suite.use(() => page.getByLabel("slug").fill(slug))
-        yield* Suite.use(() => page.getByLabel("Name", { exact: true }).last().fill("Console agent"))
-        yield* Suite.use(() => page.getByRole("button", { name: "Add agent" }).click())
-        yield* Suite.use(() => page.getByText(slug).waitFor())
+        yield* page.getByLabel("slug").fill(slug)
+        yield* page.getByLabel("Name", { exact: true }).last().fill("Console agent")
+        yield* page.getByRole("button", { name: "Add agent" }).click()
+        yield* page.getByText(slug).waitFor()
 
         const client = yield* Suite.client(yield* Suite.sessionCookie)
         const agents = yield* client.global.agents()
@@ -90,9 +90,9 @@ describe("the console", () => {
     it.effect("shows today's sample events in the calendar", () =>
       Effect.gen(function* () {
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/calendar"))
-        yield* Suite.use(() => page.getByText("Standup").first().waitFor())
-        yield* Suite.use(() => page.getByText("Lunch").first().waitFor())
+        yield* page.goto("/calendar")
+        yield* page.getByText("Standup").first().waitFor()
+        yield* page.getByText("Lunch").first().waitFor()
       })
     )
   })
