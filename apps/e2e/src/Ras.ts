@@ -9,6 +9,7 @@ import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as ChildProcess from "effect/process/ChildProcess"
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner"
+import * as MemoryTesting from "@ras/memory/testing"
 
 export const owner = { email: "owner@e2e.test", password: "e2e-owner-password" } as const
 
@@ -47,7 +48,9 @@ export const serve = Effect.gen(function* () {
   yield* run("git", ["init", "--quiet", "--initial-branch", "master"], { cwd: memory })
   yield* run("git", ["config", "user.name", "e2e"], { cwd: memory })
   yield* run("git", ["config", "user.email", "e2e@e2e.test"], { cwd: memory })
-  yield* run("git", ["commit", "--quiet", "--allow-empty", "-m", "init"], { cwd: memory })
+  yield* fs.writeFileString(path.join(memory, "registry.yaml"), MemoryTesting.registry)
+  yield* run("git", ["add", "registry.yaml"], { cwd: memory })
+  yield* run("git", ["commit", "--quiet", "-m", "init"], { cwd: memory })
 
   const options: ChildProcess.CommandOptions = {
     cwd: api,

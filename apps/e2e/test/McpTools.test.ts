@@ -49,11 +49,12 @@ const Slot = Schema.Struct({ start: Schema.String, end: Schema.String })
 const Conflict = Schema.Struct({ first: Event, second: Event })
 const Hours = Schema.Struct({ month: Schema.String, minutes: Schema.Number })
 const Calendars = Schema.Array(Schema.Struct({ id: Schema.Number, name: Schema.String, writable: Schema.Boolean }))
-const Written = Schema.Struct({ name: Schema.String, version: Schema.String })
-const Fact = Schema.Struct({ name: Schema.String, text: Schema.String, version: Schema.String })
+const Written = Schema.Struct({ path: Schema.String, kind: Schema.String, version: Schema.String })
+const Fact = Schema.Struct({ path: Schema.String, kind: Schema.String, text: Schema.String, version: Schema.String })
 const Read = Schema.Struct({ facts: Schema.Array(Fact), missing: Schema.Array(Schema.String) })
-const Index = Schema.Struct({ facts: Schema.Array(Schema.Struct({ name: Schema.String, description: Schema.String })) })
-const Hits = Schema.Array(Schema.Struct({ name: Schema.String }))
+const Entry = Schema.Struct({ path: Schema.String, kind: Schema.String, description: Schema.String })
+const Index = Schema.Struct({ facts: Schema.Array(Entry), kinds: Schema.Array(Schema.Struct({ kind: Schema.String })) })
+const Hits = Schema.Array(Schema.Struct({ path: Schema.String }))
 const MailSummary = Schema.Struct({
   id: Schema.String,
   subject: Schema.String,
@@ -388,52 +389,51 @@ describe("the MCP tools", () => {
       })
     )
 
-    it.effect("writes, indexes, reads, finds, changes and deletes a memory fact", () =>
+    it.effect("writes, indexes, reads, finds, changes and deletes a fact of a kind the registry defines", () =>
       Effect.gen(function* () {
         const session = yield* Mcp.allowed("Memory tools")
-        const name = `coffee-${crypto.randomUUID().slice(0, 8)}`
+        const path = `preferences/coffee-${crypto.randomUUID().slice(0, 8)}.md`
+        const properties = { description: "How the owner takes coffee." }
         const written = yield* Mcp.call(
           session,
           "memory_write",
-          { name, description: "How the owner takes coffee.", type: "preference", text: "A flat white, no sugar." },
+          { path, properties, text: "A flat white, no sugar." },
           Written
         )
-        assert.strictEqual(written.name, name)
+        assert.deepInclude(written, { path, kind: "preference" })
 
-        const index = yield* Mcp.call(session, "memory_index", {}, Index)
-        assert.deepInclude(index.facts, { name, description: "How the owner takes coffee." })
-        const read = yield* Mcp.call(session, "memory_read", { names: [name, "no-such-fact"] }, Read)
+        const index = yield* Mcp.call(session, "memory_index", { kind: "preference" }, Index)
+        assert.deepInclude(index.facts, { path, kind: "preference", description: properties.description })
+        assert.isTrue(index.kinds.some((summary) => summary.kind === "preference"))
+        const read = yield* Mcp.call(session, "memory_read", { paths: [path, "preferences/no-such-fact.md"] }, Read)
         assert.include(read.facts[0]!.text, "flat white")
-        assert.deepStrictEqual(read.missing, ["no-such-fact"])
+        assert.deepStrictEqual(read.missing, ["preferences/no-such-fact.md"])
         const hits = yield* Mcp.call(session, "memory_search", { query: "flat white" }, Hits)
-        assert.isTrue(hits.some((hit) => hit.name === name))
+        assert.isTrue(hits.some((hit) => hit.path === path))
 
         const changed = yield* Mcp.call(
           session,
           "memory_write",
-          {
-            name,
-            description: "How the owner takes coffee.",
-            type: "preference",
-            text: "An espresso.",
-            version: written.version
-          },
+          { path, properties, text: "An espresso.", version: written.version },
           Written
         )
         assert.notStrictEqual(changed.version, written.version)
         assert.include(
           yield* Mcp.refusal(session, "memory_write", {
-            name,
-            description: "Stale.",
-            type: "preference",
+            path,
+            properties,
             text: "Tea.",
             version: written.version
           }),
-          name
+          path
         )
+        assert.isNotEmpty(
+          yield* Mcp.refusal(session, "memory_write", { path: "notes/coffee.md", properties, text: "Tea." })
+        )
+        assert.isNotEmpty(yield* Mcp.refusal(session, "memory_write", { path, properties: {}, text: "Tea." }))
 
-        yield* Mcp.run(session, "memory_delete", { name, version: changed.version })
-        assert.deepStrictEqual((yield* Mcp.call(session, "memory_read", { names: [name] }, Read)).missing, [name])
+        yield* Mcp.run(session, "memory_delete", { path, version: changed.version })
+        assert.deepStrictEqual((yield* Mcp.call(session, "memory_read", { paths: [path] }, Read)).missing, [path])
       })
     )
 
