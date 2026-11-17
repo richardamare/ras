@@ -7,15 +7,19 @@
   },
   "scripts": {
     "typecheck": "tsc",
-    "lint": "oxlint src"
+    "lint": "oxlint src test",
+    "test": "bun --bun vitest run"
   },
   "dependencies": {
     "@ras/global": "workspace:*",
     "@ras/kernel": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "imapflow": "catalog:"
   },
   "devDependencies": {
+    "@effect/vitest": "catalog:",
     "@types/bun": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
