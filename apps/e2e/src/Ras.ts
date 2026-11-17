@@ -43,11 +43,9 @@ export const serve = Effect.gen(function* () {
   const memory = path.join(scratch, "memory")
   yield* fs.makeDirectory(memory)
   yield* run("git", ["init", "--quiet", "--initial-branch", "master"], { cwd: memory })
-  yield* run(
-    "git",
-    ["-c", "user.name=e2e", "-c", "user.email=e2e@e2e.test", "commit", "--quiet", "--allow-empty", "-m", "init"],
-    { cwd: memory }
-  )
+  yield* run("git", ["config", "user.name", "e2e"], { cwd: memory })
+  yield* run("git", ["config", "user.email", "e2e@e2e.test"], { cwd: memory })
+  yield* run("git", ["commit", "--quiet", "--allow-empty", "-m", "init"], { cwd: memory })
 
   const options: ChildProcess.CommandOptions = {
     cwd: api,
