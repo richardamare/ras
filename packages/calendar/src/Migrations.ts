@@ -46,5 +46,21 @@ export const migrations: Module.Migrations = {
         from_at TEXT NOT NULL,
         to_at TEXT NOT NULL
       ) STRICT`
-  })
+  }),
+  "0002_create_drafts": SqlClient.SqlClient.use(
+    (sql) => sql`
+      CREATE TABLE calendar_drafts (
+        id TEXT PRIMARY KEY,
+        calendar_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        start_at TEXT NOT NULL,
+        end_at TEXT NOT NULL,
+        all_day INTEGER NOT NULL,
+        location TEXT,
+        notes TEXT,
+        show_as TEXT,
+        refusal TEXT,
+        created_at TEXT NOT NULL
+      ) STRICT`
+  )
 }

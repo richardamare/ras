@@ -697,6 +697,10 @@
                     },
                     "required": ["every"],
                     "additionalProperties": false
+                  },
+                  "draft": {
+                    "type": "boolean",
+                    "description": "Keeps the event in ras, where the owner confirms or discards it; a draft cannot repeat."
                   }
                 },
                 "required": ["title"],
@@ -1347,6 +1351,85 @@
             }
           },
           "required": true
+        }
+      }
+    },
+    "/calendar/events/{id}/confirm": {
+      "post": {
+        "tags": ["calendar"],
+        "operationId": "calendar.confirmDraft",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedEncoded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -3217,6 +3300,54 @@
         "required": ["_tag", "source", "reason"],
         "additionalProperties": false
       },
+      "CreatedEncoded": {
+        "type": "object",
+        "properties": {
+          "calendar": {
+            "type": "integer",
+            "maximum": 9007199254740991,
+            "exclusiveMinimum": 0
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "recurring": {
+            "type": "boolean"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The draft's id while the event is a draft in ras."
+          }
+        },
+        "required": ["calendar", "title", "start", "end", "allDay", "recurring", "link", "draft"],
+        "additionalProperties": false
+      },
       "EventEncoded": {
         "type": "object",
         "properties": {
@@ -3305,6 +3436,31 @@
               }
             ],
             "description": "The original a copy was written from."
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "refusal": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["refusal"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set while the event is a draft in ras, with why its calendar refused it when it was confirmed."
           }
         },
         "required": [
@@ -3323,7 +3479,8 @@
           "category",
           "notes",
           "attendees",
-          "copyOf"
+          "copyOf",
+          "draft"
         ],
         "additionalProperties": false
       },
@@ -3362,43 +3519,6 @@
           }
         },
         "required": ["name", "email", "rsvp", "organizer", "optional"],
-        "additionalProperties": false
-      },
-      "CreatedEncoded": {
-        "type": "object",
-        "properties": {
-          "calendar": {
-            "type": "integer",
-            "maximum": 9007199254740991,
-            "exclusiveMinimum": 0
-          },
-          "title": {
-            "type": "string"
-          },
-          "start": {
-            "type": "string"
-          },
-          "end": {
-            "type": "string"
-          },
-          "allDay": {
-            "type": "boolean"
-          },
-          "recurring": {
-            "type": "boolean"
-          },
-          "link": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": ["calendar", "title", "start", "end", "allDay", "recurring", "link"],
         "additionalProperties": false
       },
       "WorkHoursEncoded": {

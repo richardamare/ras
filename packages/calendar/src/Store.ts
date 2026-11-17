@@ -177,3 +177,87 @@ export const replace = (
         ON CONFLICT (id) DO UPDATE SET synced_at = excluded.synced_at, from_at = excluded.from_at, to_at = excluded.to_at`
     }).pipe(sql.withTransaction, Effect.orDie)
   )
+
+/** A plain event drafted in ras; it reaches its calendar only once the owner confirms it. */
+export interface Draft {
+  readonly id: Domain.DraftId
+  readonly calendar: Domain.CalendarId
+  readonly title: string
+  readonly span: Domain.Span
+  readonly allDay: boolean
+  readonly location: Option.Option<string>
+  readonly notes: Option.Option<string>
+  readonly showAs: Option.Option<Domain.ShowAs>
+  readonly refusal: Option.Option<string>
+}
+
+const DraftRow = Schema.Struct({
+  id: Domain.DraftId,
+  calendar: Domain.CalendarId,
+  title: Schema.String,
+  start: Time.Instant,
+  end: Time.Instant,
+  allDay: Schema.BooleanFromBit,
+  location: Schema.NullOr(Schema.String),
+  notes: Schema.NullOr(Schema.String),
+  showAs: Schema.NullOr(Domain.ShowAs),
+  refusal: Schema.NullOr(Schema.String)
+})
+
+const draftsWhere = (where: (sql: SqlClient.SqlClient) => ReturnType<SqlClient.SqlClient["unsafe"]>) =>
+  rows(
+    DraftRow,
+    SqlClient.SqlClient.use(
+      (sql) => sql`
+        SELECT id, calendar_id AS calendar, title, start_at AS start, end_at AS "end", all_day AS "allDay", location,
+               notes, show_as AS "showAs", refusal
+        FROM calendar_drafts WHERE ${where(sql)} ORDER BY start_at, title`
+    )
+  ).pipe(
+    Effect.map(
+      Arr.map((row): Draft => ({
+        id: row.id,
+        calendar: row.calendar,
+        title: row.title,
+        span: { start: row.start, end: row.end },
+        allDay: row.allDay,
+        location: Option.fromNullOr(row.location),
+        notes: Option.fromNullOr(row.notes),
+        showAs: Option.fromNullOr(row.showAs),
+        refusal: Option.fromNullOr(row.refusal)
+      }))
+    )
+  )
+
+export const drafts = (span: Domain.Span) =>
+  draftsWhere((sql) => sql`start_at < ${DateTime.formatIso(span.end)} AND end_at > ${DateTime.formatIso(span.start)}`)
+
+export const draftById = (id: Domain.DraftId) =>
+  Effect.map(
+    draftsWhere((sql) => sql`id = ${id}`),
+    (found) => Arr.head(found)
+  )
+
+export const saveDraft = (draft: Draft, at: string) =>
+  Global.write(
+    SqlClient.SqlClient.use(
+      (sql) => sql`
+        INSERT INTO calendar_drafts (id, calendar_id, title, start_at, end_at, all_day, location, notes, show_as,
+                                     refusal, created_at)
+        VALUES (${draft.id}, ${draft.calendar}, ${draft.title}, ${DateTime.formatIso(draft.span.start)},
+                ${DateTime.formatIso(draft.span.end)}, ${draft.allDay ? 1 : 0}, ${Option.getOrNull(draft.location)},
+                ${Option.getOrNull(draft.notes)}, ${Option.getOrNull(draft.showAs)}, ${Option.getOrNull(draft.refusal)},
+                ${at})
+        ON CONFLICT (id) DO UPDATE SET
+          title = excluded.title, start_at = excluded.start_at, end_at = excluded.end_at, all_day = excluded.all_day,
+          location = excluded.location, notes = excluded.notes, show_as = excluded.show_as, refusal = excluded.refusal`
+    ).pipe(Effect.asVoid, Effect.orDie)
+  )
+
+export const deleteDraft = (id: Domain.DraftId) =>
+  Global.write(
+    SqlClient.SqlClient.use((sql) => sql`DELETE FROM calendar_drafts WHERE id = ${id}`).pipe(
+      Effect.asVoid,
+      Effect.orDie
+    )
+  )

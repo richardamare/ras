@@ -86,6 +86,13 @@ export const group = HttpApiGroup.make("calendar")
       error: failures
     })
   )
+  .add(
+    HttpApiEndpoint.post("confirmDraft", "/events/:id/confirm", {
+      params: { id: Domain.EventId },
+      success: Domain.Created,
+      error: failures
+    })
+  )
   .prefix("/calendar")
 
 export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (endpoints) =>
@@ -106,5 +113,6 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (end
       .handle("changeEvent", ({ params, payload }) => events.change(params.id, payload))
       .handle("cancelEvent", ({ params }) => events.cancel(params.id))
       .handle("replyToEvent", ({ params, payload }) => events.reply(params.id, payload.reply))
+      .handle("confirmDraft", ({ params }) => events.confirm(params.id))
   })
 )
