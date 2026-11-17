@@ -6,6 +6,8 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
+import * as Time from "@ras/kernel/Time"
+import * as Blocks from "./Blocks.ts"
 import * as Board from "./Board.ts"
 import * as Domain from "./Domain.ts"
 
@@ -103,11 +105,39 @@ export const group = HttpApiGroup.make("work")
       error: failures
     })
   )
+  .add(
+    HttpApiEndpoint.get("blocks", "/blocks", {
+      query: { from: Time.PragueLocal, to: Time.PragueLocal },
+      success: Schema.Array(Domain.Block),
+      error: failures
+    })
+  )
+  .add(HttpApiEndpoint.get("running", "/blocks/running", { success: Schema.NullOr(Domain.Block) }))
+  .add(HttpApiEndpoint.post("plan", "/blocks", { payload: Domain.PlanWork, success: Domain.Block, error: failures }))
+  .add(
+    HttpApiEndpoint.post("start", "/blocks/start", {
+      payload: Schema.Struct({ task: Domain.TaskId }),
+      success: Domain.Block,
+      error: failures
+    })
+  )
+  .add(HttpApiEndpoint.post("stop", "/blocks/stop", { success: Domain.Block, error: failures }))
+  .add(HttpApiEndpoint.post("log", "/blocks/log", { payload: Domain.LogWork, success: Domain.Block, error: failures }))
+  .add(
+    HttpApiEndpoint.patch("move", "/blocks/:id", {
+      params: { id: Domain.BlockId },
+      payload: Schema.Struct({ start: Time.PragueLocal, end: Time.PragueLocal }),
+      success: Domain.Block,
+      error: failures
+    })
+  )
+  .add(HttpApiEndpoint.delete("remove", "/blocks/:id", { params: { id: Domain.BlockId }, error: failures }))
   .prefix("/work")
 
 export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoints) =>
   Effect.gen(function* () {
     const board = yield* Board.Board
+    const blocks = yield* Blocks.Blocks
     return endpoints
       .handle("spaces", () => board.spaces)
       .handle("addSpace", ({ payload }) => board.addSpace(payload))
@@ -125,5 +155,13 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoin
       .handle("comment", ({ params, payload }) => board.comment(params.id, payload))
       .handle("link", ({ params, payload }) => board.link(params.id, payload.url))
       .handle("unlink", ({ params, query }) => board.unlink(params.id, query.url))
+      .handle("blocks", ({ query }) => blocks.blocks(query))
+      .handle("running", () => Effect.map(blocks.running, Option.getOrNull))
+      .handle("plan", ({ payload }) => blocks.plan(payload))
+      .handle("start", ({ payload }) => blocks.start(payload.task))
+      .handle("stop", () => blocks.stop)
+      .handle("log", ({ payload }) => blocks.log(payload))
+      .handle("move", ({ params, payload }) => blocks.move({ block: params.id, ...payload }))
+      .handle("remove", ({ params }) => blocks.remove(params.id))
   })
 )

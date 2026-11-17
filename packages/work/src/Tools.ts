@@ -3,6 +3,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
+import * as Blocks from "./Blocks.ts"
 import * as Board from "./Board.ts"
 import * as Domain from "./Domain.ts"
 
@@ -82,12 +83,50 @@ export const toolkit = Toolkit.make(
     parameters: { ...TaskRef, url: Domain.LinkUrl },
     success: Domain.Task,
     destructive: false
+  }),
+  Global.writeTool("plan_work", {
+    description:
+      "Plans a block of work on one of the owner's open tasks, at a Prague local start and a length, as an event in its space's calendar. With `draft` the block stays in ras, taking its time, until confirm_drafts writes it.",
+    parameters: Domain.PlanWork.fields,
+    success: Domain.Block,
+    destructive: false
+  }),
+  Global.writeTool("start_work", {
+    description: "Starts work on one of the owner's open tasks now. One block runs at a time.",
+    parameters: TaskRef,
+    success: Domain.Block,
+    destructive: false
+  }),
+  Global.writeTool("stop_work", {
+    description: "Stops the running block now, and its event ends at the same time.",
+    parameters: {},
+    success: Domain.Block,
+    destructive: false
+  }),
+  Global.writeTool("log_work", {
+    description: "Records work on a task that already happened: its Prague local end and its length in minutes.",
+    parameters: Domain.LogWork.fields,
+    success: Domain.Block,
+    destructive: false
+  }),
+  Global.writeTool("move_work", {
+    description:
+      "Moves or resizes a block that is not running, with its event. A planned block stays from now on; work that has ended stays in the past.",
+    parameters: Domain.MoveWork.fields,
+    success: Domain.Block,
+    destructive: false
+  }),
+  Global.writeTool("remove_work", {
+    description: "Removes a block that is not running, with its event.",
+    parameters: { block: Domain.BlockId },
+    destructive: true
   })
 )
 
 export const handlers = toolkit.toLayer(
   Effect.gen(function* () {
     const board = yield* Board.Board
+    const blocks = yield* Blocks.Blocks
     const actingAs = yield* Global.actingAs
     return {
       spaces: () => board.spaces,
@@ -102,7 +141,13 @@ export const handlers = toolkit.toLayer(
       delete_task: ({ agent, task }) => board.deleteTask(task).pipe(actingAs(agent)),
       comment_task: ({ agent, task, ...comment }) => board.comment(task, comment).pipe(actingAs(agent)),
       link_task: ({ agent, task, url }) => board.link(task, url).pipe(actingAs(agent)),
-      unlink_task: ({ agent, task, url }) => board.unlink(task, url).pipe(actingAs(agent))
+      unlink_task: ({ agent, task, url }) => board.unlink(task, url).pipe(actingAs(agent)),
+      plan_work: ({ agent, ...input }) => blocks.plan(input).pipe(actingAs(agent)),
+      start_work: ({ agent, task }) => blocks.start(task).pipe(actingAs(agent)),
+      stop_work: ({ agent }) => blocks.stop.pipe(actingAs(agent)),
+      log_work: ({ agent, ...input }) => blocks.log(input).pipe(actingAs(agent)),
+      move_work: ({ agent, ...input }) => blocks.move(input).pipe(actingAs(agent)),
+      remove_work: ({ agent, block }) => blocks.remove(block).pipe(actingAs(agent))
     }
   })
 )

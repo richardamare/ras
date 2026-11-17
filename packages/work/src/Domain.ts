@@ -12,6 +12,8 @@ export const TaskId = Id.Uuid.pipe(Schema.brand("TaskId"))
 export type TaskId = typeof TaskId.Type
 export const CommentId = Id.Uuid.pipe(Schema.brand("CommentId"))
 export type CommentId = typeof CommentId.Type
+export const BlockId = Id.Uuid.pipe(Schema.brand("BlockId"))
+export type BlockId = typeof BlockId.Type
 
 export const Color = Schema.String.check(Schema.isPattern(/^#[0-9a-f]{6}$/))
 
@@ -173,3 +175,49 @@ export const NewComment = Schema.Struct({
   link: Schema.optionalKey(Schema.String).annotate({ description: "A URL to the output, if there is one." })
 })
 export type NewComment = typeof NewComment.Type
+
+/**
+ * `draft` is planned and has no event; `planned` is in its calendar and has not ended; `running` is the one block worked
+ * on now; `done` is in its calendar and has ended, and counts as time spent.
+ */
+export const BlockState = Schema.Literals(["draft", "planned", "running", "done"])
+export type BlockState = typeof BlockState.Type
+
+export class Block extends Schema.Class<Block>("Block")({
+  id: BlockId,
+  task: TaskId,
+  title: Schema.String.annotate({ description: "The project and the task, as its event is titled." }),
+  calendar: Calendar.CalendarId,
+  start: Time.PragueLocal,
+  end: Schema.NullOr(Time.PragueLocal).annotate({ description: "None while it runs." }),
+  state: BlockState
+}) {}
+
+const Minutes = (minimum: number) =>
+  Schema.Int.check(Schema.isBetween({ minimum, maximum: 720 })).annotate({
+    description: `Minutes, from ${minimum} to 720.`
+  })
+
+export const PlanWork = Schema.Struct({
+  task: TaskId,
+  start: Time.PragueLocal,
+  minutes: Minutes(5),
+  draft: Schema.optionalKey(Schema.Boolean).annotate({
+    description: "Keeps the block in ras, taking its time, until confirm_drafts writes its event."
+  })
+})
+export type PlanWork = typeof PlanWork.Type
+
+export const LogWork = Schema.Struct({
+  task: TaskId,
+  end: Time.PragueLocal.annotate({ description: "When the work ended; not in the future." }),
+  minutes: Minutes(1)
+})
+export type LogWork = typeof LogWork.Type
+
+export const MoveWork = Schema.Struct({
+  block: BlockId,
+  start: Time.PragueLocal,
+  end: Time.PragueLocal
+})
+export type MoveWork = typeof MoveWork.Type
