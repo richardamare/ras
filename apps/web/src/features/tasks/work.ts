@@ -18,3 +18,12 @@ export const reasonOf = (error: unknown) =>
         : error.reason
       : undefined
     : undefined
+
+/** An estimate typed as `1:30` or as plain minutes, in minutes; `null` for an empty box, `undefined` for neither. */
+export const minutesOf = (text: string): number | null | undefined => {
+  const typed = text.trim()
+  if (typed === "") return null
+  const clock = /^(\d+):([0-5]\d)$/.exec(typed)
+  if (clock !== null) return Number(clock[1]) * 60 + Number(clock[2])
+  return /^\d+$/.test(typed) ? Number(typed) : undefined
+}

@@ -4,6 +4,7 @@ import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
+import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Dialog from "@/components/ui/dialog"
 import * as Select from "@/components/ui/select"
@@ -12,6 +13,7 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Textarea from "@/components/ui/textarea"
 import * as Completion from "@/features/tasks/completion"
 import * as TaskBits from "@/features/tasks/task-bits"
+import * as TaskEdit from "@/features/tasks/task-edit"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
@@ -28,7 +30,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Details({ id, comment: pointed }: { id: string; comment: string | null }) {
+function Details({ id, comment: pointed, onClose }: { id: string; comment: string | null; onClose: () => void }) {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
   const assignee = TaskBits.useAssignee()
@@ -37,6 +39,7 @@ function Details({ id, comment: pointed }: { id: string; comment: string | null 
   const note = React.useRef<HTMLTextAreaElement>(null)
   const askForNote = React.useRef(false)
   const [text, setText] = React.useState("")
+  const [editing, setEditing] = React.useState(false)
   const settle = {
     onSuccess: () => {
       setText("")
@@ -89,7 +92,16 @@ function Details({ id, comment: pointed }: { id: string; comment: string | null 
           <Completion.DoneCheckbox task={found} />
         </span>
         <Dialog.DialogTitle className="min-w-0 flex-1 pt-1">{found.title}</Dialog.DialogTitle>
+        <IconButton.IconButton
+          label={t("edit.button")}
+          className="-my-1 size-8 shrink-0"
+          disabled={editing}
+          onClick={() => setEditing(true)}
+        >
+          <LucideReact.PencilIcon />
+        </IconButton.IconButton>
         <CopyLink.CopyLink url={TaskUrl.taskUrl(id)} className="-my-1 size-8 shrink-0" />
+        <TaskEdit.DeleteButton task={found} onDeleted={onClose} />
       </Dialog.DialogHeader>
       <Dialog.DialogBody className="grid gap-5 pb-1">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-3">
@@ -137,45 +149,37 @@ function Details({ id, comment: pointed }: { id: string; comment: string | null 
               </Select.SelectContent>
             </Select.Select>
           </Field>
+          <Field label={t("fields.project")}>
+            <TaskEdit.ProjectSelect task={found} />
+          </Field>
           <Field label={t("fields.priority")}>
-            {found.priority === "urgent" || found.priority === "high" ? (
-              <TaskBits.PriorityFlag priority={found.priority} withLabel />
-            ) : (
-              t(`priority.${found.priority}`)
-            )}
+            <TaskEdit.PrioritySelect task={found} />
           </Field>
           <Field label={t("fields.deadline")}>
-            <TaskBits.Due task={found} />
+            <TaskEdit.DeadlineInput task={found} />
+          </Field>
+          <Field label={t("fields.estimate")}>
+            <TaskEdit.EstimateInput task={found} />
           </Field>
           <Field label={t("fields.spent")}>{Prague.duration(found.spent)}</Field>
-          <Field label={t("fields.estimate")}>{found.estimate === null ? "—" : Prague.duration(found.estimate)}</Field>
         </div>
         <section className="grid gap-2">
           <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("brief")}</h3>
-          <p
-            className={
-              found.body.length > 0 ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-sm text-muted-foreground"
-            }
-          >
-            {found.body.length > 0 ? found.body : t("noBody")}
-          </p>
-          {found.links.length > 0 && (
-            <ul className="grid gap-1 text-sm">
-              {found.links.map((link) => (
-                <li key={link} className="flex min-w-0 items-center gap-1.5">
-                  <LucideReact.LinkIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <a
-                    className="truncate text-primary underline-offset-2 hover:underline"
-                    href={link}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {link}
-                  </a>
-                </li>
-              ))}
-            </ul>
+          {editing ? (
+            <TaskEdit.BriefForm task={found} onDone={() => setEditing(false)} />
+          ) : (
+            <p
+              className={
+                found.body.length > 0 ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-sm text-muted-foreground"
+              }
+            >
+              {found.body.length > 0 ? found.body : t("noBody")}
+            </p>
           )}
+        </section>
+        <section className="grid gap-2">
+          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("links.title")}</h3>
+          <TaskEdit.Links task={found} />
         </section>
         <Separator.Separator />
         <section className="grid gap-3">
@@ -239,13 +243,15 @@ function Details({ id, comment: pointed }: { id: string; comment: string | null 
   )
 }
 
-/** The task the address names, with its body, comments and links, over whichever page is open. */
+/** The task the address names, over whichever page is open, where its fields, brief and links are edited and it is commented on. */
 export function TaskDialog() {
   const [{ task, comment }, set] = TaskUrl.useTaskParams()
   return (
     <Dialog.Dialog open={task !== null} onOpenChange={(open) => !open && void set({ task: null, comment: null })}>
       <Dialog.DialogContent className="sm:max-w-xl" aria-describedby={undefined}>
-        {task !== null && <Details key={task} id={task} comment={comment} />}
+        {task !== null && (
+          <Details key={task} id={task} comment={comment} onClose={() => void set({ task: null, comment: null })} />
+        )}
       </Dialog.DialogContent>
     </Dialog.Dialog>
   )
