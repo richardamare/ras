@@ -347,6 +347,61 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("starts and stops work and adds blocks on a task from the tasks table's menu and from its dialog", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Clocked"), space: space.id } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?q=${encodeURIComponent(task.title)}`)
+        const menu = (item: string) =>
+          Effect.andThen(
+            page
+              .getByRole("main")
+              .getByRole("button", { name: `Actions: ${task.title}` })
+              .click(),
+            page.getByRole("menuitem", { name: item, exact: true }).click()
+          )
+
+        yield* menu("Start")
+        yield* becomes(client.work.running(), (block) => block?.task === task.id)
+        yield* menu("Stop")
+        yield* becomes(client.work.running(), (block) => block === null)
+
+        const addBlock = (date: string, from: string, to: string, length: string) =>
+          Effect.gen(function* () {
+            yield* menu("Add block")
+            const dialog = page.getByRole("dialog", { name: `Add a block to “${task.title}”` })
+            yield* dialog.getByLabel("Date").fill(date)
+            yield* dialog.getByLabel("From").fill(from)
+            yield* dialog.getByLabel("To").fill(to)
+            yield* dialog.getByText(`${length} of work`).waitFor()
+            yield* dialog.getByRole("button", { name: "Add block" }).click()
+            yield* dialog.waitFor({ state: "detached" })
+          })
+        const ahead = Time.addDays(yield* today, 45)
+        yield* addBlock(ahead, "10:00", "10:45", "0:45")
+        const planned = yield* client.work.blocks({
+          query: { from: Time.PragueLocal.make(`${ahead}T00:00`), to: Time.PragueLocal.make(`${ahead}T23:59`) }
+        })
+        assert.deepStrictEqual(
+          planned
+            .filter((block) => block.task === task.id)
+            .map((block): Array<string | null> => [block.start, block.end, block.state]),
+          [[`${ahead}T10:00`, `${ahead}T10:45`, "planned"]]
+        )
+        yield* addBlock(Time.addDays(yield* today, -21), "08:00", "09:30", "1:30")
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent >= 90)
+
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog", { name: task.title })
+        yield* dialog.getByRole("button", { name: "Start" }).click()
+        yield* becomes(client.work.running(), (block) => block?.task === task.id)
+        yield* dialog.getByRole("button", { name: "Stop" }).click()
+        yield* becomes(client.work.running(), (block) => block === null)
+      })
+    )
+
     it.effect("shows a project's progress, its tasks and its upcoming blocks", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

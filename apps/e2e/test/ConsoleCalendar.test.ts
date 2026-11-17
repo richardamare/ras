@@ -269,6 +269,28 @@ describe("the console's calendar", () => {
       })
     )
 
+    it.effect("starts work on a block's task from its popover, and stops the running block there", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Kicked off"), space: space.id } })
+        const date = yield* day(62)
+        const block = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "10:00") }
+        })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
+
+        yield* page.getByText("Planned work block").waitFor()
+        yield* page.getByRole("button", { name: "Start" }).click()
+        const running = yield* becomes(client.work.running(), (found) => found?.task === task.id)
+
+        yield* page.goto(`/calendar?view=day&date=${yield* day(0)}&item=${running!.id}`)
+        yield* page.getByRole("button", { name: "Stop" }).click()
+        yield* becomes(client.work.running(), (found) => found === null)
+      })
+    )
+
     it.effect("moves a block to a typed time, opens its task, and removes it from its popover", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

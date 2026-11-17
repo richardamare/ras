@@ -7,6 +7,7 @@ import * as BlockMoveDialog from "@/features/calendar/block-move-dialog"
 import * as EventDialog from "@/features/calendar/event-dialog"
 import * as NewTaskDialog from "@/features/tasks/new-task-dialog"
 import * as TaskDialog from "@/features/tasks/task-dialog"
+import * as WorkActions from "@/features/tasks/work-actions"
 
 interface ModalProps {
   open: boolean
@@ -53,6 +54,7 @@ export function ModalProvider() {
       <Slot useStore={MoveDialog.useMoveDialog} component={MoveDialog.MoveDialog} />
       <Slot useStore={EventDialog.useEventDialog} component={EventDialog.EventDialog} />
       <Slot useStore={BlockMoveDialog.useBlockMoveDialog} component={BlockMoveDialog.BlockMoveDialog} />
+      <Slot useStore={WorkActions.useBlockDialog} component={WorkActions.BlockDialog} />
       <Slot useStore={ConfirmDialog.useConfirmDialog} component={ConfirmDialog.ConfirmDialog} />
     </>
   )

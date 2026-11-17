@@ -247,38 +247,43 @@ export function Links({ task }: { task: Task }) {
   )
 }
 
-/** Asks first; the API deletes a task with no work begun on it, and moves one with work to done instead. */
-export function DeleteButton({ task, onDeleted }: { task: Task; onDeleted: () => void }) {
+/**
+ * Asks first, then deletes the task. The API deletes a task with no work begun on it, and moves one with work to done
+ * instead; the toast says which.
+ */
+export const useDeleteTask = (onDeleted: () => void = () => {}) => {
   const { t } = ReactI18next.useTranslation("Work")
   const confirm = ConfirmDialog.useConfirmDialog()
-  const settled = useSettled()
-  const remove = ReactQuery.useMutation({
-    ...Queries.workDeleteTaskMutation(),
-    ...settled,
-    onSuccess: (kept) => {
-      Sonner.toast.success(
-        kept === null ? t("delete.deleted", { title: task.title }) : t("delete.closed", { title: task.title })
-      )
-      onDeleted()
-      return settled.onSuccess()
-    }
-  })
+  const client = ReactQuery.useQueryClient()
+  const remove = ReactQuery.useMutation(Queries.workDeleteTaskMutation())
 
+  return (task: Pick<Task, "id" | "title">) =>
+    confirm.open({
+      title: t("delete.title", { title: task.title }),
+      description: t("delete.description"),
+      confirmLabel: t("delete.confirm"),
+      cancelLabel: t("delete.keep"),
+      destructive: true,
+      onConfirm: () =>
+        void remove.mutateAsync({ path: { id: task.id } }).then(
+          (kept) => {
+            Sonner.toast.success(t(kept === null ? "delete.deleted" : "delete.closed", { title: task.title }))
+            onDeleted()
+            return client.invalidateQueries()
+          },
+          (error: unknown) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
+        )
+    })
+}
+
+export function DeleteButton({ task, onDeleted }: { task: Task; onDeleted: () => void }) {
+  const { t } = ReactI18next.useTranslation("Work")
+  const ask = useDeleteTask(onDeleted)
   return (
     <IconButton.IconButton
       label={t("delete.button")}
       className="-my-1 size-8 shrink-0 text-destructive"
-      disabled={remove.isPending}
-      onClick={() =>
-        confirm.open({
-          title: t("delete.title", { title: task.title }),
-          description: t("delete.description"),
-          confirmLabel: t("delete.confirm"),
-          cancelLabel: t("delete.keep"),
-          destructive: true,
-          onConfirm: () => remove.mutate({ path: { id: task.id } })
-        })
-      }
+      onClick={() => ask(task)}
     >
       <LucideReact.Trash2Icon />
     </IconButton.IconButton>

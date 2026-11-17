@@ -113,5 +113,26 @@
     "keep": "Ponechat úkol",
     "deleted": "Smazáno: {{title}}",
     "closed": "Na úkolu {{title}} se už pracovalo, proto se přesunul do Hotovo."
+  },
+  "work": {
+    "start": "Spustit",
+    "stop": "Zastavit",
+    "date": "Datum",
+    "from": "Od",
+    "to": "Do"
+  },
+  "block": {
+    "button": "Přidat blok",
+    "title": "Přidat blok k „{{title}}“",
+    "hint": "Blok může ležet v minulosti, v budoucnosti i přes teď. Do stráveného času se počítá, jakmile skončí.",
+    "submit": "Přidat blok",
+    "added": "Blok je v kalendáři: {{title}}",
+    "length": "{{length}} práce",
+    "badSpan": "Blok musí skončit až po začátku."
+  },
+  "menu": {
+    "label": "Akce: {{title}}",
+    "column": "Akce",
+    "open": "Otevřít"
   }
 }

@@ -14,6 +14,7 @@ import * as Pointer from "@/features/calendar/pointer"
 import * as Url from "@/features/calendar/url"
 import * as Completion from "@/features/tasks/completion"
 import * as TaskBits from "@/features/tasks/task-bits"
+import * as WorkActions from "@/features/tasks/work-actions"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
@@ -197,6 +198,7 @@ function BlockCard({
   const when = useWhen()
   const task = ReactQuery.useQuery(Queries.workTaskOptions({ path: { id: block.task } }))
   const moveDialog = BlockMoveDialog.useBlockMoveDialog()
+  const clock = WorkActions.useClock()
   const remove = ReactQuery.useMutation({
     ...Queries.workRemoveMutation(),
     onSuccess: () => {
@@ -258,6 +260,20 @@ function BlockCard({
             <LucideReact.CalendarClockIcon />
             {t("item.moveBlock")}
           </Button.Button>
+        )}
+        {block.state === "running" ? (
+          <Button.Button size="sm" variant="outline" disabled={clock.busy} onClick={clock.stop}>
+            <LucideReact.SquareIcon />
+            {work("work.stop")}
+          </Button.Button>
+        ) : (
+          task.data !== undefined &&
+          task.data.status !== "done" && (
+            <Button.Button size="sm" variant="outline" disabled={clock.busy} onClick={() => clock.start(block.task)}>
+              <LucideReact.PlayIcon />
+              {work("work.start")}
+            </Button.Button>
+          )
         )}
         <Button.Button size="sm" className="ms-auto" onClick={onOpenTask}>
           {t("item.openTask")}

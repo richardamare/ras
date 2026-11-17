@@ -111,5 +111,26 @@
     "keep": "Keep task",
     "deleted": "{{title}} is deleted.",
     "closed": "{{title}} has work on it, so it moved to Done."
+  },
+  "work": {
+    "start": "Start",
+    "stop": "Stop",
+    "date": "Date",
+    "from": "From",
+    "to": "To"
+  },
+  "block": {
+    "button": "Add block",
+    "title": "Add a block to “{{title}}”",
+    "hint": "A block may lie in the past, in the future or across now. It counts as time spent once it ends.",
+    "submit": "Add block",
+    "added": "A block of {{title}} is in the calendar.",
+    "length": "{{length}} of work",
+    "badSpan": "The block must end after it starts."
+  },
+  "menu": {
+    "label": "Actions: {{title}}",
+    "column": "Actions",
+    "open": "Open"
   }
 }
