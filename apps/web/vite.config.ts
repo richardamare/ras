@@ -19,10 +19,11 @@ const api = process.env.DEV_API_TARGET ?? "http://localhost:4200"
 
 /*
  * Same-origin in dev too, so the session cookie and better-auth's origin check behave as in
- * production. `origin` is rewritten to the API's, which is the only origin it trusts.
+ * production. `origin` is rewritten to the API's, which is the only origin it trusts. The trailing
+ * slash leaves a console page named like a module, such as `/calendar`, to the console.
  */
 const proxy = Object.fromEntries(
-  ["/auth", "/global", "/calendar", "/work", "/openapi.json"].map((path) => [
+  ["/auth/", "/global/", "/calendar/", "/work/", "/openapi.json"].map((path) => [
     path,
     { target: api, changeOrigin: true, headers: { origin: api } }
   ])

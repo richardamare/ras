@@ -1,0 +1,83 @@
+{
+  "untitled": "(no title)",
+  "failed": "The change was not saved.",
+  "unreachable": "The calendar could not be read.",
+  "allDay": "All day",
+  "block": "Work block",
+  "more_one": "{{count}} more",
+  "more_other": "{{count}} more",
+  "today": "Today",
+  "newEvent": "New event",
+  "view": {
+    "label": "View",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  "previous": {
+    "day": "Previous day",
+    "week": "Previous week",
+    "month": "Previous month"
+  },
+  "next": {
+    "day": "Next day",
+    "week": "Next week",
+    "month": "Next month"
+  },
+  "draft": {
+    "toggle": "Draft",
+    "badge": "Draft",
+    "on": "Drafting: new events and blocks stay in ras until you confirm them",
+    "left": "Drafts are waiting",
+    "inView_one": "{{count}} draft in view",
+    "inView_other": "{{count}} drafts in view",
+    "confirmAll": "Confirm all drafts",
+    "discardAll": "Discard all drafts",
+    "discardTitle": "Discard every draft?",
+    "discardDescription": "Every draft event and block is deleted, in this view and outside it.",
+    "keep": "Keep them",
+    "confirmDay": "Confirm the drafts of {{day}}",
+    "refused": "{{title}} stays a draft: {{reason}}"
+  },
+  "planner": {
+    "title": "Plan tasks",
+    "close": "Close",
+    "search": "Search tasks",
+    "hint": "Drag a task onto the grid to plan a block.",
+    "empty": "No open tasks."
+  },
+  "event": {
+    "new": "New event",
+    "newDraft": "New draft event",
+    "newHint": "The event goes to a calendar of the connected Outlook account.",
+    "readonly": "{{calendar}} takes no changes from ras; change it in that calendar's own Outlook.",
+    "title": "Title",
+    "calendar": "Calendar",
+    "day": "Day",
+    "start": "Start",
+    "end": "End",
+    "firstDay": "First day",
+    "lastDay": "Last day",
+    "location": "Location",
+    "showAs": "Show as",
+    "notes": "Notes",
+    "attendees": "Attendees",
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel event",
+    "discard": "Discard draft",
+    "confirm": "Confirm draft"
+  },
+  "showAs": {
+    "busy": "Busy",
+    "tentative": "Tentative",
+    "free": "Free",
+    "oof": "Out of office",
+    "workingElsewhere": "Working elsewhere"
+  },
+  "reply": {
+    "accept": "Accept",
+    "tentative": "Maybe",
+    "decline": "Decline"
+  }
+}
