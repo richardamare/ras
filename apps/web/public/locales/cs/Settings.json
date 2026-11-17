@@ -26,11 +26,22 @@
   },
   "connections": {
     "title": "Připojení",
-    "description": "Účet Outlook, do kterého ras zapisuje události.",
-    "none": "Nepřipojeno",
-    "connected": "{{account}}, od {{at}}",
+    "description": "Vnější systémy, ze kterých ras čte a do kterých zapisuje. Kontrola na systém sáhne tím nejlevnějším čtením.",
     "connect": "Připojit",
-    "reconnect": "Připojit znovu"
+    "reconnect": "Připojit znovu",
+    "check": "Zkontrolovat",
+    "kind": {
+      "outlook": "Outlook",
+      "reclaim": "Reclaim",
+      "icloud": "iCloud Mail",
+      "github": "GitHub"
+    },
+    "state": {
+      "connected": "Připojeno",
+      "notConfigured": "Nenastaveno",
+      "failing": "Nefunguje",
+      "sample": "Vzorová data"
+    }
   },
   "agents": {
     "title": "Agenti",

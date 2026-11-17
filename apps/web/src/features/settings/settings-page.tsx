@@ -2,7 +2,6 @@ import * as React from "react"
 import * as ReactQuery from "@tanstack/react-query"
 import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
-import * as Sonner from "sonner"
 
 import * as Badge from "@/components/ui/badge"
 import * as ConfirmDialog from "@/components/confirm-dialog"
@@ -11,7 +10,6 @@ import * as Input from "@/components/ui/input"
 import * as Select from "@/components/ui/select"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as SettingsSection from "@/features/settings/settings-section"
-import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 
@@ -131,41 +129,6 @@ function Spaces() {
           {t("spaces.add")}
         </Button.Button>
       </form>
-    </SettingsSection.Section>
-  )
-}
-
-function Connections() {
-  const { t } = ReactI18next.useTranslation("Settings")
-  const graph = ReactQuery.useQuery(Queries.globalGraphOptions())
-  const connect = ReactQuery.useMutation({
-    ...Queries.globalConnectGraphMutation(),
-    onSuccess: (result) => window.location.assign(result.url),
-    onError: (error) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
-  })
-
-  return (
-    <SettingsSection.Section title={t("connections.title")} description={t("connections.description")}>
-      <SettingsSection.Row>
-        <LucideReact.MailIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-        <span className="font-medium">Outlook</span>
-        {graph.data == null ? (
-          <span className="text-sm text-muted-foreground">{t("connections.none")}</span>
-        ) : (
-          <span className="text-sm text-muted-foreground">
-            {t("connections.connected", { account: graph.data.account, at: graph.data.connected.replace("T", " ") })}
-          </span>
-        )}
-        <Button.Button
-          size="sm"
-          variant="outline"
-          className="ms-auto"
-          disabled={connect.isPending}
-          onClick={() => connect.mutate({})}
-        >
-          {t(graph.data == null ? "connections.connect" : "connections.reconnect")}
-        </Button.Button>
-      </SettingsSection.Row>
     </SettingsSection.Section>
   )
 }
@@ -300,7 +263,6 @@ export function SettingsPage() {
     <div className="grid max-w-4xl gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
       <Spaces />
-      <Connections />
       <Agents />
       <Clients />
     </div>
