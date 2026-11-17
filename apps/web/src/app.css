@@ -346,3 +346,40 @@
     animation-duration: 1ms;
   }
 }
+
+.calendar-event {
+  --event-fill-share: 20%;
+  border-left-color: var(--event-bar);
+  background-color: color-mix(in srgb, var(--event-bar) var(--event-fill-share), transparent);
+  color: color-mix(in srgb, var(--event-bar) 55%, var(--foreground));
+}
+
+.calendar-event[data-show-as="tentative"] {
+  --event-fill-share: 10%;
+}
+
+.calendar-event[data-show-as="free"] {
+  --event-fill-share: 4%;
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--event-bar) 10%, transparent) 0 4px,
+    transparent 4px 9px
+  );
+  color: color-mix(in srgb, var(--event-bar) 35%, var(--muted-foreground));
+}
+
+.calendar-event[data-show-as="oof"] {
+  --event-fill-share: 30%;
+}
+
+.calendar-event[data-show-as="workingElsewhere"] {
+  --event-fill-share: 15%;
+}
+
+/* A draft is in ras only: greyed toward the background, with a dashed outline in its calendar's colour. */
+.calendar-event[data-draft="true"] {
+  --event-fill-share: 8%;
+  border: 1.5px dashed color-mix(in srgb, var(--event-bar) 60%, var(--muted-foreground));
+  background-color: color-mix(in srgb, var(--event-bar) var(--event-fill-share), var(--muted));
+  color: color-mix(in srgb, var(--event-bar) 25%, var(--muted-foreground));
+}

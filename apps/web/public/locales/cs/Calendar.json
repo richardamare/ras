@@ -1,0 +1,87 @@
+{
+  "untitled": "(bez názvu)",
+  "failed": "Změna se neuložila.",
+  "unreachable": "Kalendář se nepodařilo načíst.",
+  "allDay": "Celý den",
+  "block": "Pracovní blok",
+  "more_one": "a {{count}} další",
+  "more_few": "a {{count}} další",
+  "more_many": "a {{count}} dalších",
+  "more_other": "a {{count}} dalších",
+  "today": "Dnes",
+  "newEvent": "Nová událost",
+  "view": {
+    "label": "Zobrazení",
+    "day": "Den",
+    "week": "Týden",
+    "month": "Měsíc"
+  },
+  "previous": {
+    "day": "Předchozí den",
+    "week": "Předchozí týden",
+    "month": "Předchozí měsíc"
+  },
+  "next": {
+    "day": "Další den",
+    "week": "Další týden",
+    "month": "Další měsíc"
+  },
+  "draft": {
+    "toggle": "Návrh",
+    "badge": "Návrh",
+    "on": "Navrhování: nové události a bloky zůstanou v ras, dokud je nepotvrdíš",
+    "left": "Čekají návrhy",
+    "inView_one": "{{count}} návrh v zobrazení",
+    "inView_few": "{{count}} návrhy v zobrazení",
+    "inView_many": "{{count}} návrhů v zobrazení",
+    "inView_other": "{{count}} návrhů v zobrazení",
+    "confirmAll": "Potvrdit všechny návrhy",
+    "discardAll": "Zahodit všechny návrhy",
+    "discardTitle": "Zahodit všechny návrhy?",
+    "discardDescription": "Smaže se každý návrh události i bloku, v tomto zobrazení i mimo něj.",
+    "keep": "Ponechat",
+    "confirmDay": "Potvrdit návrhy dne {{day}}",
+    "refused": "{{title}} zůstává návrhem: {{reason}}"
+  },
+  "planner": {
+    "title": "Plánovat úkoly",
+    "close": "Zavřít",
+    "search": "Hledat úkoly",
+    "hint": "Přetáhni úkol do mřížky a naplánuješ blok.",
+    "empty": "Žádné otevřené úkoly."
+  },
+  "event": {
+    "new": "Nová událost",
+    "newDraft": "Nový návrh události",
+    "newHint": "Událost se zapíše do kalendáře připojeného účtu Outlook.",
+    "readonly": "{{calendar}} od ras změny nepřijímá; změň ji v Outlooku toho kalendáře.",
+    "title": "Název",
+    "calendar": "Kalendář",
+    "day": "Den",
+    "start": "Začátek",
+    "end": "Konec",
+    "firstDay": "První den",
+    "lastDay": "Poslední den",
+    "location": "Místo",
+    "showAs": "Zobrazit jako",
+    "notes": "Poznámky",
+    "attendees": "Účastníci",
+    "create": "Vytvořit",
+    "save": "Uložit",
+    "cancel": "Zrušit událost",
+    "discard": "Zahodit návrh",
+    "confirm": "Potvrdit návrh"
+  },
+  "showAs": {
+    "busy": "Zaneprázdněn",
+    "tentative": "Předběžně",
+    "free": "Volno",
+    "oof": "Mimo kancelář",
+    "workingElsewhere": "Pracuji jinde"
+  },
+  "reply": {
+    "accept": "Přijmout",
+    "tentative": "Možná",
+    "decline": "Odmítnout"
+  }
+}
