@@ -3,7 +3,6 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
@@ -11,7 +10,10 @@ import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
 import * as Blocks from "./Blocks.ts"
 import * as Domain from "./Domain.ts"
-import * as Store from "./Store.ts"
+import * as BlockRepository from "./BlockRepository.ts"
+import * as ProjectRepository from "./ProjectRepository.ts"
+import * as SpaceRepository from "./SpaceRepository.ts"
+import * as TaskRepository from "./TaskRepository.ts"
 
 type Read<A> = Effect.Effect<A, Errors.NotFound | Errors.Invalid>
 
@@ -25,7 +27,7 @@ const speaker = Effect.map(Effect.service(Global.CurrentActor), (actor): Domain.
   Option.getOrElse(actor.agent, () => "owner" as const)
 )
 
-const columns = (summary: Domain.TaskSummary, body: string): Store.TaskColumns => ({
+const columns = (summary: Domain.TaskSummary, body: string): TaskRepository.TaskColumns => ({
   title: summary.title,
   body,
   status: summary.status,
@@ -62,26 +64,28 @@ export class Board extends Context.Service<
   static readonly layer = Layer.effect(
     Board,
     Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient
+      const spaces = yield* SpaceRepository.SpaceRepository
+      const projects = yield* ProjectRepository.ProjectRepository
+      const tasks = yield* TaskRepository.TaskRepository
+      const storedBlocks = yield* BlockRepository.BlockRepository
       const writes = yield* Global.Writes
       const agents = yield* Global.Agents
       const calendar = yield* Calendar.Calendar
       const blocks = yield* Blocks.Blocks
-      const db = Effect.provideService(SqlClient.SqlClient, sql)
 
-      const space = (id: string) => db(Store.spaceById(id)).pipe(Effect.flatMap(Errors.orNotFound("space", id)))
-      const project = (id: string) => db(Store.projectById(id)).pipe(Effect.flatMap(Errors.orNotFound("project", id)))
-      const stored = (id: string) => db(Store.taskById(id)).pipe(Effect.flatMap(Errors.orNotFound("task", id)))
+      const space = (id: string) => spaces.byId(id).pipe(Effect.flatMap(Errors.orNotFound("space", id)))
+      const project = (id: string) => projects.byId(id).pipe(Effect.flatMap(Errors.orNotFound("project", id)))
+      const stored = (id: string) => tasks.byId(id).pipe(Effect.flatMap(Errors.orNotFound("task", id)))
 
       const task = (id: Domain.TaskId) =>
         Effect.gen(function* () {
           const { summary, body } = yield* stored(id)
           return new Domain.Task({
             ...summary,
-            spent: Blocks.spent(yield* db(Store.blocksOfTask(id)), yield* DateTime.now),
+            spent: Blocks.spent(yield* storedBlocks.ofTask(id), yield* DateTime.now),
             body,
-            comments: yield* db(Store.comments(id)),
-            links: yield* db(Store.links(id))
+            comments: yield* tasks.comments(id),
+            links: yield* tasks.links(id)
           })
         })
 
@@ -159,7 +163,7 @@ export class Board extends Context.Service<
               ? summary.space
               : (yield* open(change.space)).id
           const at = yield* now
-          const after: Store.TaskColumns = {
+          const after: TaskRepository.TaskColumns = {
             title: change.title ?? summary.title,
             body: change.body ?? body,
             status,
@@ -173,10 +177,10 @@ export class Board extends Context.Service<
           if (status === "done" && summary.status !== "done") yield* blocks.release(id)
           const diff = Global.changed(columns(summary, body), after)
           const write = Effect.gen(function* () {
-            yield* db(Store.updateTask(id, after, at))
+            yield* tasks.update(id, after, at)
             if (change.comment !== undefined) {
               const comment = { id: yield* Id.generate(Domain.CommentId), author, at, text: change.comment }
-              yield* db(Store.insertComment(id, comment))
+              yield* tasks.addComment(id, comment)
             }
           })
           yield* run(
@@ -190,11 +194,11 @@ export class Board extends Context.Service<
         })
 
       return Board.of({
-        spaces: db(Store.spaces),
+        spaces: spaces.all,
 
         addSpace: (input) =>
           Effect.gen(function* () {
-            const position = (yield* db(Store.spaces)).length
+            const position = (yield* spaces.all).length
             const added = new Domain.Space({
               id: yield* Id.generate(Domain.SpaceId),
               name: input.name,
@@ -208,7 +212,7 @@ export class Board extends Context.Service<
               "work.space.added",
               `space/${added.id}`,
               Option.none(),
-              Effect.as(db(Store.insertSpace(added)), added),
+              Effect.as(spaces.insert(added), added),
               (result) => Option.some(Global.snapshot(Domain.Space, result))
             )
           }),
@@ -229,7 +233,7 @@ export class Board extends Context.Service<
               "work.space.changed",
               `space/${id}`,
               Option.some(diff.before),
-              Effect.as(db(Store.updateSpace(after)), after),
+              Effect.as(spaces.update(after), after),
               () => Option.some(diff.after)
             )
           }),
@@ -250,26 +254,26 @@ export class Board extends Context.Service<
               "work.space.archived",
               `space/${id}`,
               Option.some({ archived: false }),
-              Effect.as(db(Store.archiveSpace(id, yield* now)), after),
+              Effect.as(spaces.archive(id, yield* now), after),
               () => Option.some({ archived: true })
             )
           }),
 
-        projects: (inSpace) => db(Store.projects({ space: inSpace })),
+        projects: (inSpace) => projects.list({ space: inSpace }),
 
         project: (id) =>
           Effect.gen(function* () {
             const found = yield* project(id)
             return new Domain.ProjectDetail({
               ...found,
-              spent: Blocks.spent(yield* db(Store.blocksOfProject(id)), yield* DateTime.now),
-              tasks: yield* db(Store.tasks({ project: id }))
+              spent: Blocks.spent(yield* storedBlocks.ofProject(id), yield* DateTime.now),
+              tasks: yield* tasks.list({ project: id })
             })
           }),
 
         addProject: (input) =>
           Effect.gen(function* () {
-            const home = input.space === undefined ? yield* db(Store.defaultSpace) : yield* open(input.space)
+            const home = input.space === undefined ? yield* spaces.defaultSpace : yield* open(input.space)
             const added = new Domain.Project({
               id: yield* Id.generate(Domain.ProjectId),
               space: home.id,
@@ -282,7 +286,7 @@ export class Board extends Context.Service<
               "work.project.added",
               `project/${added.id}`,
               Option.none(),
-              Effect.as(db(Store.insertProject(added)), added),
+              Effect.as(projects.insert(added), added),
               (result) => Option.some(Global.snapshot(Domain.Project, result))
             )
           }),
@@ -297,7 +301,7 @@ export class Board extends Context.Service<
               "work.project.changed",
               `project/${id}`,
               Option.some(diff.before),
-              Effect.as(db(Store.updateProject(after)), after),
+              Effect.as(projects.update(after), after),
               () => Option.some(diff.after)
             )
           }),
@@ -305,9 +309,9 @@ export class Board extends Context.Service<
         tasks: (filter) =>
           Effect.gen(function* () {
             const { updatedSince, ...rest } = filter
-            if (updatedSince === undefined) return yield* db(Store.tasks(rest))
+            if (updatedSince === undefined) return yield* tasks.list(rest)
             const since = DateTime.formatIso(yield* Time.toInstant(updatedSince))
-            return yield* db(Store.tasks({ ...rest, updatedSince: since }))
+            return yield* tasks.list({ ...rest, updatedSince: since })
           }),
 
         task,
@@ -318,14 +322,14 @@ export class Board extends Context.Service<
             const inProject = input.project === undefined ? Option.none() : Option.some(yield* project(input.project))
             const home = yield* Option.match(inProject, {
               onSome: (found) => open(found.space),
-              onNone: () => (input.space === undefined ? db(Store.defaultSpace) : open(input.space))
+              onNone: () => (input.space === undefined ? spaces.defaultSpace : open(input.space))
             })
             const assignee = input.assignee ?? "owner"
             yield* assignable(assignee)
             const at = yield* now
             const status = input.status ?? (author === "owner" ? "todo" : "inbox")
             const id = yield* Id.generate(Domain.TaskId)
-            const row: Store.TaskColumns = {
+            const row: TaskRepository.TaskColumns = {
               title: input.title,
               body: input.body ?? "",
               status,
@@ -336,7 +340,7 @@ export class Board extends Context.Service<
               project: Option.match(inProject, { onNone: () => null, onSome: (found) => found.id }),
               space: home.id
             }
-            yield* run("work.task.added", `task/${id}`, Option.none(), db(Store.insertTask(id, row, at)), () =>
+            yield* run("work.task.added", `task/${id}`, Option.none(), tasks.insert(id, row, at), () =>
               Option.some(row)
             )
             return yield* task(id)
@@ -348,14 +352,14 @@ export class Board extends Context.Service<
           Effect.gen(function* () {
             const { summary, body } = yield* stored(id)
             const now = yield* DateTime.now
-            if ((yield* db(Store.blocksOfTask(id))).some((row) => Blocks.started(row, now)))
+            if ((yield* storedBlocks.ofTask(id)).some((row) => Blocks.started(row, now)))
               return Option.some(yield* changeTask(id, { status: "done" }))
             yield* blocks.release(id)
             yield* run(
               "work.task.deleted",
               `task/${id}`,
               Option.some({ ...Global.snapshot(Domain.TaskSummary, summary), body }),
-              db(Store.deleteTask(id)),
+              tasks.delete(id),
               () => Option.none()
             )
             return Option.none()
@@ -371,7 +375,7 @@ export class Board extends Context.Service<
               "work.task.commented",
               `task/${id}`,
               Option.none(),
-              Effect.andThen(db(Store.insertComment(id, added)), db(Store.touchTask(id, at))),
+              Effect.andThen(tasks.addComment(id, added), tasks.touch(id, at)),
               () => Option.some({ author, text: input.text, link: input.link ?? null })
             )
             return yield* task(id)
@@ -385,7 +389,7 @@ export class Board extends Context.Service<
               "work.task.linked",
               `task/${id}`,
               Option.none(),
-              Effect.andThen(db(Store.insertLink(id, url)), db(Store.touchTask(id, at))),
+              Effect.andThen(tasks.addLink(id, url), tasks.touch(id, at)),
               () => Option.some({ url })
             )
             return yield* task(id)
@@ -399,7 +403,7 @@ export class Board extends Context.Service<
               "work.task.unlinked",
               `task/${id}`,
               Option.some({ url }),
-              Effect.andThen(db(Store.deleteLink(id, url)), db(Store.touchTask(id, at))),
+              Effect.andThen(tasks.removeLink(id, url), tasks.touch(id, at)),
               () => Option.none()
             )
             return yield* task(id)

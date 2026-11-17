@@ -4,14 +4,16 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Semaphore from "effect/Semaphore"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
 import * as Domain from "./Domain.ts"
-import * as Store from "./Store.ts"
+import * as BlockRepository from "./BlockRepository.ts"
+import * as ProjectRepository from "./ProjectRepository.ts"
+import * as SpaceRepository from "./SpaceRepository.ts"
+import * as TaskRepository from "./TaskRepository.ts"
 
 /** A started block's event first runs this long; stopping it sets the real end. */
 const runningEvent = 15 * 60_000
@@ -23,7 +25,7 @@ const refuse = (code: string, reason: string, instead: string) =>
 
 const millis = DateTime.toEpochMillis
 
-export const stateOf = (row: Store.BlockRow, now: DateTime.Utc): Domain.BlockState =>
+export const stateOf = (row: BlockRepository.StoredBlock, now: DateTime.Utc): Domain.BlockState =>
   Option.isNone(row.event)
     ? "draft"
     : Option.match(row.end, {
@@ -32,18 +34,18 @@ export const stateOf = (row: Store.BlockRow, now: DateTime.Utc): Domain.BlockSta
       })
 
 /** A block whose event has begun; a draft never has. */
-export const started = (row: Store.BlockRow, now: DateTime.Utc) =>
+export const started = (row: BlockRepository.StoredBlock, now: DateTime.Utc) =>
   Option.isSome(row.event) && DateTime.isLessThanOrEqualTo(row.start, now)
 
 /** Minutes of the blocks that are done. */
-export const spent = (rows: ReadonlyArray<Store.BlockRow>, now: DateTime.Utc) =>
+export const spent = (rows: ReadonlyArray<BlockRepository.StoredBlock>, now: DateTime.Utc) =>
   Math.round(
     rows
       .filter((row) => stateOf(row, now) === "done")
       .reduce((sum, row) => sum + millis(Option.getOrThrow(row.end)) - millis(row.start), 0) / 60_000
   )
 
-export const view = (row: Store.BlockRow, now: DateTime.Utc) =>
+export const view = (row: BlockRepository.StoredBlock, now: DateTime.Utc) =>
   new Domain.Block({
     id: row.id,
     task: row.task,
@@ -87,18 +89,20 @@ export class Blocks extends Context.Service<
   static readonly layer = Layer.effect(
     Blocks,
     Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient
+      const spaces = yield* SpaceRepository.SpaceRepository
+      const projects = yield* ProjectRepository.ProjectRepository
+      const tasks = yield* TaskRepository.TaskRepository
+      const storedBlocks = yield* BlockRepository.BlockRepository
       const writes = yield* Global.Writes
       const events = yield* Calendar.Events
       const one = yield* Semaphore.make(1)
-      const db = Effect.provideService(SqlClient.SqlClient, sql)
 
-      const block = (id: string) => Effect.flatMap(db(Store.blockById(id)), Errors.orNotFound("work block", id))
+      const block = (id: string) => Effect.flatMap(storedBlocks.byId(id), Errors.orNotFound("work block", id))
 
       /** An open task of the owner's, in a space whose calendar takes its blocks. */
       const workable = (id: Domain.TaskId, verb: string) =>
         Effect.gen(function* () {
-          const found = yield* db(Store.taskById(id))
+          const found = yield* tasks.byId(id)
           if (Option.isNone(found)) return yield* new Errors.NotFound({ subject: "task", id })
           const task = found.value.summary
           if (task.status === "done")
@@ -113,7 +117,7 @@ export class Blocks extends Context.Service<
               `"${task.title}" is assigned to ${task.assignee}, and an agent's work takes none of the owner's time.`,
               "Assign it to the owner first."
             )
-          const space = Option.getOrThrow(yield* db(Store.spaceById(task.space)))
+          const space = Option.getOrThrow(yield* spaces.byId(task.space))
           if (space.calendar === null)
             return yield* refuse(
               "calendar",
@@ -126,8 +130,9 @@ export class Blocks extends Context.Service<
       /** Refuses a span another block already takes; a running block takes its time until now. */
       const free = (start: DateTime.Utc, end: DateTime.Utc, now: DateTime.Utc, except: Option.Option<Domain.BlockId>) =>
         Effect.gen(function* () {
-          const overlapping = (yield* db(
-            Store.blocks({ start: DateTime.formatIso(start), end: DateTime.formatIso(end) }, DateTime.formatIso(now))
+          const overlapping = (yield* storedBlocks.overlapping(
+            { start: DateTime.formatIso(start), end: DateTime.formatIso(end) },
+            DateTime.formatIso(now)
           )).filter((other) => !Option.contains(except, other.id))
           const other = overlapping[0]
           if (other === undefined) return
@@ -147,14 +152,14 @@ export class Blocks extends Context.Service<
 
       const save = <A>(
         action: Global.Action,
-        row: Store.BlockRow,
+        row: BlockRepository.StoredBlock,
         result: A,
         before: Option.Option<object>,
         after: Option.Option<object>
       ) =>
         writes.run(
           action,
-          Effect.as(db(Store.saveBlock(row)), {
+          Effect.as(storedBlocks.save(row), {
             result,
             subject: `block/${row.id}`,
             before: before as Option.Option<Global.Snapshot>,
@@ -162,19 +167,19 @@ export class Blocks extends Context.Service<
           })
         )
 
-      const shown = (row: Store.BlockRow) => ({
+      const shown = (row: BlockRepository.StoredBlock) => ({
         task: row.task,
         start: Time.toPragueLocal(row.start),
         end: Option.getOrNull(Option.map(row.end, Time.toPragueLocal)),
         draft: Option.isNone(row.event)
       })
 
-      const discard = (row: Store.BlockRow) =>
+      const discard = (row: BlockRepository.StoredBlock) =>
         Effect.gen(function* () {
           if (Option.isSome(row.event)) yield* events.removeBlock(row.event.value)
           yield* writes.run(
             "work.block.removed",
-            Effect.as(db(Store.deleteBlock(row.id)), {
+            Effect.as(storedBlocks.delete(row.id), {
               result: undefined,
               subject: `block/${row.id}`,
               before: Option.some(shown(row)),
@@ -193,8 +198,7 @@ export class Blocks extends Context.Service<
       ) =>
         Effect.gen(function* () {
           const id = yield* Id.generate(Domain.BlockId)
-          const project =
-            target.task.project === null ? Option.none() : yield* db(Store.projectById(target.task.project))
+          const project = target.task.project === null ? Option.none() : yield* projects.byId(target.task.project)
           const title = Option.match(project, {
             onNone: () => target.task.title,
             onSome: (found) => `${found.name}: ${target.task.title}`
@@ -204,7 +208,15 @@ export class Blocks extends Context.Service<
             onSome: (until) =>
               Effect.map(events.placeBlock(target.calendar, { id, title, span: span(start, until) }), Option.some)
           })
-          const row: Store.BlockRow = { id, task: target.task.id, title, calendar: target.calendar, start, end, event }
+          const row: BlockRepository.StoredBlock = {
+            id,
+            task: target.task.id,
+            title,
+            calendar: target.calendar,
+            start,
+            end,
+            event
+          }
           return yield* save(action, row, view(row, yield* DateTime.now), Option.none(), Option.some(shown(row)))
         })
 
@@ -214,15 +226,16 @@ export class Blocks extends Context.Service<
             const now = yield* DateTime.now
             const from = yield* Time.toInstant(window.from)
             const to = yield* Time.toInstant(window.to)
-            const found = yield* db(
-              Store.blocks({ start: DateTime.formatIso(from), end: DateTime.formatIso(to) }, DateTime.formatIso(now))
+            const found = yield* storedBlocks.overlapping(
+              { start: DateTime.formatIso(from), end: DateTime.formatIso(to) },
+              DateTime.formatIso(now)
             )
             return found.map((row) => view(row, now))
           }),
 
         running: Effect.gen(function* () {
           const now = yield* DateTime.now
-          return Option.map(yield* db(Store.runningBlock), (row) => view(row, now))
+          return Option.map(yield* storedBlocks.running, (row) => view(row, now))
         }),
 
         plan: (input) =>
@@ -250,7 +263,7 @@ export class Blocks extends Context.Service<
         start: (task) =>
           Effect.gen(function* () {
             const target = yield* workable(task, "starting")
-            const running = yield* db(Store.runningBlock)
+            const running = yield* storedBlocks.running
             if (Option.isSome(running))
               return yield* refuse(
                 "running",
@@ -269,7 +282,7 @@ export class Blocks extends Context.Service<
           }).pipe(one.withPermit),
 
         stop: Effect.gen(function* () {
-          const found = yield* db(Store.runningBlock)
+          const found = yield* storedBlocks.running
           if (Option.isNone(found))
             return yield* refuse("idle", "No work is running.", "Start a task's work with start_work.")
           const running = found.value
@@ -280,7 +293,7 @@ export class Blocks extends Context.Service<
             title: running.title,
             span: span(running.start, end)
           })
-          const stopped: Store.BlockRow = { ...running, end: Option.some(end) }
+          const stopped: BlockRepository.StoredBlock = { ...running, end: Option.some(end) }
           return yield* save(
             "work.block.stopped",
             stopped,
@@ -324,7 +337,7 @@ export class Blocks extends Context.Service<
             yield* free(start, end, now, Option.some(row.id))
             if (Option.isSome(row.event))
               yield* events.moveBlock(row.event.value, { id: row.id, title: row.title, span: span(start, end) })
-            const moved: Store.BlockRow = { ...row, start, end: Option.some(end) }
+            const moved: BlockRepository.StoredBlock = { ...row, start, end: Option.some(end) }
             return yield* save(
               "work.block.moved",
               moved,
@@ -345,7 +358,7 @@ export class Blocks extends Context.Service<
         release: (task) =>
           Effect.gen(function* () {
             const now = yield* DateTime.now
-            const rows = yield* db(Store.blocksOfTask(task))
+            const rows = yield* storedBlocks.ofTask(task)
             yield* Effect.forEach(
               rows.filter((row) => !started(row, now)),
               discard,
@@ -364,7 +377,7 @@ export class Blocks extends Context.Service<
               title: row.title,
               span: span(row.start, end)
             })
-            const confirmed: Store.BlockRow = { ...row, event: Option.some(placed) }
+            const confirmed: BlockRepository.StoredBlock = { ...row, event: Option.some(placed) }
             return yield* save(
               "work.block.confirmed",
               confirmed,
@@ -380,15 +393,11 @@ export class Blocks extends Context.Service<
   /** The block drafts the calendar counts as taken, read from the work module's own table. */
   static readonly busyTime = Layer.effect(
     Calendar.BusyTime,
-    Effect.map(Effect.service(SqlClient.SqlClient), (sql) =>
+    Effect.map(Effect.service(BlockRepository.BlockRepository), (storedBlocks) =>
       Calendar.BusyTime.of({
         drafts: (window) =>
           Effect.map(
-            Effect.provideService(
-              Store.blockDrafts({ start: DateTime.formatIso(window.start), end: DateTime.formatIso(window.end) }),
-              SqlClient.SqlClient,
-              sql
-            ),
+            storedBlocks.draftsInSpan({ start: DateTime.formatIso(window.start), end: DateTime.formatIso(window.end) }),
             (rows) =>
               rows.map((row) => ({
                 id: row.id,
@@ -399,5 +408,5 @@ export class Blocks extends Context.Service<
           )
       })
     )
-  )
+  ).pipe(Layer.provide(BlockRepository.BlockRepository.layer))
 }
