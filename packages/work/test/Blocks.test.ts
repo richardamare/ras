@@ -1,6 +1,7 @@
 import { assert, layer } from "@effect/vitest"
 import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import * as Ref from "effect/Ref"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
@@ -148,6 +149,52 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const elsewhere = yield* board.addTask({ title: "Essay", space: other.id })
       assert.strictEqual(yield* code(blocks.start(elsewhere.id)), "work.block.calendar")
       assert.isDefined(space)
+    })
+  )
+
+  test.effect("closes a task without its unstarted blocks, and keeps the time spent on it", () =>
+    Effect.gen(function* () {
+      const { board, task, project } = yield* setUp
+      const blocks = yield* Blocks.Blocks
+      yield* blocks.log({ task: task.id, end: yield* inHours(-30), minutes: 45 })
+      yield* blocks.plan({ task: task.id, start: yield* inHours(40), minutes: 30 })
+      yield* blocks.plan({ task: task.id, start: yield* inHours(42), minutes: 30, draft: true })
+      yield* Ref.set(CalendarTesting.sampleCalls, [])
+      const closed = yield* board.changeTask(task.id, { status: "done" })
+      assert.deepStrictEqual([closed.status, closed.spent], ["done", 45])
+      assert.strictEqual((yield* board.project(project.id)).spent, 45)
+      assert.deepStrictEqual(
+        (yield* calls).map((one) => one._tag),
+        ["Cancel"]
+      )
+      const left = yield* blocks.blocks({ from: yield* inHours(-31), to: yield* inHours(43) })
+      assert.deepStrictEqual(
+        left.filter((one) => one.task === task.id).map((one) => one.state),
+        ["done"]
+      )
+    })
+  )
+
+  test.effect("deletes a task with its planned blocks, and closes one with work logged instead", () =>
+    Effect.gen(function* () {
+      const { board, task } = yield* setUp
+      const blocks = yield* Blocks.Blocks
+      yield* blocks.plan({ task: task.id, start: yield* inHours(44), minutes: 30 })
+      yield* Ref.set(CalendarTesting.sampleCalls, [])
+      assert.isTrue(Option.isNone(yield* board.deleteTask(task.id)))
+      assert.strictEqual(yield* code(board.task(task.id)), "NotFound")
+      assert.deepStrictEqual(
+        (yield* calls).map((one) => one._tag),
+        ["Cancel"]
+      )
+
+      const worked = yield* board.addTask({ title: "Read the contract" })
+      yield* blocks.log({ task: worked.id, end: yield* inHours(-34), minutes: 20 })
+      const kept = yield* board.deleteTask(worked.id)
+      assert.deepStrictEqual(
+        Option.map(kept, (found) => [found.status, found.spent]),
+        Option.some(["done", 20])
+      )
     })
   )
 })

@@ -36,6 +36,18 @@ export const stateOf = (row: Store.BlockRow, now: DateTime.Utc): Domain.BlockSta
         onSome: (end) => (DateTime.isLessThanOrEqualTo(end, now) ? "done" : "planned")
       })
 
+/** A block whose event has begun; a draft never has. */
+export const started = (row: Store.BlockRow, now: DateTime.Utc) =>
+  Option.isSome(row.event) && DateTime.isLessThanOrEqualTo(row.start, now)
+
+/** Minutes of the blocks that are done. */
+export const spent = (rows: ReadonlyArray<Store.BlockRow>, now: DateTime.Utc) =>
+  Math.round(
+    rows
+      .filter((row) => stateOf(row, now) === "done")
+      .reduce((sum, row) => sum + millis(Option.getOrThrow(row.end)) - millis(row.start), 0) / 60_000
+  )
+
 export const view = (row: Store.BlockRow, now: DateTime.Utc) =>
   new Domain.Block({
     id: row.id,
@@ -73,6 +85,8 @@ export class Blocks extends Context.Service<
     readonly remove: (id: Domain.BlockId) => Write<void>
     /** Writes a draft block's event into its calendar; a draft the calendar refuses stays a draft. */
     readonly confirm: (id: Domain.BlockId) => Write<Domain.Block>
+    /** Removes a task's blocks that have not started, drafts included, with their events. */
+    readonly release: (task: Domain.TaskId) => Write<void>
   }
 >()("@ras/work/Blocks") {
   static readonly layer = Layer.effect(
@@ -164,6 +178,20 @@ export class Blocks extends Context.Service<
         end: Option.getOrNull(Option.map(row.end, Time.toPragueLocal)),
         draft: Option.isNone(row.event)
       })
+
+      const discard = (row: Store.BlockRow) =>
+        Effect.gen(function* () {
+          if (Option.isSome(row.event)) yield* events.removeBlock(row.event.value)
+          yield* writes.run(
+            "work.block.removed",
+            Effect.as(db(Store.deleteBlock(row.id)), {
+              result: undefined,
+              subject: `block/${row.id}`,
+              before: Option.some(shown(row)),
+              after: Option.none()
+            })
+          )
+        })
 
       /** A new block's row, with the event its calendar took unless it is a draft. */
       const create = (
@@ -321,15 +349,17 @@ export class Blocks extends Context.Service<
             const row = yield* block(id)
             if (stateOf(row, yield* DateTime.now) === "running")
               return yield* refuse("running", `${row.title} is running.`, "Stop it with stop_work before removing it.")
-            if (Option.isSome(row.event)) yield* events.removeBlock(row.event.value)
-            yield* writes.run(
-              "work.block.removed",
-              Effect.as(db(Store.deleteBlock(row.id)), {
-                result: undefined,
-                subject: `block/${row.id}`,
-                before: Option.some(shown(row)),
-                after: Option.none()
-              })
+            yield* discard(row)
+          }),
+
+        release: (task) =>
+          Effect.gen(function* () {
+            const now = yield* DateTime.now
+            const rows = yield* db(Store.blocksOfTask(task))
+            yield* Effect.forEach(
+              rows.filter((row) => !started(row, now)),
+              discard,
+              { discard: true }
             )
           }),
 

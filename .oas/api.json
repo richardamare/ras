@@ -2627,8 +2627,22 @@
         ],
         "security": [],
         "responses": {
-          "204": {
-            "description": "<No Content>"
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TaskEncoded"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid",
@@ -4031,6 +4045,12 @@
               }
             ]
           },
+          "spent": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minutes of its work blocks that are done."
+          },
           "body": {
             "type": "string"
           },
@@ -4060,6 +4080,7 @@
           "created",
           "updated",
           "closed",
+          "spent",
           "body",
           "comments",
           "links"
@@ -4292,6 +4313,12 @@
               }
             ]
           },
+          "spent": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minutes of its work blocks that are done."
+          },
           "tasks": {
             "type": "array",
             "items": {
@@ -4299,7 +4326,7 @@
             }
           }
         },
-        "required": ["id", "space", "name", "status", "deadline", "description", "tasks"],
+        "required": ["id", "space", "name", "status", "deadline", "description", "spent", "tasks"],
         "additionalProperties": false
       },
       "SpaceEncoded": {

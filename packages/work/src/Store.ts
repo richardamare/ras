@@ -360,6 +360,8 @@ export const blockDrafts = (span: { readonly start: string; readonly end: string
 
 export const blocksOfTask = (task: Domain.TaskId) => blocksWhere((sql) => sql`b.task_id = ${task}`)
 
+export const blocksOfProject = (project: Domain.ProjectId) => blocksWhere((sql) => sql`t.project_id = ${project}`)
+
 const iso = (instant: Option.Option<DateTime.Utc>) => Option.getOrNull(Option.map(instant, DateTime.formatIso))
 
 export const saveBlock = (block: BlockRow) =>
