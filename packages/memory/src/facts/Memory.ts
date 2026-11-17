@@ -10,7 +10,7 @@ import * as Schema from "effect/Schema"
 import * as Semaphore from "effect/Semaphore"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
-import * as Clone from "./Clone.ts"
+import * as Clone from "../clone/Clone.ts"
 import * as Fact from "./Fact.ts"
 import * as SearchIndexRepository from "./SearchIndexRepository.ts"
 

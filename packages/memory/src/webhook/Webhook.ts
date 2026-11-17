@@ -6,7 +6,7 @@ import * as Mac from "effect/crypto/Mac"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
-import * as Memory from "./Memory.ts"
+import * as Memory from "../facts/Memory.ts"
 
 export const path = "/webhooks/github"
 

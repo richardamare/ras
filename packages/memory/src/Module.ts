@@ -1,11 +1,11 @@
 import * as Layer from "effect/Layer"
 import * as Module from "@ras/kernel/Module"
-import * as Clone from "./Clone.ts"
-import * as Memory from "./Memory.ts"
+import * as Clone from "./clone/Clone.ts"
+import * as Memory from "./facts/Memory.ts"
 import * as Migrations from "./Migrations.ts"
-import * as SearchIndexRepository from "./SearchIndexRepository.ts"
+import * as SearchIndexRepository from "./facts/SearchIndexRepository.ts"
 import * as Tools from "./Tools.ts"
-import * as Webhook from "./Webhook.ts"
+import * as Webhook from "./webhook/Webhook.ts"
 
 export const module = Module.make({
   name: "memory",

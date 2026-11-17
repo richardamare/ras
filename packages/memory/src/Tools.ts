@@ -3,8 +3,8 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
-import * as Fact from "./Fact.ts"
-import * as Memory from "./Memory.ts"
+import * as Fact from "./facts/Fact.ts"
+import * as Memory from "./facts/Memory.ts"
 
 export const toolkit = Toolkit.make(
   Global.read("memory_index", {

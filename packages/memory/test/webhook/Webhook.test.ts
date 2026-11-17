@@ -7,9 +7,9 @@ import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as Testing from "@ras/global/testing"
-import * as Module from "../src/Module.ts"
-import * as MemoryTesting from "../src/Testing.ts"
-import * as Webhook from "../src/Webhook.ts"
+import * as Module from "../../src/Module.ts"
+import * as MemoryTesting from "../../src/Testing.ts"
+import * as Webhook from "../../src/webhook/Webhook.ts"
 
 const secret = "webhook-secret"
 
