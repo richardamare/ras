@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
+import * as Untrusted from "@ras/kernel/Untrusted"
 import * as Message from "./mailbox/Message.ts"
 import * as Search from "./mailbox/Search.ts"
 import * as Mailbox from "./mailbox/Mailbox.ts"
@@ -37,14 +38,43 @@ export const toolkit = Toolkit.make(
   })
 )
 
+/** Every field a sender wrote, fenced for the model. */
+const fencedSummary = (summary: Message.Summary) =>
+  new Message.Summary({
+    ...summary,
+    from: Untrusted.fence(summary.from),
+    to: Untrusted.fence(summary.to),
+    subject: Untrusted.fence(summary.subject),
+    snippet: Untrusted.fence(summary.snippet)
+  })
+
+const fencedMessage = (message: Message.Message) =>
+  new Message.Message({
+    ...message,
+    from: Untrusted.fence(message.from),
+    to: Untrusted.fence(message.to),
+    cc: Untrusted.fence(message.cc),
+    subject: Untrusted.fence(message.subject),
+    body: Untrusted.fence(message.body),
+    attachments: message.attachments.map(
+      (attachment) => new Message.Attachment({ ...attachment, name: Untrusted.fence(attachment.name) })
+    )
+  })
+
+const fencedFiles = (files: Message.Files) =>
+  new Message.Files({
+    files: files.files.map((file) => new Message.File({ ...file, name: Untrusted.fence(file.name) })),
+    skipped: files.skipped.map(Untrusted.fence)
+  })
+
 export const handlers = toolkit.toLayer(
   Effect.gen(function* () {
     const mailbox = yield* Mailbox.Mailbox
     return {
-      search_mail: (search) => mailbox.search(search),
-      recent_mail: (recent) => mailbox.recent(recent),
-      mail_message: ({ message }) => mailbox.message(message),
-      mail_attachments: ({ message }) => mailbox.attachments(message)
+      search_mail: (search) => Effect.map(mailbox.search(search), (found) => found.map(fencedSummary)),
+      recent_mail: (recent) => Effect.map(mailbox.recent(recent), (found) => found.map(fencedSummary)),
+      mail_message: ({ message }) => Effect.map(mailbox.message(message), fencedMessage),
+      mail_attachments: ({ message }) => Effect.map(mailbox.attachments(message), fencedFiles)
     }
   })
 )

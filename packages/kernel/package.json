@@ -10,7 +10,8 @@
     "./Sample": "./src/Sample.ts",
     "./Sql": "./src/Sql.ts",
     "./Testing": "./src/Testing.ts",
-    "./Time": "./src/Time.ts"
+    "./Time": "./src/Time.ts",
+    "./Untrusted": "./src/Untrusted.ts"
   },
   "scripts": {
     "typecheck": "tsc",
