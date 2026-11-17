@@ -9,7 +9,7 @@ import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as KernelTesting from "@ras/kernel/Testing"
 import * as BusyTime from "../../src/calendars/BusyTime.ts"
-import * as Calendar from "../../src/calendars/Calendar.ts"
+import * as Calendars from "../../src/calendars/Calendars.ts"
 import * as Domain from "../../src/Domain.ts"
 import * as Events from "../../src/events/Events.ts"
 import * as Module from "../../src/Module.ts"
@@ -25,7 +25,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
   (test) => {
     test.effect("keeps a draft in ras, shown as a draft and taking its time, and writes nothing to Outlook", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         yield* Ref.set(Outlook.sampleCalls, [])
         const created = yield* (yield* Events.Events).create({
           title: "Focus",
@@ -64,7 +64,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("moves a draft in ras, and confirms it into Outlook through the same path as a new event", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const events = yield* Events.Events
         const [draft] = yield* calendar.events(morning)
         const moved = yield* events.change(draft!.id, { start: local("2027-01-15T10:30") })
@@ -88,7 +88,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("keeps a draft its calendar refuses, with the reason, and discards it on cancel", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const events = yield* Events.Events
         const created = yield* events.create({
           title: "Review",
@@ -110,7 +110,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("writes a draft once when it is confirmed twice at the same time", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const events = yield* Events.Events
         const evening = { from: local("2027-01-16T17:00"), to: local("2027-01-16T20:00") }
         yield* events.create({
@@ -158,7 +158,7 @@ layer(
 )("block drafts", (test) => {
   test.effect("shows a block draft as the block's, takes its time, and leaves its writes to the block", () =>
     Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
+      const calendar = yield* Calendars.Calendar
       const [block] = yield* calendar.events(morning)
       assert.deepStrictEqual(
         [block!.title, block!.block, block!.draft],

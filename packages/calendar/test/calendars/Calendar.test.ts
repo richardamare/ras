@@ -11,7 +11,7 @@ import * as Testing from "@ras/global/testing"
 import * as KernelModule from "@ras/kernel/Module"
 import * as Time from "@ras/kernel/Time"
 import * as BusyTime from "../../src/calendars/BusyTime.ts"
-import * as Calendar from "../../src/calendars/Calendar.ts"
+import * as Calendars from "../../src/calendars/Calendars.ts"
 import * as CalendarRepository from "../../src/calendars/CalendarRepository.ts"
 import * as Domain from "../../src/Domain.ts"
 import * as DraftRepository from "../../src/events/DraftRepository.ts"
@@ -37,7 +37,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
   (test) => {
     test.effect("lists every connected calendar, writable in the connected account, and audits turning one off", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const listed = yield* calendar.calendars(false)
         assert.deepStrictEqual(
           listed.map((found) => [found.name, found.writable, found.enabled]),
@@ -66,7 +66,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("shows each event once, folding Calendar Sync's copy onto its original", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const first = yield* today
         const events = yield* calendar.events(days(Time.addDays(first, 2), 1))
         assert.deepStrictEqual(titles(events), [
@@ -84,7 +84,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("shows the copy when the original's calendar is turned off, and hides the calendar", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const first = yield* today
         yield* calendar.changeCalendar(Sample.work, { enabled: false })
         const events = yield* calendar.events(days(first, 1))
@@ -106,7 +106,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("spans an all-day event from Prague midnight to the next", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const day = Time.addDays(yield* today, 5)
         const holiday = (yield* calendar.events(days(day, 1))).find((event) => event.title === "Holiday")!
         assert.deepStrictEqual(
@@ -118,7 +118,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("finds the clash between the dentist and an invitation, and the free time around them", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const day = Time.addDays(yield* today, 2)
         const afternoon = { from: Time.PragueLocal.make(`${day}T13:00`), to: Time.PragueLocal.make(`${day}T17:00`) }
         const [clash] = yield* calendar.conflicts(afternoon)
@@ -139,7 +139,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("refuses a window that ends before it starts, and an event that is not there", () =>
       Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         const day = yield* today
         const backwards = yield* Effect.flip(
           calendar.events({ from: Time.PragueLocal.make(`${day}T10:00`), to: Time.PragueLocal.make(`${day}T09:00`) })
@@ -235,7 +235,7 @@ describe("refreshes after writes", () => {
           )
         })
       )
-      const calendarLayer = Layer.effect(Calendar.Calendar, Calendar.Calendar.make).pipe(
+      const calendarLayer = Layer.effect(Calendars.Calendar, Calendars.Calendar.make).pipe(
         Layer.provide(
           Layer.mergeAll(
             counting,
@@ -249,7 +249,7 @@ describe("refreshes after writes", () => {
         Layer.provideMerge(Testing.layer([tables]))
       )
       const [soon, later] = yield* Effect.gen(function* () {
-        const calendar = yield* Calendar.Calendar
+        const calendar = yield* Calendars.Calendar
         yield* Effect.forEach(Arr.range(1, 10), () => calendar.refresh, { discard: true })
         yield* TestClock.adjust("1 second")
         const soon = yield* Ref.get(syncs)

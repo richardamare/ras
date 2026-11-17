@@ -2,7 +2,7 @@ import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Effect from "effect/Effect"
 import * as Global from "@ras/global"
-import * as Calendar from "./calendars/Calendar.ts"
+import * as Calendars from "./calendars/Calendars.ts"
 import * as Domain from "./Domain.ts"
 import * as Events from "./events/Events.ts"
 
@@ -85,7 +85,7 @@ export const toolkit = Toolkit.make(
 
 export const handlers = toolkit.toLayer(
   Effect.gen(function* () {
-    const calendar = yield* Calendar.Calendar
+    const calendar = yield* Calendars.Calendar
     const events = yield* Events.Events
     const actingAs = yield* Global.actingAs
     return {

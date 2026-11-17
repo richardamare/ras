@@ -9,7 +9,7 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../calendars/Calendar.ts"
+import * as Calendars from "../calendars/Calendars.ts"
 import type * as CalendarRepository from "../calendars/CalendarRepository.ts"
 import * as Domain from "../Domain.ts"
 import * as DraftRepository from "./DraftRepository.ts"
@@ -268,7 +268,7 @@ export class Events extends Context.Service<
   static readonly layer = Layer.effect(
     Events,
     Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
+      const calendar = yield* Calendars.Calendar
       const reclaim = yield* Reclaim.Reclaim
       const outlook = yield* Outlook.Outlook
       const one = yield* Semaphore.make(1)
@@ -352,7 +352,7 @@ export class Events extends Context.Service<
 
       const saveDraft = (action: Global.Action, draft: DraftRepository.Draft, before: Option.Option<Domain.Event>) =>
         Effect.gen(function* () {
-          const event = Domain.eventOf(Calendar.entryOfDraft(draft))
+          const event = Domain.eventOf(Calendars.entryOfDraft(draft))
           const shown = Option.match(before, {
             onNone: () => ({ before: Option.none(), after: Option.some(Global.snapshot(Domain.Event, event)) }),
             onSome: (previous) => {
@@ -519,7 +519,7 @@ export class Events extends Context.Service<
             )
           }).pipe(one.withPermit),
 
-        drafts: Effect.map(drafts.all, (found) => found.map((draft) => Domain.eventOf(Calendar.entryOfDraft(draft)))),
+        drafts: Effect.map(drafts.all, (found) => found.map((draft) => Domain.eventOf(Calendars.entryOfDraft(draft)))),
 
         discardDrafts: Effect.gen(function* () {
           const found = yield* drafts.all

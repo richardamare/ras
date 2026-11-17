@@ -1,4 +1,4 @@
-export { Calendar } from "./calendars/Calendar.ts"
+export { Calendar } from "./calendars/Calendars.ts"
 export { CalendarId } from "./Domain.ts"
 export { Events, type BlockEvent } from "./events/Events.ts"
 export type { Span } from "./Domain.ts"

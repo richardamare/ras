@@ -5,7 +5,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
-import * as Calendar from "./calendars/Calendar.ts"
+import * as Calendars from "./calendars/Calendars.ts"
 import * as Domain from "./Domain.ts"
 import * as Events from "./events/Events.ts"
 
@@ -97,7 +97,7 @@ export const group = HttpApiGroup.make("calendar")
 
 export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (endpoints) =>
   Effect.gen(function* () {
-    const calendar = yield* Calendar.Calendar
+    const calendar = yield* Calendars.Calendar
     const events = yield* Events.Events
     return endpoints
       .handle("calendars", ({ query }) => calendar.calendars(query.includeDisabled === "true"))

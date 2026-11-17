@@ -8,7 +8,7 @@ import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as KernelTesting from "@ras/kernel/Testing"
 import * as BusyTime from "../../src/calendars/BusyTime.ts"
-import * as Calendar from "../../src/calendars/Calendar.ts"
+import * as Calendars from "../../src/calendars/Calendars.ts"
 import * as Domain from "../../src/Domain.ts"
 import * as Events from "../../src/events/Events.ts"
 import * as Module from "../../src/Module.ts"
@@ -26,7 +26,7 @@ const local = (text: string) => Time.PragueLocal.make(text)
 const find = (title: string, day: number) =>
   Effect.gen(function* () {
     const date = Time.addDays(yield* today, day)
-    const events = yield* (yield* Calendar.Calendar).events({
+    const events = yield* (yield* Calendars.Calendar).events({
       from: local(`${date}T00:00`),
       to: local(`${Time.addDays(date, 1)}T00:00`)
     })
@@ -198,14 +198,14 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
             yield* KernelTesting.code(events.change(standup.id, { title: "Sync" })),
             "calendar.event.readonly"
           )
-          yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: false })
+          yield* (yield* Calendars.Calendar).changeCalendar(Sample.work, { enabled: false })
           const copy = yield* find("Standup", 0)
           assert.strictEqual(yield* KernelTesting.code(events.cancel(copy.id)), "calendar.event.copy")
           assert.strictEqual(
             yield* KernelTesting.code(events.change(standup.id, { title: "Sync" })),
             "calendar.calendar.off"
           )
-          yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: true })
+          yield* (yield* Calendars.Calendar).changeCalendar(Sample.work, { enabled: true })
           assert.strictEqual(
             yield* KernelTesting.code(events.change((yield* find("Lunch", 0)).id, { title: "Lunch" })),
             "calendar.event.reclaim"
