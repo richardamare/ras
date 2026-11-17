@@ -15,6 +15,7 @@ import * as Completion from "@/features/tasks/completion"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
+import * as WorkActions from "@/features/tasks/work-actions"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
@@ -97,7 +98,10 @@ export function TasksPage() {
                 <Table.TableHead>{t("fields.status")}</Table.TableHead>
                 <Table.TableHead>{t("fields.deadline")}</Table.TableHead>
                 <Table.TableHead className="text-right">{t("fields.spent")}</Table.TableHead>
-                <Table.TableHead className="pe-4">{t("fields.next")}</Table.TableHead>
+                <Table.TableHead>{t("fields.next")}</Table.TableHead>
+                <Table.TableHead className="w-10 pe-4">
+                  <span className="sr-only">{t("menu.column")}</span>
+                </Table.TableHead>
               </Table.TableRow>
             </Table.TableHeader>
             <Table.TableBody>
@@ -156,12 +160,15 @@ export function TasksPage() {
                         Prague.duration(time?.spent ?? 0)
                       )}
                     </Table.TableCell>
-                    <Table.TableCell className="pe-4 tabular-nums">
+                    <Table.TableCell className="tabular-nums">
                       {time?.next == null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
                         `${dayLabel(time.next.slice(0, 10))} ${time.next.slice(11)}`
                       )}
+                    </Table.TableCell>
+                    <Table.TableCell className="pe-4">
+                      <WorkActions.TaskMenu task={task} />
                     </Table.TableCell>
                   </Table.TableRow>
                 )

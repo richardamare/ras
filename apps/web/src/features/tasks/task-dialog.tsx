@@ -20,6 +20,7 @@ import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
 import * as CopyLink from "@/components/copy-link"
 import * as TaskUrl from "@/features/tasks/url"
+import * as WorkActions from "@/features/tasks/work-actions"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -104,6 +105,7 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
         <TaskEdit.DeleteButton task={found} onDeleted={onClose} />
       </Dialog.DialogHeader>
       <Dialog.DialogBody className="grid gap-5 pb-1">
+        <WorkActions.WorkButtons task={found} />
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-3">
           <Field label={t("fields.status")}>
             <Select.Select value={found.status} onValueChange={(value) => move(value as Work.Status)}>

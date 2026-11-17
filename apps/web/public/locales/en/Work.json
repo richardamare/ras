@@ -111,5 +111,35 @@
     "keep": "Keep task",
     "deleted": "{{title}} is deleted.",
     "closed": "{{title}} has work on it, so it moved to Done."
+  },
+  "work": {
+    "start": "Start",
+    "stop": "Stop",
+    "date": "Date",
+    "at": "Starts at",
+    "minutes": "Minutes",
+    "from": "From",
+    "to": "To"
+  },
+  "plan": {
+    "button": "Plan",
+    "title": "Plan “{{title}}”",
+    "hint": "The block goes to the calendar of the task's space.",
+    "submit": "Plan block",
+    "planned": "{{title}} is planned."
+  },
+  "log": {
+    "button": "Log work",
+    "title": "Log work on “{{title}}”",
+    "hint": "Record time already spent on the task.",
+    "submit": "Log",
+    "logged": "Work on {{title}} is logged.",
+    "length": "{{length}} of work",
+    "badSpan": "The work must end after it starts, take at most 12 hours and not end in the future."
+  },
+  "menu": {
+    "label": "Actions: {{title}}",
+    "column": "Actions",
+    "open": "Open"
   }
 }

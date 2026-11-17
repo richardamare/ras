@@ -113,5 +113,35 @@
     "keep": "Ponechat úkol",
     "deleted": "Smazáno: {{title}}",
     "closed": "Na úkolu {{title}} se už pracovalo, proto se přesunul do Hotovo."
+  },
+  "work": {
+    "start": "Spustit",
+    "stop": "Zastavit",
+    "date": "Datum",
+    "at": "Začátek",
+    "minutes": "Minuty",
+    "from": "Od",
+    "to": "Do"
+  },
+  "plan": {
+    "button": "Naplánovat",
+    "title": "Naplánovat „{{title}}“",
+    "hint": "Blok se zapíše do kalendáře prostoru, kam úkol patří.",
+    "submit": "Naplánovat blok",
+    "planned": "Naplánováno: {{title}}"
+  },
+  "log": {
+    "button": "Zapsat práci",
+    "title": "Zapsat práci na „{{title}}“",
+    "hint": "Zapište čas, který už na úkolu proběhl.",
+    "submit": "Zapsat",
+    "logged": "Práce zapsána: {{title}}",
+    "length": "{{length}} práce",
+    "badSpan": "Práce musí skončit až po začátku, trvat nejvýš 12 hodin a nekončit v budoucnu."
+  },
+  "menu": {
+    "label": "Akce: {{title}}",
+    "column": "Akce",
+    "open": "Otevřít"
   }
 }

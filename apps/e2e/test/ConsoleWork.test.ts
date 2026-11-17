@@ -28,6 +28,20 @@ const choose = (page: Browser.Page, scope: Browser.Locator, label: string, optio
     page.getByRole("option", { name: option, exact: true }).click()
   )
 
+/** Removes the task's blocks from today: a stopped block lasts a minute at least, and that minute is free again. */
+const releaseToday = (task: string) =>
+  Effect.gen(function* () {
+    const client = yield* Suite.owner
+    const date = yield* today
+    const blocks = yield* client.work.blocks({
+      query: { from: Time.PragueLocal.make(`${date}T00:00`), to: Time.PragueLocal.make(`${date}T23:59`) }
+    })
+    yield* Effect.forEach(
+      blocks.filter((block) => block.task === task),
+      (block) => client.work.remove({ params: { id: block.id } })
+    )
+  })
+
 /** Polls `read` until what it answers holds what `done` looks for. */
 const becomes = <A, E, R>(read: Effect.Effect<A, E, R>, done: (found: A) => boolean) =>
   Effect.repeat(read, { until: done, schedule: Schedule.spaced(Duration.millis(100)), times: 50 })
@@ -344,6 +358,65 @@ describe("the console's work pages", () => {
         yield* remove(worked)
         yield* page.getByText(`${worked.title} has work on it, so it moved to Done.`).waitFor()
         yield* becomes(client.work.task({ params: { id: worked.id } }), (found) => found.status === "done")
+      })
+    )
+
+    it.effect("starts, stops, plans and logs work on a task from the tasks table's menu and from its dialog", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Clocked"), space: space.id } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?q=${encodeURIComponent(task.title)}`)
+        const menu = (item: string) =>
+          Effect.andThen(
+            page
+              .getByRole("main")
+              .getByRole("button", { name: `Actions: ${task.title}` })
+              .click(),
+            page.getByRole("menuitem", { name: item, exact: true }).click()
+          )
+
+        yield* menu("Start")
+        yield* becomes(client.work.running(), (block) => block?.task === task.id)
+        yield* menu("Stop")
+        yield* becomes(client.work.running(), (block) => block === null)
+        yield* releaseToday(task.id)
+
+        const date = Time.addDays(yield* today, 45)
+        yield* menu("Plan")
+        const plan = page.getByRole("dialog", { name: `Plan “${task.title}”` })
+        yield* plan.getByLabel("Date").fill(date)
+        yield* plan.getByLabel("Starts at").fill("10:00")
+        yield* plan.getByLabel("Minutes").fill("45")
+        yield* plan.getByRole("button", { name: "Plan block" }).click()
+        yield* plan.waitFor({ state: "detached" })
+        const planned = yield* client.work.blocks({
+          query: { from: Time.PragueLocal.make(`${date}T00:00`), to: Time.PragueLocal.make(`${date}T23:59`) }
+        })
+        assert.deepStrictEqual(
+          planned
+            .filter((block) => block.task === task.id)
+            .map((block): Array<string | null> => [block.start, block.end]),
+          [[`${date}T10:00`, `${date}T10:45`]]
+        )
+
+        yield* menu("Log work")
+        const log = page.getByRole("dialog", { name: `Log work on “${task.title}”` })
+        yield* log.getByLabel("Date").fill(Time.addDays(yield* today, -21))
+        yield* log.getByLabel("From").fill("08:00")
+        yield* log.getByLabel("To").fill("09:30")
+        yield* log.getByText("1:30 of work").waitFor()
+        yield* log.getByRole("button", { name: "Log", exact: true }).click()
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent >= 90)
+
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog", { name: task.title })
+        yield* dialog.getByRole("button", { name: "Start" }).click()
+        yield* becomes(client.work.running(), (block) => block?.task === task.id)
+        yield* dialog.getByRole("button", { name: "Stop" }).click()
+        yield* becomes(client.work.running(), (block) => block === null)
+        yield* releaseToday(task.id)
       })
     )
 

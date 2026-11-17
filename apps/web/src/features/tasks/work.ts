@@ -27,3 +27,28 @@ export const minutesOf = (text: string): number | null | undefined => {
   if (clock !== null) return Number(clock[1]) * 60 + Number(clock[2])
   return /^\d+$/.test(typed) ? Number(typed) : undefined
 }
+
+const shift = (local: string, minutes: number) =>
+  new Date(Date.parse(`${local}:00Z`) + minutes * 60_000).toISOString().slice(0, 16)
+
+const floorTo = (local: string, step: number) => {
+  const minutes = Number(local.slice(14, 16))
+  return shift(local, -(minutes % step))
+}
+
+/** Where a planned block starts by default: the next half hour after `now`, for an hour. */
+export const planDefaults = (now: string) => {
+  const start = floorTo(shift(now, 29), 30)
+  return { date: start.slice(0, 10), time: start.slice(11), minutes: 60 }
+}
+
+/** The hour of work that ended at `now`, to five minutes, kept within `now`'s day. */
+export const logDefaults = (now: string) => {
+  const end = floorTo(now, 5)
+  const start = shift(end, -60)
+  return {
+    date: end.slice(0, 10),
+    from: start.slice(0, 10) === end.slice(0, 10) ? start.slice(11) : "00:00",
+    to: end.slice(11)
+  }
+}
