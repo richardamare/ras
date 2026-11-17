@@ -41,7 +41,7 @@ export const page = Effect.gen(function* () {
   const { url } = yield* Server
   const context = yield* Effect.acquireRelease(
     use(() => browser.newContext({ baseURL: url.origin, locale: "en-US" })),
-    (context) => use(() => context.close())
+    (opened) => use(() => opened.close())
   )
   yield* use(() => context.addInitScript(() => window.localStorage.setItem("lang", "en")))
   return yield* use(() => context.newPage())
