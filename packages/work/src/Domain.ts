@@ -83,8 +83,11 @@ export class Comment extends Schema.Class<Comment>("Comment")({
   link: Schema.NullOr(Schema.String)
 }) {}
 
+const spent = Schema.Int.annotate({ description: "Minutes of its work blocks that are done." })
+
 export class Task extends Schema.Class<Task>("Task")({
   ...TaskSummary.fields,
+  spent,
   body: Schema.String,
   comments: Schema.Array(Comment),
   links: Schema.Array(LinkUrl)
@@ -92,6 +95,7 @@ export class Task extends Schema.Class<Task>("Task")({
 
 export class ProjectDetail extends Schema.Class<ProjectDetail>("ProjectDetail")({
   ...Project.fields,
+  spent,
   tasks: Schema.Array(TaskSummary)
 }) {}
 

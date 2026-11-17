@@ -9,6 +9,7 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
+import * as Blocks from "./Blocks.ts"
 import * as Domain from "./Domain.ts"
 import * as Store from "./Store.ts"
 
@@ -64,7 +65,8 @@ export class Board extends Context.Service<
     readonly task: (id: Domain.TaskId) => Read<Domain.Task>
     readonly addTask: (task: Domain.NewTask) => Write<Domain.Task>
     readonly changeTask: (id: Domain.TaskId, change: Domain.TaskChange) => Write<Domain.Task>
-    readonly deleteTask: (id: Domain.TaskId) => Write<void>
+    /** Deletes a task with its blocks; a task with work begun on it is moved to done instead, and answered. */
+    readonly deleteTask: (id: Domain.TaskId) => Write<Option.Option<Domain.Task>>
     readonly comment: (id: Domain.TaskId, comment: Domain.NewComment) => Write<Domain.Task>
     readonly link: (id: Domain.TaskId, url: string) => Write<Domain.Task>
     readonly unlink: (id: Domain.TaskId, url: string) => Write<Domain.Task>
@@ -77,6 +79,7 @@ export class Board extends Context.Service<
       const writes = yield* Global.Writes
       const agents = yield* Global.Agents
       const calendar = yield* Calendar.Calendar
+      const blocks = yield* Blocks.Blocks
       const db = Effect.provideService(SqlClient.SqlClient, sql)
 
       const space = (id: string) => db(Store.spaceById(id)).pipe(orNotFound<Domain.Space>("space", id))
@@ -91,6 +94,7 @@ export class Board extends Context.Service<
           const { summary, body } = yield* stored(id)
           return new Domain.Task({
             ...summary,
+            spent: Blocks.spent(yield* db(Store.blocksOfTask(id)), yield* DateTime.now),
             body,
             comments: yield* db(Store.comments(id)),
             links: yield* db(Store.links(id))
@@ -138,6 +142,68 @@ export class Board extends Context.Service<
             after: after(result) as Option.Option<Global.Snapshot>
           }))
         )
+
+      const changeTask = (id: Domain.TaskId, change: Domain.TaskChange) =>
+        Effect.gen(function* () {
+          const author = yield* speaker
+          const { summary, body } = yield* stored(id)
+          if (change.body !== undefined && change.body !== body && author !== "owner") {
+            return yield* refuse(
+              "work.task.body",
+              "The task's body is the owner's brief, so an agent does not change it.",
+              "Write progress, questions and results with comment_task, or in `comment`."
+            )
+          }
+          const status = change.status ?? summary.status
+          if (status !== summary.status && Domain.explained.includes(status) && change.comment === undefined) {
+            return yield* refuse(
+              "work.task.comment",
+              `A move to ${status} needs a comment in the same call.`,
+              status === "blocked" ? "Say in `comment` what is needed." : "Say in `comment` what to check."
+            )
+          }
+          if (change.assignee !== undefined) yield* assignable(change.assignee)
+          const inProject =
+            change.project === undefined
+              ? Option.none<Domain.Project>()
+              : change.project === null
+                ? Option.none<Domain.Project>()
+                : Option.some(yield* project(change.project))
+          const home = Option.isSome(inProject)
+            ? inProject.value.space
+            : change.space === undefined
+              ? summary.space
+              : (yield* open(change.space)).id
+          const at = yield* now
+          const after: Store.TaskColumns = {
+            title: change.title ?? summary.title,
+            body: change.body ?? body,
+            status,
+            assignee: change.assignee ?? summary.assignee,
+            priority: change.priority ?? summary.priority,
+            deadline: change.deadline === undefined ? summary.deadline : change.deadline,
+            estimate: change.estimate === undefined ? summary.estimate : change.estimate,
+            project: change.project === undefined ? summary.project : change.project,
+            space: home
+          }
+          if (status === "done" && summary.status !== "done") yield* blocks.release(id)
+          const diff = Global.changed(columns(summary, body), after)
+          const write = Effect.gen(function* () {
+            yield* db(Store.updateTask(id, after, at))
+            if (change.comment !== undefined) {
+              const comment = { id: yield* Id.generate(Domain.CommentId), author, at, text: change.comment }
+              yield* db(Store.insertComment(id, comment))
+            }
+          })
+          yield* run(
+            status !== summary.status ? `work.task.${status === "done" ? "closed" : "moved"}` : "work.task.changed",
+            `task/${id}`,
+            Option.some(diff.before),
+            write,
+            () => Option.some(change.comment === undefined ? diff.after : { ...diff.after, comment: change.comment })
+          )
+          return yield* task(id)
+        })
 
       return Board.of({
         spaces: db(Store.spaces),
@@ -210,7 +276,11 @@ export class Board extends Context.Service<
         project: (id) =>
           Effect.gen(function* () {
             const found = yield* project(id)
-            return new Domain.ProjectDetail({ ...found, tasks: yield* db(Store.tasks({ project: id })) })
+            return new Domain.ProjectDetail({
+              ...found,
+              spent: Blocks.spent(yield* db(Store.blocksOfProject(id)), yield* DateTime.now),
+              tasks: yield* db(Store.tasks({ project: id }))
+            })
           }),
 
         addProject: (input) =>
@@ -288,70 +358,15 @@ export class Board extends Context.Service<
             return yield* task(id)
           }),
 
-        changeTask: (id, change) =>
-          Effect.gen(function* () {
-            const author = yield* speaker
-            const { summary, body } = yield* stored(id)
-            if (change.body !== undefined && change.body !== body && author !== "owner") {
-              return yield* refuse(
-                "work.task.body",
-                "The task's body is the owner's brief, so an agent does not change it.",
-                "Write progress, questions and results with comment_task, or in `comment`."
-              )
-            }
-            const status = change.status ?? summary.status
-            if (status !== summary.status && Domain.explained.includes(status) && change.comment === undefined) {
-              return yield* refuse(
-                "work.task.comment",
-                `A move to ${status} needs a comment in the same call.`,
-                status === "blocked" ? "Say in `comment` what is needed." : "Say in `comment` what to check."
-              )
-            }
-            if (change.assignee !== undefined) yield* assignable(change.assignee)
-            const inProject =
-              change.project === undefined
-                ? Option.none<Domain.Project>()
-                : change.project === null
-                  ? Option.none<Domain.Project>()
-                  : Option.some(yield* project(change.project))
-            const home = Option.isSome(inProject)
-              ? inProject.value.space
-              : change.space === undefined
-                ? summary.space
-                : (yield* open(change.space)).id
-            const at = yield* now
-            const after: Store.TaskColumns = {
-              title: change.title ?? summary.title,
-              body: change.body ?? body,
-              status,
-              assignee: change.assignee ?? summary.assignee,
-              priority: change.priority ?? summary.priority,
-              deadline: change.deadline === undefined ? summary.deadline : change.deadline,
-              estimate: change.estimate === undefined ? summary.estimate : change.estimate,
-              project: change.project === undefined ? summary.project : change.project,
-              space: home
-            }
-            const diff = Global.changed(columns(summary, body), after)
-            const write = Effect.gen(function* () {
-              yield* db(Store.updateTask(id, after, at))
-              if (change.comment !== undefined) {
-                const comment = { id: yield* Id.generate(Domain.CommentId), author, at, text: change.comment }
-                yield* db(Store.insertComment(id, comment))
-              }
-            })
-            yield* run(
-              status !== summary.status ? `work.task.${status === "done" ? "closed" : "moved"}` : "work.task.changed",
-              `task/${id}`,
-              Option.some(diff.before),
-              write,
-              () => Option.some(change.comment === undefined ? diff.after : { ...diff.after, comment: change.comment })
-            )
-            return yield* task(id)
-          }),
+        changeTask,
 
         deleteTask: (id) =>
           Effect.gen(function* () {
             const { summary, body } = yield* stored(id)
+            const now = yield* DateTime.now
+            if ((yield* db(Store.blocksOfTask(id))).some((row) => Blocks.started(row, now)))
+              return Option.some(yield* changeTask(id, { status: "done" }))
+            yield* blocks.release(id)
             yield* run(
               "work.task.deleted",
               `task/${id}`,
@@ -359,6 +374,7 @@ export class Board extends Context.Service<
               db(Store.deleteTask(id)),
               () => Option.none()
             )
+            return Option.none()
           }),
 
         comment: (id, input) =>

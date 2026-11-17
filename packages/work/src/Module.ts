@@ -10,7 +10,7 @@ import * as Tools from "./Tools.ts"
 export const module = Module.make({
   name: "work",
   migrations: Migrations.migrations,
-  services: Layer.mergeAll(Board.Board.layer, Drafts.Drafts.layer.pipe(Layer.provideMerge(Blocks.Blocks.layer))),
+  services: Layer.mergeAll(Board.Board.layer, Drafts.Drafts.layer).pipe(Layer.provideMerge(Blocks.Blocks.layer)),
   ports: Blocks.Blocks.busyTime,
   http: { group: Http.group, handlers: Http.handlers },
   tools: { toolkit: Tools.toolkit, handlers: Tools.handlers }

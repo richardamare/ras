@@ -81,7 +81,13 @@ export const group = HttpApiGroup.make("work")
       error: failures
     })
   )
-  .add(HttpApiEndpoint.delete("deleteTask", "/tasks/:id", { params: { id: Domain.TaskId }, error: failures }))
+  .add(
+    HttpApiEndpoint.delete("deleteTask", "/tasks/:id", {
+      params: { id: Domain.TaskId },
+      success: Schema.NullOr(Domain.Task),
+      error: failures
+    })
+  )
   .add(
     HttpApiEndpoint.post("comment", "/tasks/:id/comments", {
       params: { id: Domain.TaskId },
@@ -161,7 +167,7 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoin
       .handle("task", ({ params }) => board.task(params.id))
       .handle("addTask", ({ payload }) => board.addTask(payload))
       .handle("changeTask", ({ params, payload }) => board.changeTask(params.id, payload))
-      .handle("deleteTask", ({ params }) => board.deleteTask(params.id))
+      .handle("deleteTask", ({ params }) => Effect.map(board.deleteTask(params.id), Option.getOrNull))
       .handle("comment", ({ params, payload }) => board.comment(params.id, payload))
       .handle("link", ({ params, payload }) => board.link(params.id, payload.url))
       .handle("unlink", ({ params, query }) => board.unlink(params.id, query.url))
