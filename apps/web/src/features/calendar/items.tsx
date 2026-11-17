@@ -56,6 +56,7 @@ export function EventBlock({
       type="button"
       onClick={onOpen}
       onPointerDown={grabWith(onGrab, "move")}
+      data-item={event.id}
       data-show-as={event.showAs}
       data-draft={event.draft !== null}
       className={Utils.cn(
@@ -98,6 +99,7 @@ export function BlockBlock({
       type="button"
       onClick={onOpen}
       onPointerDown={grabWith(onGrab, "move")}
+      data-item={block.id}
       aria-label={`${draft ? `${t("draft.badge")} ` : ""}${t("block")}: ${block.title}`}
       data-draft={draft}
       className={Utils.cn(
@@ -128,6 +130,7 @@ export function Chip({ item, color, onOpen }: { item: Grid.Item; color: string; 
       <button
         type="button"
         onClick={onOpen}
+        data-item={item.block.id}
         aria-label={`${draft ? `${t("draft.badge")} ` : ""}${t("block")}: ${item.block.title}`}
         className={Utils.cn(
           "flex min-w-0 items-center gap-1 rounded-sm border border-(--block-color) bg-(--block-color)/10 px-1 py-0.5 text-start text-xs",
@@ -146,6 +149,7 @@ export function Chip({ item, color, onOpen }: { item: Grid.Item; color: string; 
     <button
       type="button"
       onClick={onOpen}
+      data-item={event.id}
       data-show-as={event.showAs}
       data-draft={event.draft !== null}
       className={Utils.cn(

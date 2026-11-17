@@ -10,17 +10,13 @@ import * as Popover from "@/components/ui/popover"
 import * as Skeleton from "@/components/ui/skeleton"
 import type * as Grid from "@/features/calendar/grid"
 import * as Pointer from "@/features/calendar/pointer"
+import * as Url from "@/features/calendar/url"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
-
-export interface Opened {
-  readonly item: Grid.Item
-  /** Where the item was on screen when it was clicked. */
-  readonly at: DOMRect
-}
+import * as CopyLink from "@/components/copy-link"
 
 const replies = ["accept", "tentative", "decline"] as const
 
@@ -50,7 +46,7 @@ function useWhen() {
 
 function Heading({ color, title, detail }: { color: string; title: string; detail: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2.5 pe-6">
+    <div className="flex items-start gap-2.5 pe-14">
       <span className="mt-1 h-3.5 w-1 shrink-0 rounded-full" style={{ background: color }} aria-hidden="true" />
       <div className="grid min-w-0 gap-0.5">
         <h2 className="font-heading leading-snug font-medium break-words">{title}</h2>
@@ -254,16 +250,28 @@ function BlockCard({
   )
 }
 
+/**
+ * Where the item's first tile is, brought into view; a wide tile counts as its start, so the popover sits beside it
+ * rather than past the window's edge. The top middle of the window stands in when the view hides the item.
+ */
+const placeOf = (id: string) => {
+  const tile = document.querySelector(`[data-item="${CSS.escape(id)}"]`)
+  if (tile === null) return new DOMRect(window.innerWidth / 2, 120, 0, 0)
+  tile.scrollIntoView({ block: "center" })
+  const { left, top, width, height } = tile.getBoundingClientRect()
+  return new DOMRect(left, top, Math.min(width, 240), height)
+}
+
 /** What an event or a block in the grid is, beside it, with the actions that need no form. */
 export function ItemPopover({
-  opened,
+  item,
   calendars,
   colorOf,
   onClose,
   onEdit,
   onOpenTask
 }: {
-  opened: Opened | null
+  item: Grid.Item | null
   calendars: ReadonlyArray<Api.CalendarEncoded>
   colorOf: (calendar: number) => string
   onClose: () => void
@@ -271,13 +279,19 @@ export function ItemPopover({
   onOpenTask: (block: Api.BlockEncoded) => void
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
-  const at = opened?.at
-  const item = opened?.item
+  const id = item === null ? null : item.kind === "event" ? item.event.id : item.block.id
+  const [at, setAt] = React.useState<DOMRect | null>(null)
+  React.useEffect(() => {
+    if (id === null) return setAt(null)
+    const timer = setTimeout(() => setAt(placeOf(id)))
+    return () => clearTimeout(timer)
+  }, [id])
+
   return (
-    <Popover.Popover open={opened !== null} onOpenChange={(open) => !open && onClose()}>
+    <Popover.Popover open={item !== null && at !== null} onOpenChange={(open) => !open && onClose()}>
       <Popover.PopoverAnchor
         className="pointer-events-none fixed"
-        style={at === undefined ? undefined : { left: at.left, top: at.top, width: at.width, height: at.height }}
+        style={at === null ? undefined : { left: at.left, top: at.top, width: at.width, height: at.height }}
       />
       <Popover.PopoverContent
         side="right"
@@ -286,9 +300,12 @@ export function ItemPopover({
         className="w-80 gap-3 p-3"
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
-        <IconButton.IconButton label={t("item.close")} className="absolute top-2 right-2 size-7" onClick={onClose}>
-          <LucideReact.XIcon />
-        </IconButton.IconButton>
+        <div className="absolute top-2 right-2 flex">
+          {item !== null && <CopyLink.CopyLink url={Url.itemUrl(item)} className="size-7" />}
+          <IconButton.IconButton label={t("item.close")} className="size-7" onClick={onClose}>
+            <LucideReact.XIcon />
+          </IconButton.IconButton>
+        </div>
         {item?.kind === "event" && (
           <EventCard
             key={item.event.id}

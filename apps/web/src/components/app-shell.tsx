@@ -8,6 +8,7 @@ import * as EnvironmentBanner from "@/components/environment-banner"
 import * as PageLoader from "@/components/page-loader"
 import * as SignIn from "@/components/sign-in"
 import * as Sidebar from "@/components/ui/sidebar"
+import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Auth from "@/lib/auth"
 
 /** The console behind the owner's session; without one it shows the sign-in in place, so the URL survives. */
@@ -36,6 +37,7 @@ export const AppShell = () => {
             </React.Suspense>
           </main>
         </Sidebar.SidebarInset>
+        <TaskDialog.TaskDialog />
       </Sidebar.SidebarProvider>
     </div>
   )

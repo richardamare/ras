@@ -1,20 +1,10 @@
 import * as ReactRouter from "@tanstack/react-router"
-import * as Zod from "zod"
+import * as Nuqs from "nuqs"
 
 import * as CalendarPage from "@/features/calendar/calendar-page"
-import * as Grid from "@/features/calendar/grid"
-
-const search = Zod.object({
-  view: Zod.enum(Grid.views).catch("week"),
-  date: Zod.iso.date().optional().catch(undefined)
-})
-
-function Calendar() {
-  const { view, date } = Route.useSearch()
-  return <CalendarPage.CalendarPage view={view} date={date} />
-}
+import * as Url from "@/features/calendar/url"
 
 export const Route = ReactRouter.createFileRoute("/_shell/calendar")({
-  validateSearch: search,
-  component: Calendar
+  validateSearch: Nuqs.createStandardSchemaV1(Url.params, { partialOutput: true }),
+  component: CalendarPage.CalendarPage
 })

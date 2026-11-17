@@ -11,11 +11,10 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Progress from "@/features/projects/progress"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
+import * as TaskUrl from "@/features/tasks/url"
 
 export function ProjectPage({ id }: { id: string }) {
   const { t } = ReactI18next.useTranslation("Work")
@@ -24,7 +23,7 @@ export function ProjectPage({ id }: { id: string }) {
   const blocks = ReactQuery.useQuery(
     Queries.workBlocksOptions({ query: { from: `${Prague.today()}T00:00`, to: Time.span.to } })
   )
-  const [open, setOpen] = React.useState<Api.TaskSummaryEncoded | null>(null)
+  const openTask = TaskUrl.useOpenTask()
 
   if (project.isPending) return <Skeleton.Skeleton className="h-64 w-full" />
   if (project.data === undefined) return <p className="text-sm text-muted-foreground">{t("projects.notFound")}</p>
@@ -73,7 +72,7 @@ export function ProjectPage({ id }: { id: string }) {
               <button
                 key={task.id}
                 type="button"
-                onClick={() => setOpen(task)}
+                onClick={() => openTask(task.id)}
                 className="-mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <span className="min-w-0 truncate font-medium">{task.title}</span>
@@ -106,7 +105,6 @@ export function ProjectPage({ id }: { id: string }) {
           </Card.CardContent>
         </Card.Card>
       </div>
-      <TaskDialog.TaskDialog id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
     </div>
   )
 }
