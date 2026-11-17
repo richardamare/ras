@@ -268,6 +268,32 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("wraps a long unbroken address in a task's brief and comments inside its dialog", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const address = `https://notes.example.com/shared/${"6WlsLGHaRtjNoz82oM1ewMXIYRyBv".repeat(4)}`
+        const task = yield* client.work.addTask({
+          payload: { title: Suite.unique("Wrapped"), body: `Notes: ${address}` }
+        })
+        yield* client.work.comment({ params: { id: task.id }, payload: { text: `See ${address}` } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog", { name: task.title })
+        yield* dialog.getByText(`See ${address}`).waitFor()
+
+        const overflow = yield* Effect.promise(() =>
+          dialog.raw.evaluate((content) => {
+            const edge = content.getBoundingClientRect().right
+            return Math.max(
+              0,
+              ...[...content.querySelectorAll("*")].map((each) => each.getBoundingClientRect().right - edge)
+            )
+          })
+        )
+        assert.strictEqual(overflow, 0)
+      })
+    )
+
     it.effect("edits a task's title, brief, project, priority, deadline, estimate and links in its dialog", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

@@ -173,7 +173,9 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
           ) : (
             <p
               className={
-                found.body.length > 0 ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-sm text-muted-foreground"
+                found.body.length > 0
+                  ? "text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap"
+                  : "text-sm text-muted-foreground"
               }
             >
               {found.body.length > 0 ? found.body : t("noBody")}
@@ -216,7 +218,7 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
                       className="ms-auto size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [&_svg]:size-3.5"
                     />
                   </span>
-                  <p className="text-sm whitespace-pre-wrap">{one.text}</p>
+                  <p className="text-sm wrap-anywhere whitespace-pre-wrap">{one.text}</p>
                 </li>
               ))}
             </ol>
