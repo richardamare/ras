@@ -1,0 +1,54 @@
+{
+  "title": "Settings",
+  "failed": "The change was not saved.",
+  "spaces": {
+    "title": "Spaces",
+    "description": "Where a part of your work belongs, and the calendar its work blocks go to.",
+    "color": "Colour",
+    "name": "Name",
+    "calendar": "Calendar for work blocks",
+    "noCalendar": "No calendar",
+    "default": "Default",
+    "archived": "Archived",
+    "makeDefault": "Make default",
+    "archive": "Archive",
+    "newName": "New space",
+    "add": "Add space"
+  },
+  "calendars": {
+    "title": "Calendars",
+    "description": "Calendars of the connected Outlook account take events and blocks; the others are only shown.",
+    "writable": "Writable",
+    "readonly": "Read only",
+    "shown": "Shown"
+  },
+  "connections": {
+    "title": "Connections",
+    "description": "The Outlook account ras writes events to.",
+    "none": "Not connected",
+    "connected": "{{account}}, since {{at}}",
+    "connect": "Connect",
+    "reconnect": "Connect again"
+  },
+  "agents": {
+    "title": "Agents",
+    "description": "The names your bots act under; each write they make is audited with it.",
+    "none": "No agents yet.",
+    "archived": "Archived",
+    "archive": "Archive",
+    "slug": "slug",
+    "name": "Name",
+    "add": "Add agent"
+  },
+  "clients": {
+    "title": "MCP clients",
+    "description": "Apps you allowed to reach ras through the connector.",
+    "none": "No client is connected.",
+    "connected": "connected {{at}}",
+    "used": "last active {{at}}",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke {{name}}?",
+    "revokeDescription": "It loses access at once and has to sign in and ask for your consent again.",
+    "keep": "Keep it"
+  }
+}

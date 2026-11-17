@@ -17,6 +17,7 @@ declare module "i18next" {
       "@Sidebar": typeof import("../../public/locales/en/@Sidebar.json")
       Calendar: typeof import("../../public/locales/en/Calendar.json")
       Home: typeof import("../../public/locales/en/Home.json")
+      Settings: typeof import("../../public/locales/en/Settings.json")
       Work: typeof import("../../public/locales/en/Work.json")
       translation: typeof import("../../public/locales/en/translation.json")
     }

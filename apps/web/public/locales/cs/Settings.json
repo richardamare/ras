@@ -1,0 +1,54 @@
+{
+  "title": "Nastavení",
+  "failed": "Změna se neuložila.",
+  "spaces": {
+    "title": "Prostory",
+    "description": "Kam patří část tvé práce a do kterého kalendáře jdou její pracovní bloky.",
+    "color": "Barva",
+    "name": "Název",
+    "calendar": "Kalendář pro pracovní bloky",
+    "noCalendar": "Bez kalendáře",
+    "default": "Výchozí",
+    "archived": "Archivovaný",
+    "makeDefault": "Nastavit jako výchozí",
+    "archive": "Archivovat",
+    "newName": "Nový prostor",
+    "add": "Přidat prostor"
+  },
+  "calendars": {
+    "title": "Kalendáře",
+    "description": "Do kalendářů připojeného účtu Outlook se zapisují události a bloky; ostatní se jen zobrazují.",
+    "writable": "Zapisovatelný",
+    "readonly": "Jen ke čtení",
+    "shown": "Zobrazit"
+  },
+  "connections": {
+    "title": "Připojení",
+    "description": "Účet Outlook, do kterého ras zapisuje události.",
+    "none": "Nepřipojeno",
+    "connected": "{{account}}, od {{at}}",
+    "connect": "Připojit",
+    "reconnect": "Připojit znovu"
+  },
+  "agents": {
+    "title": "Agenti",
+    "description": "Jména, pod kterými jednají tvoji boti; každý jejich zápis se s ním zaznamená.",
+    "none": "Zatím žádní agenti.",
+    "archived": "Archivovaný",
+    "archive": "Archivovat",
+    "slug": "slug",
+    "name": "Jméno",
+    "add": "Přidat agenta"
+  },
+  "clients": {
+    "title": "MCP klienti",
+    "description": "Aplikace, kterým jsi povolil přístup do ras přes konektor.",
+    "none": "Žádný klient není připojen.",
+    "connected": "připojen {{at}}",
+    "used": "naposledy aktivní {{at}}",
+    "revoke": "Odebrat přístup",
+    "revokeTitle": "Odebrat přístup klientovi {{name}}?",
+    "revokeDescription": "Přístup ztratí okamžitě a musí se znovu přihlásit a požádat o tvůj souhlas.",
+    "keep": "Ponechat"
+  }
+}
