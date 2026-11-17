@@ -112,14 +112,14 @@ export function Assignee({ assignee }: { assignee: string }) {
     <span className="inline-flex items-center gap-1.5">
       <span
         className={Utils.cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
+          "flex size-5 shrink-0 items-center justify-center rounded-full [&_svg]:size-3",
           assignee === "owner"
             ? "bg-primary text-primary-foreground"
             : "bg-secondary text-secondary-foreground ring-1 ring-border"
         )}
         aria-hidden="true"
       >
-        {assignee === "owner" ? name.charAt(0).toUpperCase() : <LucideReact.BotIcon className="size-3" />}
+        {assignee === "owner" ? <LucideReact.UserIcon /> : <LucideReact.BotIcon />}
       </span>
       {name}
     </span>

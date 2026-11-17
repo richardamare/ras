@@ -29,6 +29,7 @@ function Details({ id }: { id: string }) {
   const client = ReactQuery.useQueryClient()
   const assignee = TaskBits.useAssignee()
   const task = ReactQuery.useQuery(Queries.workTaskOptions({ path: { id } }))
+  const agents = ReactQuery.useQuery(Queries.globalAgentsOptions())
   const note = React.useRef<HTMLTextAreaElement>(null)
   const askForNote = React.useRef(false)
   const [text, setText] = React.useState("")
@@ -82,7 +83,27 @@ function Details({ id }: { id: string }) {
           </Select.Select>
         </Field>
         <Field label={t("fields.assignee")}>
-          <TaskBits.Assignee assignee={found.assignee} />
+          <Select.Select
+            value={found.assignee}
+            onValueChange={(value) => change.mutate({ path: { id }, body: { assignee: value } })}
+          >
+            <Select.SelectTrigger size="sm" aria-label={t("fields.assignee")} className="h-7 w-full bg-background">
+              <Select.SelectValue />
+            </Select.SelectTrigger>
+            <Select.SelectContent>
+              {[
+                ...new Set([
+                  "owner",
+                  ...(agents.data ?? []).filter((agent) => !agent.archived).map((agent) => agent.slug),
+                  found.assignee
+                ])
+              ].map((person) => (
+                <Select.SelectItem key={person} value={person}>
+                  <TaskBits.Assignee assignee={person} />
+                </Select.SelectItem>
+              ))}
+            </Select.SelectContent>
+          </Select.Select>
         </Field>
         <Field label={t("fields.priority")}>
           {found.priority === "urgent" || found.priority === "high" ? (
