@@ -1,12 +1,17 @@
 import * as React from "react"
 import * as ReactQuery from "@tanstack/react-query"
+import * as ReactRouter from "@tanstack/react-router"
+import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 
+import * as PageHeader from "@/components/page-header"
 import * as Badge from "@/components/ui/badge"
 import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Progress from "@/features/projects/progress"
-import * as TaskSheet from "@/features/tasks/task-sheet"
+import * as NewTask from "@/features/tasks/new-task-dialog"
+import * as TaskBits from "@/features/tasks/task-bits"
+import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
@@ -14,6 +19,7 @@ import * as Prague from "@/lib/prague"
 
 export function ProjectPage({ id }: { id: string }) {
   const { t } = ReactI18next.useTranslation("Work")
+  const dayLabel = TaskBits.useDayLabel()
   const project = ReactQuery.useQuery(Queries.workProjectOptions({ path: { id } }))
   const blocks = ReactQuery.useQuery(
     Queries.workBlocksOptions({ query: { from: `${Prague.today()}T00:00`, to: Time.span.to } })
@@ -27,15 +33,33 @@ export function ProjectPage({ id }: { id: string }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{found.name}</h1>
-        <Badge.Badge variant="secondary">{t(`projectStatus.${found.status}`)}</Badge.Badge>
-        {found.deadline !== null && (
-          <span className="text-sm text-muted-foreground">{t("projects.due", { deadline: found.deadline })}</span>
-        )}
-        <span className="ms-auto text-sm text-muted-foreground tabular-nums">
-          {t("projects.spent", { spent: Prague.duration(found.spent) })}
-        </span>
+      <div className="grid gap-1">
+        <ReactRouter.Link
+          to="/projects"
+          className="flex w-fit items-center gap-1 rounded-sm text-sm text-muted-foreground hover:text-foreground"
+        >
+          <LucideReact.ChevronLeftIcon className="size-4" />
+          {t("projects.title")}
+        </ReactRouter.Link>
+        <PageHeader.PageHeader
+          title={
+            <span className="flex items-center gap-3">
+              {found.name}
+              <Badge.Badge variant="secondary">{t(`projectStatus.${found.status}`)}</Badge.Badge>
+            </span>
+          }
+        >
+          <span className="flex items-center gap-4 text-sm text-muted-foreground">
+            {found.deadline !== null && (
+              <TaskBits.Due task={{ deadline: found.deadline, status: found.status === "done" ? "done" : "todo" }} />
+            )}
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <LucideReact.TimerIcon className="size-3.5" aria-hidden="true" />
+              {t("projects.spent", { spent: Prague.duration(found.spent) })}
+            </span>
+          </span>
+          <NewTask.NewTaskButton project={found.id} />
+        </PageHeader.PageHeader>
       </div>
       {found.description !== null && <p className="text-sm whitespace-pre-wrap">{found.description}</p>}
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -50,12 +74,14 @@ export function ProjectPage({ id }: { id: string }) {
                 key={task.id}
                 type="button"
                 onClick={() => setOpen(task)}
-                className="flex items-baseline gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
+                className="-mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
               >
-                <span className="me-auto font-medium">{task.title}</span>
-                <span className="text-xs text-muted-foreground">
-                  {t(`status.${task.status}`)} · {task.assignee === "owner" ? t("owner") : task.assignee}
-                  {task.deadline === null ? "" : ` · ${task.deadline}`}
+                <span className="min-w-0 truncate font-medium">{task.title}</span>
+                <TaskBits.PriorityFlag priority={task.priority} />
+                <span className="ms-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+                  <TaskBits.Assignee assignee={task.assignee} />
+                  {task.deadline !== null && <TaskBits.Due task={task} />}
+                  <TaskBits.StatusBadge status={task.status} />
                 </span>
               </button>
             ))}
@@ -68,10 +94,10 @@ export function ProjectPage({ id }: { id: string }) {
           <Card.CardContent className="grid gap-2">
             {upcoming.length === 0 && <p className="text-sm text-muted-foreground">{t("projects.noBlocks")}</p>}
             {upcoming.map((block) => (
-              <div key={block.id} className="grid text-sm">
+              <div key={block.id} className="grid gap-0.5 text-sm">
                 <span className="font-medium">{block.title}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  {block.start.replace("T", " ")}
+                  {`${dayLabel(block.start.slice(0, 10))} ${block.start.slice(11)}`}
                   {block.end === null ? "" : `–${block.end.slice(11)}`}
                   {block.state === "draft" ? ` · ${t("projects.draft")}` : ""}
                 </span>
@@ -80,7 +106,7 @@ export function ProjectPage({ id }: { id: string }) {
           </Card.CardContent>
         </Card.Card>
       </div>
-      <TaskSheet.TaskSheet id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
+      <TaskDialog.TaskDialog id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
     </div>
   )
 }

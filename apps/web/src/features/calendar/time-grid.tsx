@@ -82,7 +82,7 @@ export function TimeGrid({
     const element = scroller.current
     if (element === null) return
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
-    const focus = showsToday ? Grid.minuteOf(Prague.local()) / 60 - leadHours : morningHour
+    const focus = showsToday ? Math.floor(Grid.minuteOf(Prague.local()) / 60 - leadHours) : morningHour
     element.scrollTop = Math.max(0, focus) * hourRem * remPx
   }, [showsToday])
 

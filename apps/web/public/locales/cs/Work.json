@@ -38,11 +38,16 @@
     "moveTitle": "Přesunout „{{task}}“ do stavu {{status}}",
     "whatIsNeeded": "Napiš, co je potřeba.",
     "whatToCheck": "Napiš, co zkontrolovat.",
-    "move": "Přesunout"
+    "move": "Přesunout",
+    "empty": "Nic tu není"
   },
   "tasks": {
     "title": "Úkoly",
-    "none": "Zatím žádné úkoly."
+    "none": "Zatím žádné úkoly.",
+    "search": "Hledat úkoly",
+    "open": "Otevřené",
+    "all": "Všechny",
+    "noMatch": "Žádný úkol neodpovídá."
   },
   "projectStatus": {
     "active": "Aktivní",
@@ -60,5 +65,24 @@
     "upcoming": "Nadcházející bloky",
     "noBlocks": "Žádné naplánované bloky.",
     "draft": "návrh"
-  }
+  },
+  "day": {
+    "today": "Dnes",
+    "tomorrow": "Zítra",
+    "yesterday": "Včera"
+  },
+  "newTask": {
+    "button": "Nový úkol",
+    "title": "Nový úkol",
+    "hint": "Přistane na nástěnce ve stavu K udělání, pokud nezvolíš jinak.",
+    "noProject": "Bez projektu",
+    "body": "Zadání",
+    "create": "Vytvořit úkol",
+    "added": "{{title}} je na nástěnce."
+  },
+  "brief": "Zadání",
+  "comments_one": "{{count}} komentář",
+  "comments_few": "{{count}} komentáře",
+  "comments_many": "{{count}} komentářů",
+  "comments_other": "{{count}} komentářů"
 }

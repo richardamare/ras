@@ -4,7 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Re-applying a shadcn preset rewrites --font-sans to the preset's font - restore Sora after. */
 @font-face {
   font-family: "Sora";
   src:
@@ -15,170 +14,94 @@
 }
 
 /*
- * `radix-nova` - control heights and radii come from it,
- * so do not tune them per-component. `--primary` is the brand violet (#884DFF); keep it in step
- * with `--color-brand-violet` below.
+ * One palette: cool greys with an indigo accent. Every primitive derives its corners from `--radius`, and
+ * `--accent` is a tint of the primary, so a hovered row or an active nav entry reads as part of the accent.
  */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(55% 0.225 277);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(55% 0.225 277);
+  --background: oklch(98.4% 0.003 265);
+  --foreground: oklch(22% 0.02 268);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(22% 0.02 268);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(22% 0.02 268);
+  --primary: oklch(51% 0.2 272);
+  --primary-foreground: oklch(99% 0 0);
+  --secondary: oklch(96% 0.006 265);
+  --secondary-foreground: oklch(26% 0.02 268);
+  --muted: oklch(96% 0.006 265);
+  --muted-foreground: oklch(50% 0.016 265);
+  --accent: oklch(95.5% 0.022 272);
+  --accent-foreground: oklch(36% 0.13 272);
+  --destructive: oklch(56% 0.21 27);
+  --destructive-foreground: oklch(99% 0 0);
+  --border: oklch(91.5% 0.008 265);
+  --input: oklch(89% 0.01 265);
+  --ring: oklch(51% 0.2 272);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(55% 0.225 277);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(55% 0.225 277);
+  --sidebar: oklch(97.2% 0.005 265);
+  --sidebar-foreground: oklch(30% 0.02 268);
+  --sidebar-primary: oklch(51% 0.2 272);
+  --sidebar-primary-foreground: oklch(99% 0 0);
+  --sidebar-accent: oklch(93.5% 0.03 272);
+  --sidebar-accent-foreground: oklch(36% 0.13 272);
+  --sidebar-border: oklch(91.5% 0.008 265);
+  --sidebar-ring: oklch(51% 0.2 272);
 
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: oklch(51% 0.2 272);
+  --chart-2: oklch(62% 0.15 200);
+  --chart-3: oklch(68% 0.15 150);
+  --chart-4: oklch(75% 0.14 80);
+  --chart-5: oklch(62% 0.18 20);
 
-  /* Status tones, the same in every palette: a green and an amber mean the same thing on any brand. */
-  --success: oklch(50% 0.13 150);
-  --success-soft: oklch(95% 0.045 150);
-  --warning: oklch(52% 0.12 70);
-  --warning-soft: oklch(95.5% 0.06 85);
+  /* Status tones: a green and an amber mean the same thing in either theme. */
+  --success: oklch(52% 0.13 152);
+  --success-soft: oklch(95.5% 0.04 152);
+  --warning: oklch(55% 0.13 65);
+  --warning-soft: oklch(96% 0.05 85);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(68% 0.21 277);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(68% 0.21 277);
+  --background: oklch(16.5% 0.012 268);
+  --foreground: oklch(95% 0.006 265);
+  --card: oklch(20.5% 0.014 268);
+  --card-foreground: oklch(95% 0.006 265);
+  --popover: oklch(22% 0.015 268);
+  --popover-foreground: oklch(95% 0.006 265);
+  --primary: oklch(70% 0.15 272);
+  --primary-foreground: oklch(17% 0.02 268);
+  --secondary: oklch(26% 0.016 268);
+  --secondary-foreground: oklch(95% 0.006 265);
+  --muted: oklch(26% 0.016 268);
+  --muted-foreground: oklch(71% 0.016 265);
+  --accent: oklch(28% 0.05 272);
+  --accent-foreground: oklch(88% 0.06 272);
+  --destructive: oklch(68% 0.19 25);
+  --destructive-foreground: oklch(17% 0.02 268);
+  --border: oklch(100% 0 0 / 9%);
+  --input: oklch(100% 0 0 / 14%);
+  --ring: oklch(70% 0.15 272);
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(68% 0.21 277);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(68% 0.21 277);
+  --sidebar: oklch(18.5% 0.013 268);
+  --sidebar-foreground: oklch(88% 0.008 265);
+  --sidebar-primary: oklch(70% 0.15 272);
+  --sidebar-primary-foreground: oklch(17% 0.02 268);
+  --sidebar-accent: oklch(27% 0.05 272);
+  --sidebar-accent-foreground: oklch(92% 0.04 272);
+  --sidebar-border: oklch(100% 0 0 / 8%);
+  --sidebar-ring: oklch(70% 0.15 272);
 
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: oklch(70% 0.15 272);
+  --chart-2: oklch(72% 0.12 200);
+  --chart-3: oklch(76% 0.13 150);
+  --chart-4: oklch(82% 0.12 80);
+  --chart-5: oklch(70% 0.16 20);
 
-  --success: oklch(78% 0.14 150);
-  --success-soft: oklch(30% 0.06 150);
+  --success: oklch(78% 0.14 152);
+  --success-soft: oklch(30% 0.06 152);
   --warning: oklch(82% 0.13 80);
   --warning-soft: oklch(32% 0.06 75);
-}
-
-/* The toolbar's search, filters and actions share the table card's surface. Hover, an open menu and a pressed toggle keep the button's
-   own colours. Unlayered, so it outranks the utilities it overrides. */
-[data-slot="data-table-toolbar"]
-  :is([data-slot="input-group"], [data-variant="outline"]:not(:hover, [aria-expanded="true"], [aria-pressed="true"])) {
-  background-color: var(--card);
-}
-
-/* The default palette, chosen per user in settings: a deep blue on graphite greys tinted toward it. Boxier than
-   the brand palette: every primitive derives its corners from `--radius`, and the smallest steps clamp to zero. */
-.palette-blue {
-  --radius: 0.25rem;
-}
-
-.palette-blue:not(.dark) {
-  --background: oklch(99.4% 0.002 258);
-  --foreground: oklch(24% 0.025 262);
-  --card: oklch(100% 0 0);
-  --card-foreground: oklch(24% 0.025 262);
-  --popover: oklch(100% 0 0);
-  --popover-foreground: oklch(24% 0.025 262);
-  --primary: oklch(41.2% 0.152 258);
-  --primary-foreground: oklch(100% 0 0);
-  --secondary: oklch(96.5% 0.008 258);
-  --secondary-foreground: oklch(24% 0.025 262);
-  --muted: oklch(96.5% 0.008 258);
-  --muted-foreground: oklch(46% 0.014 264);
-  --accent: oklch(96.5% 0.008 258);
-  --accent-foreground: oklch(24% 0.025 262);
-  --destructive: oklch(55.5% 0.223 29);
-  --destructive-foreground: oklch(100% 0 0);
-  --border: oklch(91.5% 0.01 258);
-  --input: oklch(91.5% 0.01 258);
-  --ring: oklch(41.2% 0.152 258);
-
-  --sidebar: oklch(97.5% 0.006 258);
-  --sidebar-foreground: oklch(24% 0.025 262);
-  --sidebar-primary: oklch(41.2% 0.152 258);
-  --sidebar-primary-foreground: oklch(100% 0 0);
-  --sidebar-accent: oklch(93% 0.03 258);
-  --sidebar-accent-foreground: oklch(41.2% 0.152 258);
-  --sidebar-border: oklch(91.5% 0.01 258);
-  --sidebar-ring: oklch(41.2% 0.152 258);
-}
-
-.palette-blue.dark {
-  --background: oklch(17% 0.018 260);
-  --foreground: oklch(96.5% 0.006 258);
-  --card: oklch(21% 0.02 260);
-  --card-foreground: oklch(96.5% 0.006 258);
-  --popover: oklch(21% 0.02 260);
-  --popover-foreground: oklch(96.5% 0.006 258);
-  --primary: oklch(68% 0.14 258);
-  --primary-foreground: oklch(17% 0.018 260);
-  --secondary: oklch(27% 0.022 260);
-  --secondary-foreground: oklch(96.5% 0.006 258);
-  --muted: oklch(27% 0.022 260);
-  --muted-foreground: oklch(72% 0.016 262);
-  --accent: oklch(27% 0.022 260);
-  --accent-foreground: oklch(96.5% 0.006 258);
-  --destructive: oklch(68% 0.19 27);
-  --destructive-foreground: oklch(96.5% 0.006 258);
-  --border: oklch(100% 0 0 / 10%);
-  --input: oklch(100% 0 0 / 15%);
-  --ring: oklch(68% 0.14 258);
-
-  --sidebar: oklch(21% 0.02 260);
-  --sidebar-foreground: oklch(96.5% 0.006 258);
-  --sidebar-primary: oklch(68% 0.14 258);
-  --sidebar-primary-foreground: oklch(17% 0.018 260);
-  --sidebar-accent: oklch(29% 0.05 258);
-  --sidebar-accent-foreground: oklch(96.5% 0.006 258);
-  --sidebar-border: oklch(100% 0 0 / 10%);
-  --sidebar-ring: oklch(68% 0.14 258);
 }
 
 @theme inline {
@@ -224,7 +147,7 @@
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
-  /* Mixed, not declared, so it follows whichever palette sets `--primary`. */
+  /* Mixed, not declared, so it follows `--primary` in either theme. */
   --color-primary-soft: color-mix(in oklab, var(--primary) 12%, var(--card));
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -234,14 +157,6 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-/* Fixed corporate colours - they do not shift with the theme. For surfaces use `primary`/`muted`. */
-@theme {
-  --color-brand-violet: #884dff;
-  --color-brand-sherpa-blue: #023444;
-  --color-brand-lawn-green: #89e103;
-  --color-brand-teams: #5b5fc7;
 }
 
 @layer base {

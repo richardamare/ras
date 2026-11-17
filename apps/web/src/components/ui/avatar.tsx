@@ -38,19 +38,12 @@ function AvatarImage({ className, ...props }: React.ComponentProps<typeof RadixU
   )
 }
 
-function AvatarFallback({
-  className,
-  variant = "default",
-  ...props
-}: React.ComponentProps<typeof RadixUi.Avatar.Fallback> & {
-  variant?: "default" | "brand"
-}) {
+function AvatarFallback({ className, ...props }: React.ComponentProps<typeof RadixUi.Avatar.Fallback>) {
   return (
     <RadixUi.Avatar.Fallback
       data-slot="avatar-fallback"
-      data-variant={variant}
       className={Utils.cn(
-        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs group-data-[shape=square]/avatar:rounded-sm data-[variant=brand]:bg-brand-sherpa-blue data-[variant=brand]:font-medium data-[variant=brand]:text-white",
+        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs group-data-[shape=square]/avatar:rounded-sm",
         className
       )}
       {...props}

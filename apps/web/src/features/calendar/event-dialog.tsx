@@ -17,10 +17,9 @@ import * as Prague from "@/lib/prague"
 
 export type DialogState =
   | { readonly kind: "create"; readonly placement: Pointer.Placement; readonly draft: boolean }
-  | { readonly kind: "event"; readonly event: Api.EventEncoded }
+  | { readonly kind: "edit"; readonly event: Api.EventEncoded }
 
 const showAs = ["busy", "tentative", "free", "oof", "workingElsewhere"] as const
-const replies = ["accept", "tentative", "decline"] as const
 
 interface Form {
   readonly title: string
@@ -83,25 +82,23 @@ function Fields({
   form,
   set,
   allDay,
-  calendars,
-  readOnly
+  calendars
 }: {
   form: Form
   set: (change: Partial<Form>) => void
   allDay: boolean
   calendars: ReadonlyArray<Api.CalendarEncoded> | null
-  readOnly: boolean
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   return (
-    <fieldset disabled={readOnly} className="grid gap-3">
+    <div className="grid gap-3">
       <Field label={t("event.title")}>
         <Input.Input required value={form.title} onChange={(event) => set({ title: event.target.value })} />
       </Field>
       {calendars !== null && calendars.length > 1 && (
         <Field label={t("event.calendar")}>
           <Select.Select value={form.calendar} onValueChange={(calendar) => set({ calendar })}>
-            <Select.SelectTrigger>
+            <Select.SelectTrigger className="w-full">
               <Select.SelectValue />
             </Select.SelectTrigger>
             <Select.SelectContent>
@@ -178,7 +175,7 @@ function Fields({
       <Field label={t("event.notes")}>
         <Textarea.Textarea value={form.notes} onChange={(event) => set({ notes: event.target.value })} />
       </Field>
-    </fieldset>
+    </div>
   )
 }
 
@@ -205,105 +202,58 @@ function Body({
   }
   const create = ReactQuery.useMutation({ ...Queries.calendarCreateEventMutation(), ...settle })
   const change = ReactQuery.useMutation({ ...Queries.calendarChangeEventMutation(), ...settle })
-  const cancel = ReactQuery.useMutation({ ...Queries.calendarCancelEventMutation(), ...settle })
-  const confirm = ReactQuery.useMutation({ ...Queries.calendarConfirmDraftMutation(), ...settle })
-  const reply = ReactQuery.useMutation({ ...Queries.calendarReplyToEventMutation(), ...settle })
-  const busy = [create, change, cancel, confirm, reply].some((mutation) => mutation.isPending)
-
-  const event = state.kind === "event" ? state.event : null
-  const editable = event === null || Pointer.editable(event, calendars)
-  const allDay = event?.allDay ?? false
-  const calendarName = calendars.find((calendar) => calendar.id === event?.calendar)?.name
-
-  const details = {
-    title: form.title,
-    location: form.location,
-    notes: form.notes,
-    showAs: form.showAs,
-    ...(allDay
-      ? { firstDay: form.firstDay, lastDay: form.lastDay }
-      : { start: `${form.day}T${form.start}`, end: endOf(form) })
-  }
+  const busy = create.isPending || change.isPending
+  const allDay = state.kind === "edit" && state.event.allDay
 
   const submit = (submitted: React.FormEvent) => {
     submitted.preventDefault()
-    if (event === null && state.kind === "create")
+    const details = {
+      title: form.title,
+      location: form.location,
+      notes: form.notes,
+      showAs: form.showAs,
+      ...(allDay
+        ? { firstDay: form.firstDay, lastDay: form.lastDay }
+        : { start: `${form.day}T${form.start}`, end: endOf(form) })
+    }
+    if (state.kind === "create")
       create.mutate({ body: { ...details, calendar: Number(form.calendar), draft: state.draft } })
-    else if (event !== null) change.mutate({ path: { id: event.id }, body: details })
+    else change.mutate({ path: { id: state.event.id }, body: details })
   }
 
   return (
-    <form className="grid gap-4" onSubmit={submit}>
+    <form className="contents" onSubmit={submit}>
       <Dialog.DialogHeader>
         <Dialog.DialogTitle>
-          {event === null
-            ? t(state.kind === "create" && state.draft ? "event.newDraft" : "event.new")
-            : event.title || t("untitled")}
+          {state.kind === "create"
+            ? t(state.draft ? "event.newDraft" : "event.new")
+            : state.event.title || t("untitled")}
         </Dialog.DialogTitle>
         <Dialog.DialogDescription>
-          {event === null
+          {state.kind === "create"
             ? t("event.newHint")
-            : editable
-              ? calendarName
-              : t("event.readonly", { calendar: calendarName })}
+            : calendars.find((calendar) => calendar.id === state.event.calendar)?.name}
         </Dialog.DialogDescription>
       </Dialog.DialogHeader>
-      {event?.draft?.refusal != null && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{event.draft.refusal}</p>
-      )}
-      <Fields form={form} set={set} allDay={allDay} calendars={event === null ? writable : null} readOnly={!editable} />
-      {event !== null && event.attendees.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {t("event.attendees")}: {event.attendees.map((attendee) => attendee.name ?? attendee.email).join(", ")}
-        </p>
-      )}
-      <Dialog.DialogFooter className="flex-wrap gap-2">
-        {event?.kind === "invitation" &&
-          replies.map((answer) => (
-            <Button.Button
-              key={answer}
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => reply.mutate({ path: { id: event.id }, body: { reply: answer } })}
-            >
-              {t(`reply.${answer}`)}
-            </Button.Button>
-          ))}
-        {event !== null && editable && (
-          <Button.Button
-            type="button"
-            variant="destructive"
-            className="me-auto"
-            disabled={busy}
-            onClick={() => cancel.mutate({ path: { id: event.id } })}
-          >
-            {t(event.draft === null ? "event.cancel" : "event.discard")}
-          </Button.Button>
-        )}
-        {event?.draft != null && (
-          <Button.Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => confirm.mutate({ path: { id: event.id } })}
-          >
-            {t("event.confirm")}
-          </Button.Button>
-        )}
-        {editable && (
-          <Button.Button
-            type="submit"
-            disabled={busy || form.title.trim() === "" || (event === null && writable.length === 0)}
-          >
-            {t(event === null ? "event.create" : "event.save")}
-          </Button.Button>
-        )}
+      <Dialog.DialogBody>
+        <Fields form={form} set={set} allDay={allDay} calendars={state.kind === "create" ? writable : null} />
+      </Dialog.DialogBody>
+      <Dialog.DialogFooter>
+        <Button.Button type="button" variant="outline" onClick={onClose}>
+          {t("event.close")}
+        </Button.Button>
+        <Button.Button
+          type="submit"
+          disabled={busy || form.title.trim() === "" || (state.kind === "create" && writable.length === 0)}
+        >
+          {t(state.kind === "create" ? "event.create" : "event.save")}
+        </Button.Button>
       </Dialog.DialogFooter>
     </form>
   )
 }
 
+/** The form that creates an event or changes one ras may write. */
 export function EventDialog({
   state,
   calendars,
@@ -318,7 +268,7 @@ export function EventDialog({
       <Dialog.DialogContent className="sm:max-w-lg">
         {state !== null && (
           <Body
-            key={state.kind === "event" ? state.event.id : `${state.placement.day}-${state.placement.start}`}
+            key={state.kind === "edit" ? state.event.id : `${state.placement.day}-${state.placement.start}`}
             state={state}
             calendars={calendars}
             onClose={onClose}

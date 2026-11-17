@@ -69,7 +69,11 @@ function DialogContent({
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="dialog-header" className={Utils.cn("flex shrink-0 flex-col gap-2 px-4", className)} {...props} />
+    <div
+      data-slot="dialog-header"
+      className={Utils.cn("flex shrink-0 flex-col gap-1.5 ps-4 pe-10", className)}
+      {...props}
+    />
   )
 }
 
@@ -120,7 +124,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof RadixU
   return (
     <RadixUi.Dialog.Title
       data-slot="dialog-title"
-      className={Utils.cn("font-heading text-base leading-none font-medium", className)}
+      className={Utils.cn("font-heading text-base leading-snug font-medium", className)}
       {...props}
     />
   )

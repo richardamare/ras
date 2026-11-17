@@ -1,13 +1,31 @@
 {
   "title": "Domů",
-  "running": { "title": "Běží", "none": "Žádný blok neběží.", "stop": "Zastavit" },
+  "running": {
+    "title": "Běží",
+    "none": "Žádný blok neběží.",
+    "stop": "Zastavit"
+  },
   "stopFailed": "Blok se nepodařilo zastavit.",
-  "counts": { "open": "Otevřené", "overdue": "Po termínu", "inReview": "Ke kontrole" },
+  "counts": {
+    "open": "Otevřené",
+    "overdue": "Po termínu",
+    "inReview": "Ke kontrole"
+  },
   "deadlines": {
     "today": "Termín dnes",
     "tomorrow": "Termín zítra",
     "thisWeek": "Termín tento týden",
-    "none": "Nic nemá termín."
+    "none": "Nic nemá termín.",
+    "title": "Termíny"
   },
-  "waiting": { "title": "Čeká na tebe", "none": "Nic na tebe nečeká." }
+  "waiting": {
+    "title": "Čeká na tebe",
+    "none": "Nic na tebe nečeká."
+  },
+  "agenda": {
+    "title": "Dnes v kalendáři",
+    "open": "Otevřít den",
+    "none": "Dnes nic v kalendáři.",
+    "allDay": "Celý den"
+  }
 }

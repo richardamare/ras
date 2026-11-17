@@ -27,8 +27,7 @@
   "draft": {
     "toggle": "Draft",
     "badge": "Draft",
-    "on": "Drafting: new events and blocks stay in ras until you confirm them",
-    "left": "Drafts are waiting",
+    "on": "With Draft on, new events and blocks stay in ras until you confirm them, and only drafts move.",
     "inView_one": "{{count}} draft in view",
     "inView_other": "{{count}} drafts in view",
     "confirmAll": "Confirm all drafts",
@@ -61,12 +60,14 @@
     "location": "Location",
     "showAs": "Show as",
     "notes": "Notes",
-    "attendees": "Attendees",
     "create": "Create",
     "save": "Save",
     "cancel": "Cancel event",
     "discard": "Discard draft",
-    "confirm": "Confirm draft"
+    "confirm": "Confirm draft",
+    "organizer": "organizer",
+    "yourReply": "Your reply: {{reply}}",
+    "close": "Close"
   },
   "showAs": {
     "busy": "Busy",
@@ -79,5 +80,24 @@
     "accept": "Accept",
     "tentative": "Maybe",
     "decline": "Decline"
+  },
+  "rsvp": {
+    "none": "No reply needed",
+    "needsAction": "Not answered",
+    "accepted": "Accepted",
+    "tentative": "Maybe",
+    "declined": "Declined"
+  },
+  "item": {
+    "edit": "Edit",
+    "openTask": "Open task",
+    "removeBlock": "Remove block",
+    "close": "Close",
+    "state": {
+      "draft": "Draft work block",
+      "planned": "Planned work block",
+      "running": "Work block running now",
+      "done": "Finished work block"
+    }
   }
 }

@@ -29,8 +29,7 @@
   "draft": {
     "toggle": "Návrh",
     "badge": "Návrh",
-    "on": "Navrhování: nové události a bloky zůstanou v ras, dokud je nepotvrdíš",
-    "left": "Čekají návrhy",
+    "on": "Se zapnutým Návrhem zůstávají nové události a bloky v ras, dokud je nepotvrdíš, a hýbat jde jen s návrhy.",
     "inView_one": "{{count}} návrh v zobrazení",
     "inView_few": "{{count}} návrhy v zobrazení",
     "inView_many": "{{count}} návrhů v zobrazení",
@@ -65,12 +64,14 @@
     "location": "Místo",
     "showAs": "Zobrazit jako",
     "notes": "Poznámky",
-    "attendees": "Účastníci",
     "create": "Vytvořit",
     "save": "Uložit",
     "cancel": "Zrušit událost",
     "discard": "Zahodit návrh",
-    "confirm": "Potvrdit návrh"
+    "confirm": "Potvrdit návrh",
+    "organizer": "organizátor",
+    "yourReply": "Tvoje odpověď: {{reply}}",
+    "close": "Zavřít"
   },
   "showAs": {
     "busy": "Zaneprázdněn",
@@ -83,5 +84,24 @@
     "accept": "Přijmout",
     "tentative": "Možná",
     "decline": "Odmítnout"
+  },
+  "rsvp": {
+    "none": "Bez odpovědi",
+    "needsAction": "Neodpovězeno",
+    "accepted": "Přijato",
+    "tentative": "Možná",
+    "declined": "Odmítnuto"
+  },
+  "item": {
+    "edit": "Upravit",
+    "openTask": "Otevřít úkol",
+    "removeBlock": "Odebrat blok",
+    "close": "Zavřít",
+    "state": {
+      "draft": "Návrh pracovního bloku",
+      "planned": "Naplánovaný pracovní blok",
+      "running": "Pracovní blok právě běží",
+      "done": "Dokončený pracovní blok"
+    }
   }
 }
