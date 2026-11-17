@@ -12,8 +12,8 @@ import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as MemoryTesting from "@ras/memory/testing"
-import * as Api from "../src/Api.ts"
-import * as Modules from "../src/Modules.ts"
+import * as Api from "../../src/composition/Api.ts"
+import * as Modules from "../../src/composition/Modules.ts"
 
 const served = (authenticated: Layer.Layer<Global.Authenticated>) =>
   Layer.unwrap(

@@ -7,10 +7,10 @@ import * as Result from "effect/Result"
 import * as Order from "effect/Order"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Module from "@ras/kernel/Module"
-import * as Api from "../src/Api.ts"
-import * as Modules from "../src/Modules.ts"
+import * as Api from "../../src/composition/Api.ts"
+import * as Modules from "../../src/composition/Modules.ts"
 
-const root = new URL("../../../", import.meta.url)
+const root = new URL("../../../../", import.meta.url)
 
 const names = Modules.modules.map((module) => module.name)
 

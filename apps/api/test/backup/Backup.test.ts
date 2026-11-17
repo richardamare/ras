@@ -6,7 +6,7 @@ import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Testing from "@ras/global/testing"
-import * as Backup from "../src/Backup.ts"
+import * as Backup from "../../src/backup/Backup.ts"
 
 describe("the backup", () => {
   it("keeps the newest backups by name", () => {

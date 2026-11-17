@@ -2,8 +2,8 @@ import * as Layer from "effect/Layer"
 import * as McpProtocol from "effect/ai/McpProtocol"
 import * as McpServer from "effect/ai/McpServer"
 import * as Global from "@ras/global"
-import * as Package from "../../../package.json" with { type: "json" }
-import * as Api from "./Api.ts"
+import * as Package from "../../../../package.json" with { type: "json" }
+import * as Api from "../composition/Api.ts"
 
 /** Every module's tools over streamable HTTP at `/mcp`, for the MCP clients the owner connected. */
 export const routes = McpServer.layerHttp({
