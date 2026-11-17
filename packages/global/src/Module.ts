@@ -1,14 +1,14 @@
 import * as Layer from "effect/Layer"
 import * as Module from "@ras/kernel/Module"
-import * as Agents from "./Agents.ts"
-import * as Auth from "./Auth.ts"
-import * as Clients from "./Clients.ts"
-import * as Graph from "./Graph.ts"
+import * as Agents from "./agents/Agents.ts"
+import * as Auth from "./auth/Auth.ts"
+import * as Clients from "./auth/Clients.ts"
+import * as Graph from "./graph/Graph.ts"
 import * as Http from "./Http.ts"
 import * as Migrations from "./Migrations.ts"
-import * as Routes from "./Routes.ts"
+import * as Routes from "./auth/Routes.ts"
 import * as Tools from "./Tools.ts"
-import * as Writes from "./Writes.ts"
+import * as Writes from "./audit/Writes.ts"
 
 export const module = Module.make({
   name: "global",

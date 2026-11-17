@@ -63,6 +63,33 @@ describe("the architecture", () => {
     assert.deepStrictEqual(offences, [])
   })
 
+  it("keeps each module's code in feature folders", () => {
+    const folders = new Set(
+      Arr.filterMap(sources, (file) =>
+        Result.fromNullishOr(/^(packages\/[a-z]+\/src\/[a-z]+)\//.exec(file.path)?.[1], () => undefined)
+      )
+    )
+    assert.deepStrictEqual(
+      Arr.filter(sources, ({ path }) => {
+        const source = /^packages\/(?!kernel\/)[a-z]+\/src\/(.+)$/.exec(path)?.[1]
+        if (source !== undefined)
+          return !/^(index|Module|Testing|Migrations|Http|Tools)\.ts$|^[a-z]+\/[A-Z][A-Za-z]*\.ts$/.test(source)
+        const test = /^(packages\/(?!kernel\/)[a-z]+)\/test\/([a-z]+)\//.exec(path)
+        return test !== null && !folders.has(`${test[1]}/src/${test[2]}`)
+      }).map((file) => file.path),
+      []
+    )
+  })
+
+  it("names each schema file after what it holds", () => {
+    assert.deepStrictEqual(
+      Arr.filter(sources, (file) => /^packages\/[a-z]+\/src\/(.+\/)?Domain\.ts$/.test(file.path)).map(
+        (file) => file.path
+      ),
+      []
+    )
+  })
+
   it("lets only apps/api import a module's descriptor", () => {
     assert.deepStrictEqual(
       offending(/from "@ras\/\w+\/module"/, (path) => path.startsWith("apps/api/")),

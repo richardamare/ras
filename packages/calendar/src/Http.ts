@@ -5,9 +5,14 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
-import * as Calendar from "./Calendar.ts"
-import * as Domain from "./Domain.ts"
-import * as Events from "./Events.ts"
+import * as Calendars from "./calendars/Calendars.ts"
+import * as Busy from "./calendars/Busy.ts"
+import * as Calendar from "./calendars/Calendar.ts"
+import * as Span from "./calendars/Span.ts"
+import * as WorkHours from "./calendars/WorkHours.ts"
+import * as Event from "./events/Event.ts"
+import * as EventWrites from "./events/EventWrites.ts"
+import * as Events from "./events/Events.ts"
 
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 
@@ -15,81 +20,81 @@ export const group = HttpApiGroup.make("calendar")
   .add(
     HttpApiEndpoint.get("calendars", "/calendars", {
       query: { includeDisabled: Schema.optionalKey(Schema.Literals(["true", "false"])) },
-      success: Schema.Array(Domain.Calendar),
+      success: Schema.Array(Calendar.Calendar),
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.patch("changeCalendar", "/calendars/:id", {
-      params: { id: Schema.NumberFromString.pipe(Schema.decodeTo(Domain.CalendarId)) },
-      payload: Domain.CalendarChange,
-      success: Domain.Calendar,
+      params: { id: Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId)) },
+      payload: Calendar.CalendarChange,
+      success: Calendar.Calendar,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("events", "/events", {
-      query: Domain.Window.fields,
-      success: Schema.Array(Domain.Event),
+      query: Span.Window.fields,
+      success: Schema.Array(Event.Event),
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("event", "/events/:id", {
-      params: { id: Domain.EventId },
-      success: Domain.Event,
+      params: { id: Event.EventId },
+      success: Event.Event,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("freeTime", "/free-time", {
-      query: { ...Domain.Window.fields, minimum: Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)) },
-      success: Schema.Array(Domain.Slot),
+      query: { ...Span.Window.fields, minimum: Schema.NumberFromString.pipe(Schema.decodeTo(Schema.Int)) },
+      success: Schema.Array(Busy.Slot),
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("conflicts", "/conflicts", {
-      query: Domain.Window.fields,
-      success: Schema.Array(Domain.Conflict),
+      query: Span.Window.fields,
+      success: Schema.Array(Busy.Conflict),
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("workHours", "/work-hours/:month", {
-      params: { month: Domain.Month },
+      params: { month: WorkHours.Month },
       query: { category: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])) },
-      success: Domain.WorkHours,
+      success: WorkHours.WorkHours,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.post("createEvent", "/events", {
-      payload: Domain.NewEvent,
-      success: Domain.Created,
+      payload: EventWrites.NewEvent,
+      success: EventWrites.Created,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.patch("changeEvent", "/events/:id", {
-      params: { id: Domain.EventId },
-      payload: Domain.EventChange,
-      success: Domain.Event,
+      params: { id: Event.EventId },
+      payload: EventWrites.EventChange,
+      success: Event.Event,
       error: failures
     })
   )
-  .add(HttpApiEndpoint.delete("cancelEvent", "/events/:id", { params: { id: Domain.EventId }, error: failures }))
+  .add(HttpApiEndpoint.delete("cancelEvent", "/events/:id", { params: { id: Event.EventId }, error: failures }))
   .add(
     HttpApiEndpoint.post("replyToEvent", "/events/:id/reply", {
-      params: { id: Domain.EventId },
-      payload: Schema.Struct({ reply: Domain.Reply }),
+      params: { id: Event.EventId },
+      payload: Schema.Struct({ reply: EventWrites.Reply }),
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.post("confirmDraft", "/events/:id/confirm", {
-      params: { id: Domain.EventId },
-      success: Domain.Created,
+      params: { id: Event.EventId },
+      success: EventWrites.Created,
       error: failures
     })
   )
@@ -97,7 +102,7 @@ export const group = HttpApiGroup.make("calendar")
 
 export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (endpoints) =>
   Effect.gen(function* () {
-    const calendar = yield* Calendar.Calendar
+    const calendar = yield* Calendars.Calendar
     const events = yield* Events.Events
     return endpoints
       .handle("calendars", ({ query }) => calendar.calendars(query.includeDisabled === "true"))

@@ -6,5 +6,5 @@ export const module = Module.module
 /** The settings that serve the invented calendars and an Outlook that writes nowhere. */
 export const sample = { RAS_SAMPLE: "true" }
 
-export { personal, work, workCopy } from "./Sample.ts"
-export { sampleCalls } from "./Outlook.ts"
+export { personal, work, workCopy } from "./reclaim/Sample.ts"
+export { sampleCalls } from "./outlook/Outlook.ts"

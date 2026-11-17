@@ -3,133 +3,138 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
-import * as Blocks from "./Blocks.ts"
-import * as Board from "./Board.ts"
-import * as Domain from "./Domain.ts"
-import * as Drafts from "./Drafts.ts"
+import * as Blocks from "./blocks/Blocks.ts"
+import * as Board from "./board/Board.ts"
+import * as Block from "./blocks/Block.ts"
+import * as Project from "./board/Project.ts"
+import * as ProjectDetail from "./board/ProjectDetail.ts"
+import * as Space from "./board/Space.ts"
+import * as Task from "./board/Task.ts"
+import * as Confirmation from "./drafts/Confirmation.ts"
+import * as Drafts from "./drafts/Drafts.ts"
 
-const TaskRef = { task: Domain.TaskId }
+const TaskRef = { task: Task.TaskId }
 
 export const toolkit = Toolkit.make(
   Global.read("spaces", {
     description: "The spaces work belongs to, such as personal or a client. One is the default.",
-    success: Schema.Array(Domain.Space)
+    success: Schema.Array(Space.Space)
   }),
   Global.read("projects", {
     description: "Every project, or the projects of one space: name, status, deadline and space.",
-    parameters: Schema.Struct({ space: Schema.optionalKey(Domain.SpaceId) }),
-    success: Schema.Array(Domain.Project)
+    parameters: Schema.Struct({ space: Schema.optionalKey(Space.SpaceId) }),
+    success: Schema.Array(Project.Project)
   }),
   Global.read("project", {
     description: "One project with its tasks.",
-    parameters: Schema.Struct({ project: Domain.ProjectId }),
-    success: Domain.ProjectDetail
+    parameters: Schema.Struct({ project: Project.ProjectId }),
+    success: ProjectDetail.ProjectDetail
   }),
   Global.read("tasks", {
     description:
       "Tasks on the board, open work first by deadline. An agent polls for its work with its own `assignee`, status `todo` and `updatedSince`.",
-    parameters: Domain.TaskFilter,
-    success: Schema.Array(Domain.TaskSummary)
+    parameters: Task.TaskFilter,
+    success: Schema.Array(Task.TaskSummary)
   }),
   Global.read("task", {
     description:
       "One task with its body (the brief), its comments (the log) and its links. A console link the owner shares names the task in `?task=<id>`, and one of its comments in `&comment=<id>`.",
     parameters: Schema.Struct(TaskRef),
-    success: Domain.Task
+    success: Task.Task
   }),
   Global.writeTool("add_project", {
     description: "Adds a project to a space, the default space when none is given.",
-    parameters: Domain.NewProject.fields,
-    success: Domain.Project,
+    parameters: Project.NewProject.fields,
+    success: Project.Project,
     destructive: false
   }),
   Global.writeTool("update_project", {
     description: "Changes a project. Moving it to another space takes its tasks along.",
-    parameters: { project: Domain.ProjectId, ...Domain.ProjectChange.fields },
-    success: Domain.Project,
+    parameters: { project: Project.ProjectId, ...Project.ProjectChange.fields },
+    success: Project.Project,
     destructive: false
   }),
   Global.writeTool("add_task", {
     description:
       "Adds a task. What the owner asks for starts in `todo`; work an agent proposes on its own starts in `inbox`. The body is the brief, from the owner's words.",
-    parameters: Domain.NewTask.fields,
-    success: Domain.Task,
+    parameters: Task.NewTask.fields,
+    success: Task.Task,
     destructive: false
   }),
   Global.writeTool("update_task", {
     description:
       "Changes a task: status, assignee, title, deadline and the rest. A move to `blocked` or `review` needs `comment`, saying what is needed or what to check. Only the owner changes the body.",
-    parameters: { ...TaskRef, ...Domain.TaskChange.fields },
-    success: Domain.Task,
+    parameters: { ...TaskRef, ...Task.TaskChange.fields },
+    success: Task.Task,
     destructive: false
   }),
   Global.writeTool("delete_task", {
     description:
       "Deletes a task with its comments, links and blocks that have not started. A task with work begun on it keeps its time: it is moved to done instead, and the answer is the task.",
     parameters: TaskRef,
-    success: Schema.NullOr(Domain.Task),
+    success: Schema.NullOr(Task.Task),
     destructive: true
   }),
   Global.writeTool("comment_task", {
     description: "Appends to a task's log: progress, a question or a result, with an optional link to the output.",
-    parameters: { ...TaskRef, ...Domain.NewComment.fields },
-    success: Domain.Task,
+    parameters: { ...TaskRef, ...Task.NewComment.fields },
+    success: Task.Task,
     destructive: false
   }),
   Global.writeTool("link_task", {
     description: "Attaches a GitHub issue or pull request to a task by its URL.",
-    parameters: { ...TaskRef, url: Domain.LinkUrl },
-    success: Domain.Task,
+    parameters: { ...TaskRef, url: Task.LinkUrl },
+    success: Task.Task,
     destructive: false
   }),
   Global.writeTool("unlink_task", {
     description: "Detaches a GitHub issue or pull request from a task.",
-    parameters: { ...TaskRef, url: Domain.LinkUrl },
-    success: Domain.Task,
+    parameters: { ...TaskRef, url: Task.LinkUrl },
+    success: Task.Task,
     destructive: false
   }),
   Global.writeTool("plan_work", {
     description:
       "Plans a block of work on one of the owner's open tasks, at a Prague local start and a length, as an event in its space's calendar. With `draft` the block stays in ras, taking its time, until confirm_drafts writes it.",
-    parameters: Domain.PlanWork.fields,
-    success: Domain.Block,
+    parameters: Block.PlanWork.fields,
+    success: Block.Block,
     destructive: false
   }),
   Global.writeTool("start_work", {
     description: "Starts work on one of the owner's open tasks now. One block runs at a time.",
     parameters: TaskRef,
-    success: Domain.Block,
+    success: Block.Block,
     destructive: false
   }),
   Global.writeTool("stop_work", {
     description: "Stops the running block now, and its event ends at the same time.",
     parameters: {},
-    success: Domain.Block,
+    success: Block.Block,
     destructive: false
   }),
   Global.writeTool("log_work", {
     description: "Records work on a task that already happened: its Prague local end and its length in minutes.",
-    parameters: Domain.LogWork.fields,
-    success: Domain.Block,
+    parameters: Block.LogWork.fields,
+    success: Block.Block,
     destructive: false
   }),
   Global.writeTool("move_work", {
     description:
       "Moves or resizes a block that is not running, with its event. A planned block stays from now on; work that has ended stays in the past.",
-    parameters: Domain.MoveWork.fields,
-    success: Domain.Block,
+    parameters: Block.MoveWork.fields,
+    success: Block.Block,
     destructive: false
   }),
   Global.writeTool("remove_work", {
     description: "Removes a block that is not running, with its event.",
-    parameters: { block: Domain.BlockId },
+    parameters: { block: Block.BlockId },
     destructive: true
   }),
   Global.writeTool("confirm_drafts", {
     description:
       "Writes drafts into their calendars: the drafts named, every draft of a Prague day, or with neither every draft. Event drafts and block drafts alike. A draft its calendar refuses stays a draft, and the answer says why.",
-    parameters: Domain.ConfirmDrafts.fields,
-    success: Domain.DraftsConfirmed,
+    parameters: Confirmation.ConfirmDrafts.fields,
+    success: Confirmation.DraftsConfirmed,
     destructive: false
   })
 )
