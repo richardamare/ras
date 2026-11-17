@@ -6,14 +6,12 @@ import * as Global from "@ras/global"
 import * as CalendarTesting from "@ras/calendar/testing"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
+import * as KernelTesting from "@ras/kernel/Testing"
 import * as Board from "../src/Board.ts"
 import * as Module from "../src/Module.ts"
 
 const scheduler = Global.AgentSlug.make("scheduler")
 const ghost = Global.AgentSlug.make("ghost")
-
-const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.map(Effect.flip(effect), (error) => ("code" in error ? String(error.code) : error._tag))
 
 /** Runs `effect` as the agent, as a writing tool that names it does. */
 const asAgent = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
@@ -36,7 +34,10 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
         [task.id]
       )
 
-      assert.strictEqual(yield* code(asAgent(board.changeTask(task.id, { status: "review" }))), "work.task.comment")
+      assert.strictEqual(
+        yield* KernelTesting.code(asAgent(board.changeTask(task.id, { status: "review" }))),
+        "work.task.comment"
+      )
       const reviewed = yield* asAgent(
         board.changeTask(task.id, { status: "review", comment: "Booked Tuesday 9:00. Check it fits." })
       )
@@ -58,7 +59,10 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const board = yield* Board.Board
       const proposed = yield* asAgent(board.addTask({ title: "Renew the domain", body: "It expires in December." }))
       assert.strictEqual(proposed.status, "inbox")
-      assert.strictEqual(yield* code(asAgent(board.changeTask(proposed.id, { body: "Rewritten." }))), "work.task.body")
+      assert.strictEqual(
+        yield* KernelTesting.code(asAgent(board.changeTask(proposed.id, { body: "Rewritten." }))),
+        "work.task.body"
+      )
       const commented = yield* asAgent(board.comment(proposed.id, { text: "Found the registrar." }))
       assert.strictEqual(commented.body, "It expires in December.")
       assert.strictEqual(commented.comments.length, 1)
@@ -83,7 +87,10 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
   test.effect("refuses an assignee that is not an agent", () =>
     Effect.gen(function* () {
       const board = yield* Board.Board
-      assert.strictEqual(yield* code(board.addTask({ title: "Nobody's", assignee: ghost })), "global.agent.unknown")
+      assert.strictEqual(
+        yield* KernelTesting.code(board.addTask({ title: "Nobody's", assignee: ghost })),
+        "global.agent.unknown"
+      )
     })
   )
 
@@ -92,7 +99,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const board = yield* Board.Board
       const [personal] = yield* board.spaces
       assert.isTrue(personal!.default)
-      assert.strictEqual(yield* code(board.archiveSpace(personal!.id)), "work.space.default")
+      assert.strictEqual(yield* KernelTesting.code(board.archiveSpace(personal!.id)), "work.space.default")
 
       const client = yield* board.addSpace({ name: "Client", color: "#00469b" })
       const project = yield* board.addProject({ name: "Website" })
@@ -106,7 +113,10 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       )
 
       yield* board.archiveSpace(client.id)
-      assert.strictEqual(yield* code(board.addTask({ title: "Late", space: client.id })), "work.space.archived")
+      assert.strictEqual(
+        yield* KernelTesting.code(board.addTask({ title: "Late", space: client.id })),
+        "work.space.archived"
+      )
     })
   )
 
@@ -120,7 +130,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       assert.deepStrictEqual((yield* board.unlink(task.id, url)).links, [])
       yield* board.comment(task.id, { text: "Started." })
       yield* board.deleteTask(task.id)
-      assert.strictEqual(yield* code(board.task(task.id)), "NotFound")
+      assert.strictEqual(yield* KernelTesting.code(board.task(task.id)), "NotFound")
     })
   )
   test.effect("writes a space's work blocks to a calendar of the connected account and refuses any other", () =>
@@ -128,7 +138,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const board = yield* Board.Board
       const [personal] = yield* board.spaces
       assert.strictEqual(
-        yield* code(board.changeSpace(personal!.id, { calendar: CalendarTesting.work })),
+        yield* KernelTesting.code(board.changeSpace(personal!.id, { calendar: CalendarTesting.work })),
         "work.space.calendar"
       )
       const changed = yield* board.changeSpace(personal!.id, { calendar: CalendarTesting.personal })

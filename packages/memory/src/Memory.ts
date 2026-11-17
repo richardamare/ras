@@ -244,11 +244,9 @@ export class Memory extends Context.Service<
         remove: (name, version) =>
           Effect.gen(function* () {
             const check = (found: Option.Option<Current>): Effect.Effect<void, Errors.NotFound | Errors.Refused> =>
-              Option.match(found, {
-                onNone: () => Effect.fail(new Errors.NotFound({ subject: "fact", id: name })),
-                onSome: (existing) =>
-                  existing.version === version ? Effect.void : Effect.fail(changed(name, existing))
-              })
+              Effect.flatMap(Errors.orNotFound("fact", name)(found), (existing) =>
+                existing.version === version ? Effect.void : Effect.fail(changed(name, existing))
+              )
             const before = yield* publish(name, check, Option.none())
             yield* audited("memory.fact.deleted", name, before, Option.none())
           }),

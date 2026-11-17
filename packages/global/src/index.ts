@@ -8,5 +8,15 @@ export { api, Authenticated } from "./Http.ts"
 export { set as setOwner } from "./Owner.ts"
 export { layer as session } from "./Session.ts"
 export { actingAs, read, write as writeTool } from "./Tools.ts"
-export { changed, snapshot, Transaction, write, Writes, type Action, type Change, type Snapshot } from "./Writes.ts"
+export {
+  changed,
+  snapshot,
+  Transaction,
+  write,
+  Writes,
+  type Action,
+  type Change,
+  type Snapshot,
+  type Write
+} from "./Writes.ts"
 export { Connection as GraphConnection, Graph, layer as graph } from "./Graph.ts"

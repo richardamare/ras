@@ -11,12 +11,10 @@ import * as CalendarTesting from "@ras/calendar/testing"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
+import * as KernelTesting from "@ras/kernel/Testing"
 import * as Blocks from "../src/Blocks.ts"
 import * as Board from "../src/Board.ts"
 import * as Module from "../src/Module.ts"
-
-const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.map(Effect.flip(effect), (error) => ("code" in error ? String(error.code) : error._tag))
 
 const calls = Ref.getAndSet(CalendarTesting.sampleCalls, [])
 
@@ -53,11 +51,11 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
         ["sample-personal", "ras: Plan the week", `ras-block:${block.id}`]
       )
       assert.strictEqual(
-        yield* code(blocks.plan({ task: task.id, start: yield* inHours(2.5), minutes: 30 })),
+        yield* KernelTesting.code(blocks.plan({ task: task.id, start: yield* inHours(2.5), minutes: 30 })),
         "work.block.overlap"
       )
       assert.strictEqual(
-        yield* code(blocks.plan({ task: task.id, start: yield* inHours(-1), minutes: 30 })),
+        yield* KernelTesting.code(blocks.plan({ task: task.id, start: yield* inHours(-1), minutes: 30 })),
         "work.block.past"
       )
       yield* blocks.remove(block.id)
@@ -74,8 +72,8 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const blocks = yield* Blocks.Blocks
       const started = yield* blocks.start(task.id)
       assert.deepStrictEqual([started.state, started.end], ["running", null])
-      assert.strictEqual(yield* code(blocks.start(task.id)), "work.block.running")
-      assert.strictEqual(yield* code(blocks.remove(started.id)), "work.block.running")
+      assert.strictEqual(yield* KernelTesting.code(blocks.start(task.id)), "work.block.running")
+      assert.strictEqual(yield* KernelTesting.code(blocks.remove(started.id)), "work.block.running")
       yield* TestClock.adjust("50 minutes")
       const stopped = yield* blocks.stop
       assert.strictEqual(stopped.state, "done")
@@ -83,7 +81,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const [, move] = yield* calls
       const change = move as Extract<typeof move, { _tag: "Change" }>
       assert.strictEqual(change.write.end?.dateTime, `${stopped.end}:00`)
-      assert.strictEqual(yield* code(blocks.stop), "work.block.idle")
+      assert.strictEqual(yield* KernelTesting.code(blocks.stop), "work.block.idle")
       const sql = yield* SqlClient.SqlClient
       const audit = yield* sql<{ action: string }>`
         SELECT action FROM global_audit_entries WHERE action LIKE 'work.block.%' ORDER BY id`
@@ -99,7 +97,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const logged = yield* blocks.log({ task: task.id, end: yield* inHours(-0.5), minutes: 45 })
       assert.strictEqual(logged.state, "done")
       assert.strictEqual(
-        yield* code(blocks.log({ task: task.id, end: yield* inHours(1), minutes: 30 })),
+        yield* KernelTesting.code(blocks.log({ task: task.id, end: yield* inHours(1), minutes: 30 })),
         "work.block.future"
       )
     })
@@ -141,14 +139,14 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       yield* (yield* Global.Agents).add(scheduler, "Scheduler")
       const theirs = yield* board.addTask({ title: "Book the dentist", assignee: scheduler })
       assert.strictEqual(
-        yield* code(blocks.plan({ task: theirs.id, start: yield* inHours(9), minutes: 30 })),
+        yield* KernelTesting.code(blocks.plan({ task: theirs.id, start: yield* inHours(9), minutes: 30 })),
         "work.block.agent"
       )
       const done = yield* board.addTask({ title: "Done already", status: "done" })
-      assert.strictEqual(yield* code(blocks.start(done.id)), "work.block.done")
+      assert.strictEqual(yield* KernelTesting.code(blocks.start(done.id)), "work.block.done")
       const other = yield* board.addSpace({ name: "School", color: "#00cc6a" })
       const elsewhere = yield* board.addTask({ title: "Essay", space: other.id })
-      assert.strictEqual(yield* code(blocks.start(elsewhere.id)), "work.block.calendar")
+      assert.strictEqual(yield* KernelTesting.code(blocks.start(elsewhere.id)), "work.block.calendar")
       assert.isDefined(space)
     })
   )
@@ -183,7 +181,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       yield* blocks.plan({ task: task.id, start: yield* inHours(44), minutes: 30 })
       yield* Ref.set(CalendarTesting.sampleCalls, [])
       assert.isTrue(Option.isNone(yield* board.deleteTask(task.id)))
-      assert.strictEqual(yield* code(board.task(task.id)), "NotFound")
+      assert.strictEqual(yield* KernelTesting.code(board.task(task.id)), "NotFound")
       assert.deepStrictEqual(
         (yield* calls).map((one) => one._tag),
         ["Cancel"]

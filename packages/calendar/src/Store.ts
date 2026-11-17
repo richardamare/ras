@@ -5,14 +5,10 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
+import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
 import * as Domain from "./Domain.ts"
 import type * as Reclaim from "./Reclaim.ts"
-
-const rows = <S extends Schema.Top>(
-  schema: S,
-  query: Effect.Effect<ReadonlyArray<unknown>, unknown, SqlClient.SqlClient>
-) => query.pipe(Effect.flatMap(Schema.decodeUnknownEffect(Schema.Array(schema))), Effect.orDie)
 
 const CalendarRow = Schema.Struct({
   id: Domain.CalendarId,
@@ -32,7 +28,7 @@ export interface Connected {
 
 /** The calendars Reclaim listed in the last sync, in its order; those of the `writable` account take plain events. */
 export const connected = (writable: Option.Option<string>) =>
-  rows(
+  Sql.rows(
     CalendarRow,
     SqlClient.SqlClient.use(
       (sql) => sql`
@@ -71,7 +67,7 @@ export const changeCalendar = (calendar: Domain.Calendar) =>
 const SyncRow = Schema.Struct({ syncedAt: Time.Instant, from: Time.Instant, to: Time.Instant })
 
 /** When the cache was last filled, and the span of time it holds. */
-export const sync = rows(
+export const sync = Sql.rows(
   SyncRow,
   SqlClient.SqlClient.use(
     (sql) => sql`SELECT synced_at AS "syncedAt", from_at AS "from", to_at AS "to" FROM calendar_syncs WHERE id = 1`
@@ -100,7 +96,7 @@ const EventRow = Schema.Struct({
 
 /** The cached events that overlap the span. */
 export const events = (span: Domain.Span) =>
-  rows(
+  Sql.rows(
     EventRow,
     SqlClient.SqlClient.use(
       (sql) => sql`
@@ -206,7 +202,7 @@ const DraftRow = Schema.Struct({
 })
 
 const draftsWhere = (where: (sql: SqlClient.SqlClient) => ReturnType<SqlClient.SqlClient["unsafe"]>) =>
-  rows(
+  Sql.rows(
     DraftRow,
     SqlClient.SqlClient.use(
       (sql) => sql`

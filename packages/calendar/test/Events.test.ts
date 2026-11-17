@@ -6,6 +6,7 @@ import * as Ref from "effect/Ref"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
+import * as KernelTesting from "@ras/kernel/Testing"
 import * as BusyTime from "../src/BusyTime.ts"
 import * as Calendar from "../src/Calendar.ts"
 import * as Domain from "../src/Domain.ts"
@@ -16,9 +17,6 @@ import * as Reclaim from "../src/Reclaim.ts"
 import * as Sample from "../src/Sample.ts"
 
 const today = Effect.map(DateTime.now, Time.pragueDateOf)
-
-const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.map(Effect.flip(effect), (error) => ("code" in error ? String(error.code) : error._tag))
 
 /** The calls Outlook answered since the last look. */
 const calls = Ref.getAndSet(Outlook.sampleCalls, [])
@@ -42,11 +40,13 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
       Effect.gen(function* () {
         const events = yield* Events.Events
         assert.strictEqual(
-          yield* code(events.create({ title: "Call", start: local("2027-01-15T09:00") })),
+          yield* KernelTesting.code(events.create({ title: "Call", start: local("2027-01-15T09:00") })),
           "calendar.calendar.choose"
         )
         assert.strictEqual(
-          yield* code(events.create({ title: "Call", calendar: Sample.work, start: local("2027-01-15T09:00") })),
+          yield* KernelTesting.code(
+            events.create({ title: "Call", calendar: Sample.work, start: local("2027-01-15T09:00") })
+          ),
           "calendar.calendar.readonly"
         )
         assert.deepStrictEqual(yield* calls, [])
@@ -135,15 +135,18 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
       () =>
         Effect.gen(function* () {
           const events = yield* Events.Events
-          assert.strictEqual(yield* code(events.create({ title: "x", start: local("2027-03-28T02:30") })), "Invalid")
           assert.strictEqual(
-            yield* code(
+            yield* KernelTesting.code(events.create({ title: "x", start: local("2027-03-28T02:30") })),
+            "Invalid"
+          )
+          assert.strictEqual(
+            yield* KernelTesting.code(
               events.create({ title: "x", start: local("2027-01-15T10:00"), end: local("2027-01-15T09:00") })
             ),
             "Invalid"
           )
           assert.strictEqual(
-            yield* code(
+            yield* KernelTesting.code(
               events.create({
                 title: "x",
                 start: local("2027-03-22T09:00"),
@@ -191,18 +194,24 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
         Effect.gen(function* () {
           const events = yield* Events.Events
           const standup = yield* find("Standup", 0)
-          assert.strictEqual(yield* code(events.change(standup.id, { title: "Sync" })), "calendar.event.readonly")
+          assert.strictEqual(
+            yield* KernelTesting.code(events.change(standup.id, { title: "Sync" })),
+            "calendar.event.readonly"
+          )
           yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: false })
           const copy = yield* find("Standup", 0)
-          assert.strictEqual(yield* code(events.cancel(copy.id)), "calendar.event.copy")
-          assert.strictEqual(yield* code(events.change(standup.id, { title: "Sync" })), "calendar.calendar.off")
+          assert.strictEqual(yield* KernelTesting.code(events.cancel(copy.id)), "calendar.event.copy")
+          assert.strictEqual(
+            yield* KernelTesting.code(events.change(standup.id, { title: "Sync" })),
+            "calendar.calendar.off"
+          )
           yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: true })
           assert.strictEqual(
-            yield* code(events.change((yield* find("Lunch", 0)).id, { title: "Lunch" })),
+            yield* KernelTesting.code(events.change((yield* find("Lunch", 0)).id, { title: "Lunch" })),
             "calendar.event.reclaim"
           )
           assert.strictEqual(
-            yield* code(events.reply((yield* find("Dentist", 2)).id, "accept")),
+            yield* KernelTesting.code(events.reply((yield* find("Dentist", 2)).id, "accept")),
             "calendar.event.not-invitation"
           )
           assert.deepStrictEqual(yield* calls, [])
@@ -244,7 +253,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
             ["Change", "Cancel"]
           )
           assert.strictEqual(
-            yield* code(events.placeBlock(Sample.work, { id: block, title: "x", span })),
+            yield* KernelTesting.code(events.placeBlock(Sample.work, { id: block, title: "x", span })),
             "calendar.calendar.readonly"
           )
           const entry = Reclaim.entryOf({

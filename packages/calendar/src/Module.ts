@@ -1,7 +1,6 @@
-import * as Config from "effect/Config"
-import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Module from "@ras/kernel/Module"
+import * as KernelSample from "@ras/kernel/Sample"
 import * as Calendar from "./Calendar.ts"
 import * as Events from "./Events.ts"
 import * as Http from "./Http.ts"
@@ -11,12 +10,11 @@ import * as Reclaim from "./Reclaim.ts"
 import * as Sample from "./Sample.ts"
 import * as Tools from "./Tools.ts"
 
-/** Reclaim and Outlook, or with `RAS_SAMPLE` set the invented calendars and an Outlook that writes nowhere. */
-const sources = Layer.unwrap(
-  Effect.map(Config.Boolean("RAS_SAMPLE").pipe(Config.withDefault(false)), (sample) =>
-    sample ? Layer.merge(Sample.layer, Outlook.sample) : Layer.merge(Reclaim.live, Outlook.live)
-  ).pipe(Effect.orDie)
-)
+/** Reclaim and Outlook, or in sample mode the invented calendars and an Outlook that writes nowhere. */
+const sources = KernelSample.choose({
+  sample: Layer.merge(Sample.layer, Outlook.sample),
+  live: Layer.merge(Reclaim.live, Outlook.live)
+})
 
 export const module = Module.make({
   name: "calendar",

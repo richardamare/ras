@@ -7,16 +7,9 @@ import * as Struct from "effect/Struct"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
+import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
 import * as Domain from "./Domain.ts"
-
-/** Every read decodes its rows; a row that does not decode is a defect of the store, not a failure of the caller. */
-const rows = <S extends Schema.Top>(
-  schema: S,
-  query: Effect.Effect<ReadonlyArray<unknown>, unknown, SqlClient.SqlClient>
-) => query.pipe(Effect.flatMap(Schema.decodeUnknownEffect(Schema.Array(schema))), Effect.orDie)
-
-const first = <A>(found: ReadonlyArray<A>) => Option.fromUndefinedOr(found[0])
 
 const write = <A, E>(statement: Effect.Effect<A, E, SqlClient.SqlClient>) =>
   Global.write(Effect.asVoid(Effect.orDie(statement)))
@@ -37,18 +30,18 @@ const calendarText = (space: Domain.Space) => (space.calendar === null ? null : 
 const spaceColumns = (sql: SqlClient.SqlClient) =>
   sql`SELECT id, name, color, position, calendar, is_default AS "default", archived_at IS NOT NULL AS archived FROM work_spaces`
 
-export const spaces = rows(
+export const spaces = Sql.rows(
   SpaceRow,
   SqlClient.SqlClient.use((sql) => sql`${spaceColumns(sql)} ORDER BY position, name`)
 ).pipe(Effect.map(Arr.map((row) => new Domain.Space(row))))
 
 export const spaceById = (id: string) =>
-  rows(
+  Sql.rows(
     SpaceRow,
     SqlClient.SqlClient.use((sql) => sql`${spaceColumns(sql)} WHERE id = ${id}`)
-  ).pipe(Effect.map((found) => Option.map(first(found), (row) => new Domain.Space(row))))
+  ).pipe(Effect.map((found) => Option.map(Sql.first(found), (row) => new Domain.Space(row))))
 
-export const defaultSpace = rows(
+export const defaultSpace = Sql.rows(
   SpaceRow,
   SqlClient.SqlClient.use((sql) => sql`${spaceColumns(sql)} WHERE is_default = 1`)
 ).pipe(Effect.map((found) => new Domain.Space(found[0]!)))
@@ -92,7 +85,7 @@ const projectColumns = (sql: SqlClient.SqlClient) =>
   sql`SELECT id, space_id AS space, name, status, deadline, description FROM work_projects`
 
 export const projects = (filter: { readonly space: Option.Option<Domain.SpaceId> }) =>
-  rows(
+  Sql.rows(
     ProjectRow,
     SqlClient.SqlClient.use(
       (sql) => sql`
@@ -103,10 +96,10 @@ export const projects = (filter: { readonly space: Option.Option<Domain.SpaceId>
   ).pipe(Effect.map(Arr.map((row) => new Domain.Project(row))))
 
 export const projectById = (id: string) =>
-  rows(
+  Sql.rows(
     ProjectRow,
     SqlClient.SqlClient.use((sql) => sql`${projectColumns(sql)} WHERE id = ${id}`)
-  ).pipe(Effect.map((found) => Option.map(first(found), (row) => new Domain.Project(row))))
+  ).pipe(Effect.map((found) => Option.map(Sql.first(found), (row) => new Domain.Project(row))))
 
 export const insertProject = (project: Domain.Project) =>
   write(
@@ -165,7 +158,7 @@ const summary = (row: TaskRow) =>
 
 /** Open work first, by deadline; `updatedSince` is a UTC instant. */
 export const tasks = (filter: Omit<Domain.TaskFilter, "updatedSince"> & { readonly updatedSince?: string }) =>
-  rows(
+  Sql.rows(
     TaskRow,
     SqlClient.SqlClient.use((sql) => {
       const clauses = Arr.getSomes([
@@ -184,10 +177,10 @@ export const tasks = (filter: Omit<Domain.TaskFilter, "updatedSince"> & { readon
 
 /** The task with its body, as the row stores it. */
 export const taskById = (id: string) =>
-  rows(
+  Sql.rows(
     TaskRow,
     SqlClient.SqlClient.use((sql) => sql`${taskColumns(sql)} WHERE id = ${id}`)
-  ).pipe(Effect.map((found) => Option.map(first(found), (row) => ({ summary: summary(row), body: row.body }))))
+  ).pipe(Effect.map((found) => Option.map(Sql.first(found), (row) => ({ summary: summary(row), body: row.body }))))
 
 const CommentRow = Schema.Struct({
   id: Domain.CommentId,
@@ -198,7 +191,7 @@ const CommentRow = Schema.Struct({
 })
 
 export const comments = (task: Domain.TaskId) =>
-  rows(
+  Sql.rows(
     CommentRow,
     SqlClient.SqlClient.use(
       (sql) => sql`SELECT id, author, at, text, link FROM work_comments WHERE task_id = ${task} ORDER BY at, id`
@@ -206,7 +199,7 @@ export const comments = (task: Domain.TaskId) =>
   ).pipe(Effect.map(Arr.map((row) => new Domain.Comment({ ...row, at: Time.pragueLocalOf(row.at) }))))
 
 export const links = (task: Domain.TaskId) =>
-  rows(
+  Sql.rows(
     Domain.LinkUrl,
     SqlClient.SqlClient.use((sql) =>
       Effect.map(sql<{ url: string }>`SELECT url FROM work_links WHERE task_id = ${task} ORDER BY url`, (found) =>
@@ -314,7 +307,7 @@ const BlockColumns = Schema.Struct({
 })
 
 const blocksWhere = (where: (sql: SqlClient.SqlClient) => ReturnType<SqlClient.SqlClient["unsafe"]>) =>
-  rows(
+  Sql.rows(
     BlockColumns,
     SqlClient.SqlClient.use(
       (sql) => sql`

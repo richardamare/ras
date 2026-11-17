@@ -6,6 +6,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
+import type * as Errors from "@ras/kernel/Errors"
 import * as Actor from "./Actor.ts"
 
 const TransactionId: unique symbol = Symbol("@ras/global/Transaction")
@@ -24,6 +25,9 @@ export const write = <A, E, R>(statement: Effect.Effect<A, E, R>): Effect.Effect
 
 /** `<module>.<subject>.<verb>`, such as `work.task.created`; each module lists its own as a `Schema.Literals`. */
 export type Action = `${string}.${string}.${string}`
+
+/** What a service method that writes returns: it fails with a kernel `Failure` and runs as the current actor. */
+export type Write<A> = Effect.Effect<A, Errors.Failure, Actor.CurrentActor>
 
 export type Snapshot = Readonly<Record<string, unknown>>
 

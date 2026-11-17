@@ -17,12 +17,6 @@ import * as Reclaim from "./Reclaim.ts"
 import * as Rules from "./Rules.ts"
 import * as Store from "./Store.ts"
 
-type Write<A> = Effect.Effect<
-  A,
-  Errors.Refused | Errors.NotFound | Errors.Invalid | Errors.SourceFailed,
-  Global.CurrentActor
->
-
 /** When an event happens, in Prague local time: a start and an end, or whole days from the first to the last. */
 export type When =
   | { readonly _tag: "Timed"; readonly start: Time.PragueLocal; readonly end: Time.PragueLocal }
@@ -249,14 +243,14 @@ export class Events extends Context.Service<
   Events,
   {
     /** Writes a plain event into a writable calendar, or keeps it in ras as a draft. */
-    readonly create: (event: Domain.NewEvent) => Write<Domain.Created>
+    readonly create: (event: Domain.NewEvent) => Global.Write<Domain.Created>
     /** Changes a plain event in its calendar, or a draft in ras. */
-    readonly change: (id: Domain.EventId, change: Domain.EventChange) => Write<Domain.Event>
+    readonly change: (id: Domain.EventId, change: Domain.EventChange) => Global.Write<Domain.Event>
     /** Cancels a plain event in its calendar, or discards a draft. */
-    readonly cancel: (id: Domain.EventId) => Write<void>
-    readonly reply: (id: Domain.EventId, reply: Domain.Reply) => Write<void>
+    readonly cancel: (id: Domain.EventId) => Global.Write<void>
+    readonly reply: (id: Domain.EventId, reply: Domain.Reply) => Global.Write<void>
     /** Writes a draft into its calendar as a new event; a draft the calendar refuses stays, with the reason. */
-    readonly confirm: (id: Domain.EventId) => Write<Domain.Created>
+    readonly confirm: (id: Domain.EventId) => Global.Write<Domain.Created>
     /** Every event draft, in start order. */
     readonly drafts: Effect.Effect<ReadonlyArray<Domain.Event>>
     /** Deletes every event draft; none of them is in a calendar. */
@@ -306,10 +300,7 @@ export class Events extends Context.Service<
           const all = yield* calendar.connected
           if (named !== undefined) {
             const found = Arr.findFirst(all, (entry) => entry.calendar.id === named)
-            return yield* Option.match(found, {
-              onNone: () => Effect.fail(new Errors.NotFound({ subject: "calendar", id: String(named) })),
-              onSome: Effect.succeed
-            })
+            return yield* Errors.orNotFound("calendar", String(named))(found)
           }
           const writable = all.filter((entry) => entry.calendar.enabled && entry.calendar.writable)
           if (writable.length === 1) return writable[0]!
@@ -377,12 +368,7 @@ export class Events extends Context.Service<
         })
 
       const storedDraft = (id: Domain.DraftId) =>
-        Effect.flatMap(db(Store.draftById(id)), (found) =>
-          Option.match(found, {
-            onNone: () => Effect.fail(new Errors.NotFound({ subject: "draft", id })),
-            onSome: Effect.succeed
-          })
-        )
+        Effect.flatMap(db(Store.draftById(id)), Errors.orNotFound("draft", id))
 
       return Events.of({
         create: (input) =>

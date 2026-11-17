@@ -13,12 +13,6 @@ import * as Time from "@ras/kernel/Time"
 import * as Domain from "./Domain.ts"
 import * as Store from "./Store.ts"
 
-type Write<A> = Effect.Effect<
-  A,
-  Errors.Refused | Errors.NotFound | Errors.Invalid | Errors.SourceFailed,
-  Global.CurrentActor
->
-
 /** A started block's event first runs this long; stopping it sets the real end. */
 const runningEvent = 15 * 60_000
 /** A start this close behind now still counts as now. */
@@ -73,21 +67,21 @@ export class Blocks extends Context.Service<
     }) => Effect.Effect<ReadonlyArray<Domain.Block>, Errors.Invalid>
     readonly running: Effect.Effect<Option.Option<Domain.Block>>
     /** Plans a block of an open task at a start and a length; a draft has no event until it is confirmed. */
-    readonly plan: (input: Domain.PlanWork) => Write<Domain.Block>
+    readonly plan: (input: Domain.PlanWork) => Global.Write<Domain.Block>
     /** Starts a block of an open task now; one block runs at a time. */
-    readonly start: (task: Domain.TaskId) => Write<Domain.Block>
+    readonly start: (task: Domain.TaskId) => Global.Write<Domain.Block>
     /** Ends the running block now, and its event with it. */
-    readonly stop: Write<Domain.Block>
+    readonly stop: Global.Write<Domain.Block>
     /** Records work that already happened, ending at `end`. */
-    readonly log: (input: Domain.LogWork) => Write<Domain.Block>
+    readonly log: (input: Domain.LogWork) => Global.Write<Domain.Block>
     /** Moves or resizes a block that is not running, with its event. */
-    readonly move: (input: Domain.MoveWork) => Write<Domain.Block>
+    readonly move: (input: Domain.MoveWork) => Global.Write<Domain.Block>
     /** Removes a block that is not running, with its event. */
-    readonly remove: (id: Domain.BlockId) => Write<void>
+    readonly remove: (id: Domain.BlockId) => Global.Write<void>
     /** Writes a draft block's event into its calendar; a draft the calendar refuses stays a draft. */
-    readonly confirm: (id: Domain.BlockId) => Write<Domain.Block>
+    readonly confirm: (id: Domain.BlockId) => Global.Write<Domain.Block>
     /** Removes a task's blocks that have not started, drafts included, with their events. */
-    readonly release: (task: Domain.TaskId) => Write<void>
+    readonly release: (task: Domain.TaskId) => Global.Write<void>
   }
 >()("@ras/work/Blocks") {
   static readonly layer = Layer.effect(
@@ -99,13 +93,7 @@ export class Blocks extends Context.Service<
       const one = yield* Semaphore.make(1)
       const db = Effect.provideService(SqlClient.SqlClient, sql)
 
-      const block = (id: string) =>
-        Effect.flatMap(db(Store.blockById(id)), (found) =>
-          Option.match(found, {
-            onNone: () => Effect.fail(new Errors.NotFound({ subject: "work block", id })),
-            onSome: Effect.succeed
-          })
-        )
+      const block = (id: string) => Effect.flatMap(db(Store.blockById(id)), Errors.orNotFound("work block", id))
 
       /** An open task of the owner's, in a space whose calendar takes its blocks. */
       const workable = (id: Domain.TaskId, verb: string) =>
