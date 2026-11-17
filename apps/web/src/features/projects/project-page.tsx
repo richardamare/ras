@@ -63,7 +63,7 @@ export function ProjectPage({ id }: { id: string }) {
           <NewTask.NewTaskButton project={found.id} />
         </PageHeader.PageHeader>
       </div>
-      {found.description !== null && <p className="text-sm whitespace-pre-wrap">{found.description}</p>}
+      {found.description !== null && <p className="text-sm wrap-anywhere whitespace-pre-wrap">{found.description}</p>}
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Card.Card>
           <Card.CardHeader>

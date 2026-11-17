@@ -120,6 +120,13 @@ export const group = HttpApiGroup.make("work")
       error: failures
     })
   )
+  .add(
+    HttpApiEndpoint.get("taskBlocks", "/tasks/:id/blocks", {
+      params: { id: Task.TaskId },
+      success: Schema.Array(Block.Block),
+      error: failures
+    })
+  )
   .add(HttpApiEndpoint.get("running", "/blocks/running", { success: Schema.NullOr(Block.Block) }))
   .add(HttpApiEndpoint.post("add", "/blocks", { payload: Block.AddWork, success: Block.Block, error: failures }))
   .add(
@@ -172,6 +179,7 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoin
       .handle("link", ({ params, payload }) => board.link(params.id, payload.url))
       .handle("unlink", ({ params, query }) => board.unlink(params.id, query.url))
       .handle("blocks", ({ query }) => blocks.blocks(query))
+      .handle("taskBlocks", ({ params }) => blocks.ofTask(params.id))
       .handle("running", () => Effect.map(blocks.running, Option.getOrNull))
       .handle("add", ({ payload }) => blocks.add(payload))
       .handle("start", ({ payload }) => blocks.start(payload.task))

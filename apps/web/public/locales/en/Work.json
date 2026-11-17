@@ -132,5 +132,20 @@
     "label": "Actions: {{title}}",
     "column": "Actions",
     "open": "Open"
+  },
+  "log": {
+    "title": "Work blocks",
+    "empty": "No work blocks yet.",
+    "edit": "Change time",
+    "remove": "Remove block",
+    "keep": "Keep block",
+    "removeTitle": "Remove this block?",
+    "removeDescription": "The block and its calendar event are removed, and the time it recorded leaves the task.",
+    "state": {
+      "draft": "Draft",
+      "planned": "Planned",
+      "running": "Running",
+      "done": "Done"
+    }
   }
 }

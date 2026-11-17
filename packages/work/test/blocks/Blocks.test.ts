@@ -114,6 +114,28 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
     })
   )
 
+  test.effect("lists a task's blocks, earliest first, and refuses a task that does not exist", () =>
+    Effect.gen(function* () {
+      const { board, task } = yield* setUp
+      const blocks = yield* Blocks.Blocks
+      const other = yield* board.addTask({ title: "Other" })
+      yield* TestClock.adjust("3 hours")
+      const later = yield* blocks.add({ task: task.id, start: yield* inHours(1), end: yield* inHours(2) })
+      const earlier = yield* blocks.add({ task: task.id, start: yield* inHours(-2), end: yield* inHours(-1) })
+      yield* blocks.add({ task: other.id, start: yield* inHours(3), end: yield* inHours(4) })
+      const listed = yield* blocks.ofTask(task.id)
+      assert.deepStrictEqual(
+        listed.map((block) => [block.id, block.state]),
+        [
+          [earlier.id, "done"],
+          [later.id, "planned"]
+        ]
+      )
+      const missing = yield* Effect.result(blocks.ofTask("missing" as typeof task.id))
+      assert.isTrue(Result.isFailure(missing) && missing.failure._tag === "NotFound")
+    })
+  )
+
   test.effect("keeps a draft in ras, taking its time in the calendar, until it is confirmed", () =>
     Effect.gen(function* () {
       const { task } = yield* setUp

@@ -21,6 +21,7 @@ import * as Utils from "@/lib/utils"
 import * as CopyLink from "@/components/copy-link"
 import * as TaskUrl from "@/features/tasks/url"
 import * as WorkActions from "@/features/tasks/work-actions"
+import * as WorkLog from "@/features/tasks/work-log"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -172,7 +173,9 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
           ) : (
             <p
               className={
-                found.body.length > 0 ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-sm text-muted-foreground"
+                found.body.length > 0
+                  ? "text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap"
+                  : "text-sm text-muted-foreground"
               }
             >
               {found.body.length > 0 ? found.body : t("noBody")}
@@ -182,6 +185,10 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
         <section className="grid gap-2">
           <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("links.title")}</h3>
           <TaskEdit.Links task={found} />
+        </section>
+        <section className="grid gap-2">
+          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t("log.title")}</h3>
+          <WorkLog.WorkLog task={id} />
         </section>
         <Separator.Separator />
         <section className="grid gap-3">
@@ -211,7 +218,7 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
                       className="ms-auto size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [&_svg]:size-3.5"
                     />
                   </span>
-                  <p className="text-sm whitespace-pre-wrap">{one.text}</p>
+                  <p className="text-sm wrap-anywhere whitespace-pre-wrap">{one.text}</p>
                 </li>
               ))}
             </ol>
@@ -245,7 +252,7 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
   )
 }
 
-/** The task the address names, over whichever page is open, where its fields, brief and links are edited and it is commented on. */
+/** The task the address names, over whichever page is open, where its fields, brief, links and work blocks are edited and it is commented on. */
 export function TaskDialog() {
   const [{ task, comment }, set] = TaskUrl.useTaskParams()
   return (

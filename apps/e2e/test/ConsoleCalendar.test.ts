@@ -320,5 +320,55 @@ describe("the console's calendar", () => {
         yield* becomes(blocksOf(task.id, date), (blocks) => blocks.length === 0)
       })
     )
+
+    it.effect("moves and removes a finished block from its popover, asking before the removal", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Worked"), space: space.id } })
+        const date = yield* day(-2)
+        const block = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "10:00") }
+        })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
+
+        yield* page.getByText("Finished work block").waitFor()
+        yield* page.getByRole("button", { name: "Move", exact: true }).click()
+        const dialog = page.getByRole("dialog", { name: "Move work block" })
+        yield* dialog.getByLabel("End").fill("11:00")
+        yield* dialog.getByRole("button", { name: "Move" }).click()
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent === 120)
+
+        yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
+        yield* page.getByRole("button", { name: "Remove block" }).click()
+        const confirm = page.getByRole("dialog", { name: "Remove this block?" })
+        yield* confirm.getByRole("button", { name: "Keep block" }).click()
+        assert.strictEqual((yield* blocksOf(task.id, date)).length, 1)
+
+        yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
+        yield* page.getByRole("button", { name: "Remove block" }).click()
+        yield* confirm.getByRole("button", { name: "Remove block" }).click()
+        yield* becomes(blocksOf(task.id, date), (blocks) => blocks.length === 0)
+      })
+    )
+
+    it.effect("confirms a draft block from its popover", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Drafted"), space: space.id } })
+        const date = yield* day(63)
+        const block = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "10:00"), draft: true }
+        })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
+
+        yield* page.getByText("Draft work block").waitFor()
+        yield* page.getByRole("button", { name: "Confirm draft" }).click()
+        yield* becomes(blocksOf(task.id, date), (blocks) => blocks[0]?.state === "planned")
+      })
+    )
   })
 })

@@ -134,5 +134,20 @@
     "label": "Akce: {{title}}",
     "column": "Akce",
     "open": "Otevřít"
+  },
+  "log": {
+    "title": "Pracovní bloky",
+    "empty": "Zatím žádné pracovní bloky.",
+    "edit": "Změnit čas",
+    "remove": "Odebrat blok",
+    "keep": "Ponechat blok",
+    "removeTitle": "Odebrat tento blok?",
+    "removeDescription": "Blok se odebere i s kalendářovou událostí a čas, který na něm byl zaznamenán, zmizí z úkolu.",
+    "state": {
+      "draft": "Návrh",
+      "planned": "Naplánovaný",
+      "running": "Běží",
+      "done": "Hotový"
+    }
   }
 }

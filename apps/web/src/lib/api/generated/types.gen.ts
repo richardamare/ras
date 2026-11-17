@@ -1997,6 +1997,49 @@ export type WorkAddResponses = {
 
 export type WorkAddResponse = WorkAddResponses[keyof WorkAddResponses];
 
+export type WorkTaskBlocksData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/work/tasks/{id}/blocks';
+};
+
+export type WorkTaskBlocksErrors = {
+    /**
+     * Invalid
+     */
+    400: InvalidEncoded;
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+    /**
+     * NotFound
+     */
+    404: NotFoundEncoded;
+    /**
+     * Refused
+     */
+    409: RefusedEncoded;
+    /**
+     * SourceFailed
+     */
+    502: SourceFailedEncoded;
+};
+
+export type WorkTaskBlocksError = WorkTaskBlocksErrors[keyof WorkTaskBlocksErrors];
+
+export type WorkTaskBlocksResponses = {
+    /**
+     * Success
+     */
+    200: Array<BlockEncoded>;
+};
+
+export type WorkTaskBlocksResponse = WorkTaskBlocksResponses[keyof WorkTaskBlocksResponses];
+
 export type WorkRunningData = {
     body?: never;
     path?: never;

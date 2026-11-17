@@ -268,6 +268,32 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("wraps a long unbroken address in a task's brief and comments inside its dialog", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const address = `https://notes.example.com/shared/${"6WlsLGHaRtjNoz82oM1ewMXIYRyBv".repeat(4)}`
+        const task = yield* client.work.addTask({
+          payload: { title: Suite.unique("Wrapped"), body: `Notes: ${address}` }
+        })
+        yield* client.work.comment({ params: { id: task.id }, payload: { text: `See ${address}` } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog", { name: task.title })
+        yield* dialog.getByText(`See ${address}`).waitFor()
+
+        const overflow = yield* Effect.promise(() =>
+          dialog.raw.evaluate((content) => {
+            const edge = content.getBoundingClientRect().right
+            return Math.max(
+              0,
+              ...[...content.querySelectorAll("*")].map((each) => each.getBoundingClientRect().right - edge)
+            )
+          })
+        )
+        assert.strictEqual(overflow, 0)
+      })
+    )
+
     it.effect("edits a task's title, brief, project, priority, deadline, estimate and links in its dialog", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
@@ -399,6 +425,42 @@ describe("the console's work pages", () => {
         yield* becomes(client.work.running(), (block) => block?.task === task.id)
         yield* dialog.getByRole("button", { name: "Stop" }).click()
         yield* becomes(client.work.running(), (block) => block === null)
+      })
+    )
+
+    it.effect("lists a task's work blocks in its dialog, changes a finished block's time and removes it", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const task = yield* client.work.addTask({ payload: { title: Suite.unique("Logged"), space: space.id } })
+        const past = Time.addDays(yield* today, -3)
+        const ahead = Time.addDays(yield* today, 40)
+        const at = (date: string, clock: string) => Time.PragueLocal.make(`${date}T${clock}`)
+        yield* client.work.add({ payload: { task: task.id, start: at(past, "08:00"), end: at(past, "09:00") } })
+        yield* client.work.add({ payload: { task: task.id, start: at(ahead, "10:00"), end: at(ahead, "10:30") } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?task=${task.id}`)
+        const dialog = page.getByRole("dialog", { name: task.title })
+        const row = (text: string) => dialog.getByRole("listitem").filter({ hasText: text })
+
+        yield* row("10:00–10:30").getByText("Planned").waitFor()
+        yield* row("08:00–09:00").getByText("Done").waitFor()
+        yield* row("08:00–09:00").getByRole("button", { name: "Change time" }).click()
+        const move = page.getByRole("dialog", { name: "Move work block" })
+        yield* move.getByLabel("End").fill("10:15")
+        yield* move.getByRole("button", { name: "Move" }).click()
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent === 135)
+        yield* row("08:00–10:15").getByText("2:15").waitFor()
+
+        yield* row("08:00–10:15").getByRole("button", { name: "Remove block" }).click()
+        const confirm = page.getByRole("dialog", { name: "Remove this block?" })
+        yield* confirm.getByRole("button", { name: "Remove block" }).click()
+        yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.spent === 0)
+        const left = yield* client.work.taskBlocks({ params: { id: task.id } })
+        assert.deepStrictEqual(
+          left.map((block) => block.start),
+          [at(ahead, "10:00")]
+        )
       })
     )
 
