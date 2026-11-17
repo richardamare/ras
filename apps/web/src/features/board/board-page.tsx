@@ -148,7 +148,7 @@ export function BoardPage() {
       {tasks.isPending ? (
         <Skeleton.Skeleton className="h-64 w-full" />
       ) : (
-        <div className="-mx-1 grid min-h-0 flex-1 auto-cols-[minmax(11rem,1fr)] grid-flow-col gap-3 overflow-x-auto px-1 pt-1 pb-3">
+        <div className="-mx-1 grid min-h-0 flex-1 auto-cols-[minmax(11rem,1fr)] grid-flow-col grid-rows-[minmax(0,1fr)] gap-3 overflow-x-auto px-1 pt-1 pb-3">
           {Columns.columns(tasks.data ?? []).map((column) => (
             <section
               key={column.status}
@@ -163,7 +163,7 @@ export function BoardPage() {
                 drop(column.status, event.dataTransfer.getData("text/plain"))
               }}
               className={Utils.cn(
-                "flex min-h-40 flex-col gap-2 rounded-xl border border-transparent bg-muted/60 p-2 transition-colors",
+                "flex min-h-0 flex-col gap-2 rounded-xl border border-transparent bg-muted/60 p-2 transition-colors",
                 over === column.status && "border-dashed border-primary/50 bg-accent/60"
               )}
             >
@@ -173,14 +173,16 @@ export function BoardPage() {
                   {column.tasks.length}
                 </span>
               </h2>
-              {column.tasks.length === 0 && (
-                <p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-                  {t("board.empty")}
-                </p>
-              )}
-              {column.tasks.map((task) => (
-                <Card key={task.id} task={task} projects={projectNames} onOpen={() => openTask(task.id)} />
-              ))}
+              <div className="-mx-2 -mb-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-0.5 pb-2">
+                {column.tasks.length === 0 && (
+                  <p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
+                    {t("board.empty")}
+                  </p>
+                )}
+                {column.tasks.map((task) => (
+                  <Card key={task.id} task={task} projects={projectNames} onOpen={() => openTask(task.id)} />
+                ))}
+              </div>
             </section>
           ))}
         </div>

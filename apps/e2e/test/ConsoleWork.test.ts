@@ -63,6 +63,38 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("keeps the board in the window and scrolls a full column within itself", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const project = yield* client.work.addProject({ payload: { name: Suite.unique("Long"), space: space.id } })
+        const tasks = yield* Effect.forEach(Array.from({ length: 30 }), () =>
+          client.work.addTask({ payload: { title: Suite.unique("Pile"), project: project.id } })
+        )
+        const page = yield* Suite.signedInPage
+        yield* Effect.promise(() => page.raw.setViewportSize({ width: 1280, height: 720 }))
+        yield* page.goto(`/board?project=${project.id}`)
+        yield* page.getByText(tasks[29]!.title).waitFor()
+
+        const layout = yield* Effect.promise(() =>
+          page.raw
+            .getByRole("region")
+            .filter({ has: page.raw.getByText(tasks[0]!.title) })
+            .evaluate((column) => {
+              const list = column.lastElementChild as HTMLElement
+              return {
+                columnOverflow: column.scrollHeight - column.clientHeight,
+                columnBottom: column.getBoundingClientRect().bottom,
+                listOverflow: list.scrollHeight - list.clientHeight
+              }
+            })
+        )
+        assert.strictEqual(layout.columnOverflow, 0)
+        assert.isAtMost(layout.columnBottom, 720)
+        assert.isAbove(layout.listOverflow, 0)
+      })
+    )
+
     it.effect("narrows the board to a project and to an assignee", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
