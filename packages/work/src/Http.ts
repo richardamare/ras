@@ -9,7 +9,7 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Board from "./Board.ts"
 import * as Domain from "./Domain.ts"
 
-const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid]
+const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 
 export const group = HttpApiGroup.make("work")
   .add(HttpApiEndpoint.get("spaces", "/spaces", { success: Schema.Array(Domain.Space) }))
