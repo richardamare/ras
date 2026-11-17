@@ -116,26 +116,17 @@
     "start": "Start",
     "stop": "Stop",
     "date": "Date",
-    "at": "Starts at",
-    "minutes": "Minutes",
     "from": "From",
     "to": "To"
   },
-  "plan": {
-    "button": "Plan",
-    "title": "Plan “{{title}}”",
-    "hint": "The block goes to the calendar of the task's space.",
-    "submit": "Plan block",
-    "planned": "{{title}} is planned."
-  },
-  "log": {
-    "button": "Log work",
-    "title": "Log work on “{{title}}”",
-    "hint": "Record time already spent on the task.",
-    "submit": "Log",
-    "logged": "Work on {{title}} is logged.",
+  "block": {
+    "button": "Add block",
+    "title": "Add a block to “{{title}}”",
+    "hint": "A block may lie in the past, in the future or across now. It counts as time spent once it ends.",
+    "submit": "Add block",
+    "added": "A block of {{title}} is in the calendar.",
     "length": "{{length}} of work",
-    "badSpan": "The work must end after it starts, take at most 12 hours and not end in the future."
+    "badSpan": "The block must end after it starts."
   },
   "menu": {
     "label": "Actions: {{title}}",

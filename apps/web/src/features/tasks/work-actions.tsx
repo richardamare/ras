@@ -45,8 +45,7 @@ export const useClock = () => {
   }
 }
 
-export const usePlanDialog = DialogStore.createDialogStore<{ task: Pick<Target, "id" | "title"> }>()
-export const useLogDialog = DialogStore.createDialogStore<{ task: Pick<Target, "id" | "title"> }>()
+export const useBlockDialog = DialogStore.createDialogStore<{ task: Pick<Target, "id" | "title"> }>()
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -57,8 +56,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-/** Plans a block of work on the task in its space's calendar, from the next half hour by default. */
-export function PlanDialog({
+/** Adds a block of work on the task, in the past, the future or across now, to its space's calendar. */
+export function BlockDialog({
   task,
   open,
   onOpenChange
@@ -69,95 +68,20 @@ export function PlanDialog({
 }) {
   const { t } = ReactI18next.useTranslation("Work")
   const settled = useSettled()
-  const [form, setForm] = React.useState(() => Work.planDefaults(Prague.local()))
+  const [form, setForm] = React.useState(() => Work.blockDefaults(Prague.local()))
   const set = (change: Partial<typeof form>) => setForm((current) => ({ ...current, ...change }))
-  const plan = ReactQuery.useMutation({
-    ...Queries.workPlanMutation(),
+  const add = ReactQuery.useMutation({
+    ...Queries.workAddMutation(),
     ...settled,
     onSuccess: () => {
-      Sonner.toast.success(t("plan.planned", { title: task.title }))
+      Sonner.toast.success(t("block.added", { title: task.title }))
       onOpenChange(false)
       return settled.onSuccess()
     }
   })
-  const valid = form.date !== "" && form.time !== "" && form.minutes >= 5 && form.minutes <= 720
-
-  return (
-    <Dialog.Dialog open={open} onOpenChange={onOpenChange}>
-      <Dialog.DialogContent className="sm:max-w-md">
-        <form
-          className="contents"
-          onSubmit={(event) => {
-            event.preventDefault()
-            plan.mutate({ body: { task: task.id, start: `${form.date}T${form.time}`, minutes: form.minutes } })
-          }}
-        >
-          <Dialog.DialogHeader>
-            <Dialog.DialogTitle>{t("plan.title", { title: task.title })}</Dialog.DialogTitle>
-            <Dialog.DialogDescription>{t("plan.hint")}</Dialog.DialogDescription>
-          </Dialog.DialogHeader>
-          <Dialog.DialogBody className="grid grid-cols-3 gap-3">
-            <Field label={t("work.date")}>
-              <Input.Input type="date" required value={form.date} onChange={(e) => set({ date: e.target.value })} />
-            </Field>
-            <Field label={t("work.at")}>
-              <Input.Input
-                type="time"
-                required
-                step={300}
-                value={form.time}
-                onChange={(e) => set({ time: e.target.value })}
-              />
-            </Field>
-            <Field label={t("work.minutes")}>
-              <Input.Input
-                type="number"
-                required
-                min={5}
-                max={720}
-                step={5}
-                value={form.minutes}
-                onChange={(e) => set({ minutes: e.target.valueAsNumber })}
-              />
-            </Field>
-          </Dialog.DialogBody>
-          <Dialog.DialogFooter>
-            <Button.Button type="submit" disabled={!valid || plan.isPending}>
-              {t("plan.submit")}
-            </Button.Button>
-          </Dialog.DialogFooter>
-        </form>
-      </Dialog.DialogContent>
-    </Dialog.Dialog>
-  )
-}
-
-/** Records work already done on the task, the hour that just ended by default. */
-export function LogDialog({
-  task,
-  open,
-  onOpenChange
-}: {
-  task: Pick<Target, "id" | "title">
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const { t } = ReactI18next.useTranslation("Work")
-  const settled = useSettled()
-  const [form, setForm] = React.useState(() => Work.logDefaults(Prague.local()))
-  const set = (change: Partial<typeof form>) => setForm((current) => ({ ...current, ...change }))
-  const log = ReactQuery.useMutation({
-    ...Queries.workLogMutation(),
-    ...settled,
-    onSuccess: () => {
-      Sonner.toast.success(t("log.logged", { title: task.title }))
-      onOpenChange(false)
-      return settled.onSuccess()
-    }
-  })
+  const start = `${form.date}T${form.from}`
   const end = `${form.date}T${form.to}`
-  const minutes = form.date === "" ? 0 : Prague.minutesBetween(`${form.date}T${form.from}`, end)
-  const valid = minutes >= 1 && minutes <= 720
+  const minutes = form.date === "" || form.from === "" || form.to === "" ? 0 : Prague.minutesBetween(start, end)
 
   return (
     <Dialog.Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,12 +90,12 @@ export function LogDialog({
           className="contents"
           onSubmit={(event) => {
             event.preventDefault()
-            log.mutate({ body: { task: task.id, end, minutes } })
+            add.mutate({ body: { task: task.id, start, end } })
           }}
         >
           <Dialog.DialogHeader>
-            <Dialog.DialogTitle>{t("log.title", { title: task.title })}</Dialog.DialogTitle>
-            <Dialog.DialogDescription>{t("log.hint")}</Dialog.DialogDescription>
+            <Dialog.DialogTitle>{t("block.title", { title: task.title })}</Dialog.DialogTitle>
+            <Dialog.DialogDescription>{t("block.hint")}</Dialog.DialogDescription>
           </Dialog.DialogHeader>
           <Dialog.DialogBody className="grid gap-3">
             <div className="grid grid-cols-3 gap-3">
@@ -197,13 +121,13 @@ export function LogDialog({
                 />
               </Field>
             </div>
-            <p className={valid ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
-              {valid ? t("log.length", { length: Prague.duration(minutes) }) : t("log.badSpan")}
+            <p className={minutes > 0 ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
+              {minutes > 0 ? t("block.length", { length: Prague.duration(minutes) }) : t("block.badSpan")}
             </p>
           </Dialog.DialogBody>
           <Dialog.DialogFooter>
-            <Button.Button type="submit" disabled={!valid || log.isPending}>
-              {t("log.submit")}
+            <Button.Button type="submit" disabled={minutes <= 0 || add.isPending}>
+              {t("block.submit")}
             </Button.Button>
           </Dialog.DialogFooter>
         </form>
@@ -212,12 +136,11 @@ export function LogDialog({
   )
 }
 
-/** Start or stop, plan and log, as a row of buttons for an open task. */
+/** Start or stop and add a block, as a row of buttons for an open task. */
 export function WorkButtons({ task }: { task: Target }) {
   const { t } = ReactI18next.useTranslation("Work")
   const clock = useClock()
-  const planDialog = usePlanDialog()
-  const logDialog = useLogDialog()
+  const blockDialog = useBlockDialog()
   const runs = clock.runs(task.id)
   if (task.status === "done" && !runs) return null
 
@@ -234,25 +157,20 @@ export function WorkButtons({ task }: { task: Target }) {
           {t("work.start")}
         </Button.Button>
       )}
-      <Button.Button size="sm" variant="outline" onClick={() => planDialog.open({ task })}>
+      <Button.Button size="sm" variant="outline" onClick={() => blockDialog.open({ task })}>
         <LucideReact.CalendarPlusIcon />
-        {t("plan.button")}
-      </Button.Button>
-      <Button.Button size="sm" variant="outline" onClick={() => logDialog.open({ task })}>
-        <LucideReact.TimerIcon />
-        {t("log.button")}
+        {t("block.button")}
       </Button.Button>
     </div>
   )
 }
 
-/** Every action on a task from a row's menu: the clock, planning and logging, opening, closing and deleting it. */
+/** Every action on a task from a row's menu: the clock, adding a block, opening, closing and deleting it. */
 export function TaskMenu({ task }: { task: Target }) {
   const { t } = ReactI18next.useTranslation("Work")
   const clock = useClock()
   const completion = Completion.useTaskCompletion()
-  const planDialog = usePlanDialog()
-  const logDialog = useLogDialog()
+  const blockDialog = useBlockDialog()
   const openTask = TaskUrl.useOpenTask()
   const remove = TaskEdit.useDeleteTask()
   const open = task.status !== "done"
@@ -281,13 +199,9 @@ export function TaskMenu({ task }: { task: Target }) {
           )}
           {open && (
             <>
-              <DropdownMenu.DropdownMenuItem onSelect={() => planDialog.open({ task })}>
+              <DropdownMenu.DropdownMenuItem onSelect={() => blockDialog.open({ task })}>
                 <LucideReact.CalendarPlusIcon />
-                {t("plan.button")}
-              </DropdownMenu.DropdownMenuItem>
-              <DropdownMenu.DropdownMenuItem onSelect={() => logDialog.open({ task })}>
-                <LucideReact.TimerIcon />
-                {t("log.button")}
+                {t("block.button")}
               </DropdownMenu.DropdownMenuItem>
               <DropdownMenu.DropdownMenuSeparator />
             </>

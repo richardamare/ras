@@ -20,18 +20,13 @@ Vitest.describe("an estimate typed into the task dialog", () => {
   })
 })
 
-Vitest.describe("the times the plan and log dialogs offer", () => {
-  Vitest.test("a plan starts at the next half hour, for an hour", () => {
-    Vitest.expect(Work.planDefaults("2026-11-17T09:10")).toEqual({ date: "2026-11-17", time: "09:30", minutes: 60 })
-    Vitest.expect(Work.planDefaults("2026-11-17T09:30")).toEqual({ date: "2026-11-17", time: "09:30", minutes: 60 })
-    Vitest.expect(Work.planDefaults("2026-11-17T23:45")).toEqual({ date: "2026-11-18", time: "00:00", minutes: 60 })
+Vitest.describe("the block the add dialog offers", () => {
+  Vitest.test("is an hour from the quarter hour now falls in", () => {
+    Vitest.expect(Work.blockDefaults("2026-11-17T09:10")).toEqual({ date: "2026-11-17", from: "09:00", to: "10:00" })
+    Vitest.expect(Work.blockDefaults("2026-11-17T16:45")).toEqual({ date: "2026-11-17", from: "16:45", to: "17:45" })
   })
 
-  Vitest.test("a log covers the hour that just ended, to five minutes", () => {
-    Vitest.expect(Work.logDefaults("2026-11-17T14:07")).toEqual({ date: "2026-11-17", from: "13:05", to: "14:05" })
-  })
-
-  Vitest.test("a log just after midnight starts at midnight", () => {
-    Vitest.expect(Work.logDefaults("2026-11-17T00:20")).toEqual({ date: "2026-11-17", from: "00:00", to: "00:20" })
+  Vitest.test("ends at the day's last minute late in the evening", () => {
+    Vitest.expect(Work.blockDefaults("2026-11-17T23:20")).toEqual({ date: "2026-11-17", from: "23:15", to: "23:59" })
   })
 })

@@ -54,8 +54,7 @@ export function ModalProvider() {
       <Slot useStore={MoveDialog.useMoveDialog} component={MoveDialog.MoveDialog} />
       <Slot useStore={EventDialog.useEventDialog} component={EventDialog.EventDialog} />
       <Slot useStore={BlockMoveDialog.useBlockMoveDialog} component={BlockMoveDialog.BlockMoveDialog} />
-      <Slot useStore={WorkActions.usePlanDialog} component={WorkActions.PlanDialog} />
-      <Slot useStore={WorkActions.useLogDialog} component={WorkActions.LogDialog} />
+      <Slot useStore={WorkActions.useBlockDialog} component={WorkActions.BlockDialog} />
       <Slot useStore={ConfirmDialog.useConfirmDialog} component={ConfirmDialog.ConfirmDialog} />
     </>
   )

@@ -275,7 +275,9 @@ describe("the console's calendar", () => {
         const space = yield* workSpace
         const task = yield* client.work.addTask({ payload: { title: Suite.unique("Kicked off"), space: space.id } })
         const date = yield* day(62)
-        const block = yield* client.work.plan({ payload: { task: task.id, start: at(date, "09:00"), minutes: 60 } })
+        const block = yield* client.work.add({
+          payload: { task: task.id, start: at(date, "09:00"), end: at(date, "10:00") }
+        })
         const page = yield* Suite.signedInPage
         yield* page.goto(`/calendar?view=day&date=${date}&item=${block.id}`)
 
@@ -286,10 +288,6 @@ describe("the console's calendar", () => {
         yield* page.goto(`/calendar?view=day&date=${yield* day(0)}&item=${running!.id}`)
         yield* page.getByRole("button", { name: "Stop" }).click()
         yield* becomes(client.work.running(), (found) => found === null)
-        // A stopped block lasts a minute at least; removing it frees that minute for the other tests' timers.
-        yield* Effect.forEach(yield* blocksOf(task.id, yield* day(0)), (one) =>
-          client.work.remove({ params: { id: one.id } })
-        )
       })
     )
 

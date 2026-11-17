@@ -118,26 +118,17 @@
     "start": "Spustit",
     "stop": "Zastavit",
     "date": "Datum",
-    "at": "Začátek",
-    "minutes": "Minuty",
     "from": "Od",
     "to": "Do"
   },
-  "plan": {
-    "button": "Naplánovat",
-    "title": "Naplánovat „{{title}}“",
-    "hint": "Blok se zapíše do kalendáře prostoru, kam úkol patří.",
-    "submit": "Naplánovat blok",
-    "planned": "Naplánováno: {{title}}"
-  },
-  "log": {
-    "button": "Zapsat práci",
-    "title": "Zapsat práci na „{{title}}“",
-    "hint": "Zapište čas, který už na úkolu proběhl.",
-    "submit": "Zapsat",
-    "logged": "Práce zapsána: {{title}}",
+  "block": {
+    "button": "Přidat blok",
+    "title": "Přidat blok k „{{title}}“",
+    "hint": "Blok může ležet v minulosti, v budoucnosti i přes teď. Do stráveného času se počítá, jakmile skončí.",
+    "submit": "Přidat blok",
+    "added": "Blok je v kalendáři: {{title}}",
     "length": "{{length}} práce",
-    "badSpan": "Práce musí skončit až po začátku, trvat nejvýš 12 hodin a nekončit v budoucnu."
+    "badSpan": "Blok musí skončit až po začátku."
   },
   "menu": {
     "label": "Akce: {{title}}",
