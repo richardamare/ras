@@ -87,3 +87,12 @@ export const secretIn = (text: string): Option.Option<string> =>
     Arr.findFirst(secrets, ([, pattern]) => pattern.test(text)),
     ([kind]) => kind
   )
+
+/** A fact that matches a search, with the matching words of its text marked. */
+export const Hit = Schema.Struct({
+  name: Name,
+  description: Schema.String,
+  type: Type,
+  excerpt: Schema.String
+})
+export type Hit = typeof Hit.Type
