@@ -78,6 +78,7 @@
         "tailwind-merge": "^3.7.0",
         "tw-animate-css": "^1.4.0",
         "zod": "^4.6.7",
+        "zustand": "^5.1.0",
       },
       "devDependencies": {
         "@julr/vite-plugin-validate-env": "^2.2.2",
@@ -1496,6 +1497,8 @@
     "yargs-parser": ["yargs-parser@22.0.0", "", {}, "sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw=="],
 
     "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
+
+    "zustand": ["zustand@5.1.0", "", { "peerDependencies": { "@types/react": ">=18.0.0", "immer": ">=9.0.6", "react": ">=18.0.0", "use-sync-external-store": ">=1.2.0" }, "optionalPeers": ["@types/react", "immer", "react", "use-sync-external-store"] }, "sha512-ciJZlP48M1PTQbVQq81CGVFxHTLpZNrFjKqwjtCU34AWuXTZT/jrF3p9+fI84Cf1eSCMLapxqBy/SNTfwOBuqA=="],
 
     "@babel/code-frame/@babel/helper-validator-identifier": ["@babel/helper-validator-identifier@8.0.6", "", {}, "sha512-HYx0YmuchRxRSpnjvcNffnPS8DCauKNmnumIuHG3jnQAVewRA7kfJGwF13ayEpSZs7s4R/oBH4eppuXcAQd5JQ=="],
 

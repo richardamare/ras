@@ -62,7 +62,7 @@ export function CalendarPage() {
 
   const [drafting, setDrafting] = React.useState(false)
   const [planner, setPlanner] = React.useState(false)
-  const [dialog, setDialog] = React.useState<EventDialog.DialogState | null>(null)
+  const eventDialog = EventDialog.useEventDialog()
 
   const settle = {
     onSuccess: () => client.invalidateQueries(),
@@ -123,7 +123,7 @@ export function CalendarPage() {
         colorOf={colorOf}
         canMove={canMove}
         onOpen={open}
-        onCreate={(placement) => setDialog({ kind: "create", placement, draft: drafting })}
+        onCreate={(placement) => eventDialog.open({ state: { kind: "create", placement, draft: drafting } })}
         onMove={move}
         onPlanTask={(id, placement) =>
           plan.mutate({
@@ -203,10 +203,12 @@ export function CalendarPage() {
         )}
         <Button.Button
           onClick={() =>
-            setDialog({
-              kind: "create",
-              placement: Pointer.standard(showsToday ? today : anchor, newEventMinute),
-              draft: drafting
+            eventDialog.open({
+              state: {
+                kind: "create",
+                placement: Pointer.standard(showsToday ? today : anchor, newEventMinute),
+                draft: drafting
+              }
             })
           }
         >
@@ -241,14 +243,13 @@ export function CalendarPage() {
         onClose={close}
         onEdit={(event) => {
           close()
-          setDialog({ kind: "edit", event })
+          eventDialog.open({ state: { kind: "edit", event } })
         }}
         onOpenTask={(block) => {
           close()
           openTask(block.task)
         }}
       />
-      <EventDialog.EventDialog state={dialog} calendars={allCalendars} onClose={() => setDialog(null)} />
     </div>
   )
 }
