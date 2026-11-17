@@ -1,6 +1,7 @@
 import * as Fs from "node:fs"
 import { assert, describe, it } from "@effect/vitest"
 import * as Arr from "effect/Array"
+import * as Result from "effect/Result"
 
 const root = new URL("../../../", import.meta.url).pathname
 
@@ -37,5 +38,26 @@ describe("the architecture", () => {
       offending(/^import (type )?\{(?![^}]*\}\s*from "@effect\/vitest")/m, () => false),
       []
     )
+  })
+
+  it("lets a module's SQL name only its own tables", () => {
+    const owner = (path: string) => /^packages\/([a-z]+)\/src\//.exec(path)?.[1]
+    const modules = new Set(
+      Arr.filterMap(sources, (file) =>
+        /^packages\/[a-z]+\/src\/Module\.ts$/.test(file.path)
+          ? Result.fromNullishOr(owner(file.path), () => undefined)
+          : Result.failVoid
+      )
+    )
+    const offences = Arr.flatMap(sources, (file) => {
+      const module = owner(file.path)
+      if (module === undefined) return []
+      return Arr.filterMap(
+        Arr.fromIterable(file.text.matchAll(/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+(([a-z]+)_[a-z_]+)/g)),
+        ([, table, prefix]) =>
+          modules.has(prefix!) && prefix !== module ? Result.succeed(`${file.path}: ${table}`) : Result.failVoid
+      )
+    })
+    assert.deepStrictEqual(offences, [])
   })
 })
