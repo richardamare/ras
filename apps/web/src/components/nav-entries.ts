@@ -39,7 +39,8 @@ export const useNavSections = (): NavSection[] => {
           icon: LucideReact.SettingsIcon,
           children: [
             { to: "/settings", label: t("settingsGeneral"), exact: true },
-            { to: "/settings/calendars", label: t("settingsCalendars") }
+            { to: "/settings/calendars", label: t("settingsCalendars") },
+            { to: "/settings/connections", label: t("settingsConnections") }
           ]
         }
       ]

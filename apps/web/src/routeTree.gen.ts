@@ -19,6 +19,7 @@ import { Route as ShellProjectsIndexRouteImport } from './routes/_shell/projects
 import { Route as ShellProjectsIdRouteImport } from './routes/_shell/projects/$id'
 import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
 import { Route as ShellSettingsCalendarsRouteImport } from './routes/_shell/settings/calendars'
+import { Route as ShellSettingsConnectionsRouteImport } from './routes/_shell/settings/connections'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
@@ -69,6 +70,12 @@ const ShellSettingsCalendarsRoute = ShellSettingsCalendarsRouteImport.update({
   path: '/calendars',
   getParentRoute: () => ShellSettingsRoute,
 } as any)
+const ShellSettingsConnectionsRoute =
+  ShellSettingsConnectionsRouteImport.update({
+    id: '/connections',
+    path: '/connections',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof ShellTasksRoute
   '/projects/$id': typeof ShellProjectsIdRoute
   '/settings/calendars': typeof ShellSettingsCalendarsRoute
+  '/settings/connections': typeof ShellSettingsConnectionsRoute
   '/projects/': typeof ShellProjectsIndexRoute
   '/settings/': typeof ShellSettingsIndexRoute
 }
@@ -88,6 +96,7 @@ export interface FileRoutesByTo {
   '/': typeof ShellIndexRoute
   '/projects/$id': typeof ShellProjectsIdRoute
   '/settings/calendars': typeof ShellSettingsCalendarsRoute
+  '/settings/connections': typeof ShellSettingsConnectionsRoute
   '/projects': typeof ShellProjectsIndexRoute
   '/settings': typeof ShellSettingsIndexRoute
 }
@@ -101,6 +110,7 @@ export interface FileRoutesById {
   '/_shell/': typeof ShellIndexRoute
   '/_shell/projects/$id': typeof ShellProjectsIdRoute
   '/_shell/settings/calendars': typeof ShellSettingsCalendarsRoute
+  '/_shell/settings/connections': typeof ShellSettingsConnectionsRoute
   '/_shell/projects/': typeof ShellProjectsIndexRoute
   '/_shell/settings/': typeof ShellSettingsIndexRoute
 }
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/projects/$id'
     | '/settings/calendars'
+    | '/settings/connections'
     | '/projects/'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$id'
     | '/settings/calendars'
+    | '/settings/connections'
     | '/projects'
     | '/settings'
   id:
@@ -136,6 +148,7 @@ export interface FileRouteTypes {
     | '/_shell/'
     | '/_shell/projects/$id'
     | '/_shell/settings/calendars'
+    | '/_shell/settings/connections'
     | '/_shell/projects/'
     | '/_shell/settings/'
   fileRoutesById: FileRoutesById
@@ -216,16 +229,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsCalendarsRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
+    '/_shell/settings/connections': {
+      id: '/_shell/settings/connections'
+      path: '/connections'
+      fullPath: '/settings/connections'
+      preLoaderRoute: typeof ShellSettingsConnectionsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
   }
 }
 
 interface ShellSettingsRouteChildren {
   ShellSettingsCalendarsRoute: typeof ShellSettingsCalendarsRoute
+  ShellSettingsConnectionsRoute: typeof ShellSettingsConnectionsRoute
   ShellSettingsIndexRoute: typeof ShellSettingsIndexRoute
 }
 
 const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
   ShellSettingsCalendarsRoute: ShellSettingsCalendarsRoute,
+  ShellSettingsConnectionsRoute: ShellSettingsConnectionsRoute,
   ShellSettingsIndexRoute: ShellSettingsIndexRoute,
 }
 
