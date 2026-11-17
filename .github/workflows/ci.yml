@@ -25,6 +25,16 @@ jobs:
         env:
           VITE_ENVIRONMENT: production
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/bun-install
+      - run: bun run --cwd apps/e2e e2e:install
+      - run: bun x turbo run e2e
+        env:
+          VITE_ENVIRONMENT: production
+
   actionlint:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +45,7 @@ jobs:
 
   # The ruleset requires only this job, so adding or renaming a job above never touches repository settings.
   ci-ok:
-    needs: [check, actionlint]
+    needs: [check, e2e, actionlint]
     if: always()
     runs-on: ubuntu-latest
     steps:

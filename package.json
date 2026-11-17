@@ -30,6 +30,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "build": "turbo run build",
+    "e2e": "turbo run e2e",
     "check": "bun run fmt:check && turbo run typecheck lint test",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"

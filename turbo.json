@@ -6,6 +6,7 @@
     "lint": {},
     "test": { "dependsOn": ["^typecheck"] },
     "build": { "dependsOn": ["^build"], "env": ["VITE_ENVIRONMENT", "APP_COMMIT"], "outputs": ["dist/**"] },
-    "dev": { "cache": false, "persistent": true }
+    "dev": { "cache": false, "persistent": true },
+    "e2e": { "dependsOn": ["@ras/web#build"], "cache": false }
   }
 }

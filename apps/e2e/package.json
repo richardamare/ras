@@ -1,0 +1,25 @@
+{
+  "name": "@ras/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "oxlint src test",
+    "e2e": "bun --bun vitest run",
+    "e2e:install": "playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@ras/api": "workspace:*",
+    "@ras/global": "workspace:*",
+    "@ras/kernel": "workspace:*",
+    "effect": "catalog:",
+    "playwright": "1.65.1"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -2,6 +2,9 @@
   "name": "@ras/api",
   "private": true,
   "type": "module",
+  "exports": {
+    "./api": "./src/Api.ts"
+  },
   "scripts": {
     "typecheck": "tsc",
     "lint": "oxlint src test",
