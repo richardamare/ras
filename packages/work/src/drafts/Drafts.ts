@@ -7,7 +7,7 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Blocks from "../blocks/Blocks.ts"
-import * as Domain from "../Domain.ts"
+import * as Confirmation from "./Confirmation.ts"
 import * as BlockRepository from "../blocks/BlockRepository.ts"
 
 interface Pending {
@@ -27,8 +27,8 @@ export class Drafts extends Context.Service<
   {
     /** Confirms the drafts named, a day's drafts, or every draft; a draft its calendar refuses stays, with the reason. */
     readonly confirm: (
-      selection: Domain.ConfirmDrafts
-    ) => Effect.Effect<Domain.DraftsConfirmed, Errors.Invalid, Global.CurrentActor>
+      selection: Confirmation.ConfirmDrafts
+    ) => Effect.Effect<Confirmation.DraftsConfirmed, Errors.Invalid, Global.CurrentActor>
     /** Deletes every draft of both kinds and answers how many there were. */
     readonly discard: Effect.Effect<number, never, Global.CurrentActor>
   }
@@ -57,7 +57,7 @@ export class Drafts extends Context.Service<
         return [...eventDrafts, ...blockDrafts].toSorted((a, b) => a.start.localeCompare(b.start))
       })
 
-      const chosen = (all: ReadonlyArray<Pending>, selection: Domain.ConfirmDrafts) =>
+      const chosen = (all: ReadonlyArray<Pending>, selection: Confirmation.ConfirmDrafts) =>
         Effect.gen(function* () {
           const { day, drafts } = selection
           if (drafts !== undefined && day !== undefined)
@@ -78,7 +78,7 @@ export class Drafts extends Context.Service<
           Effect.catch((error) => Effect.succeed(Option.some(error.message))),
           Effect.map(
             (refusal) =>
-              new Domain.DraftOutcome({
+              new Confirmation.DraftOutcome({
                 id: draft.id,
                 title: draft.title,
                 start: draft.start,
@@ -91,7 +91,7 @@ export class Drafts extends Context.Service<
         confirm: (selection) =>
           Effect.gen(function* () {
             const outcomes = yield* Effect.forEach(yield* chosen(yield* pending, selection), outcome)
-            return new Domain.DraftsConfirmed({
+            return new Confirmation.DraftsConfirmed({
               confirmed: outcomes.filter((each) => each.refusal === null),
               refused: outcomes.filter((each) => each.refusal !== null)
             })

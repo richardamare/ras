@@ -10,12 +10,14 @@ import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Block from "./Block.ts"
+import * as Project from "../board/Project.ts"
+import * as Task from "../board/Task.ts"
 
 /** A block as its row keeps it: no end while it runs, no event while it is a draft. */
 export interface StoredBlock {
-  readonly id: Domain.BlockId
-  readonly task: Domain.TaskId
+  readonly id: Block.BlockId
+  readonly task: Task.TaskId
   readonly title: string
   readonly calendar: Calendar.CalendarId
   readonly start: DateTime.Utc
@@ -24,8 +26,8 @@ export interface StoredBlock {
 }
 
 const BlockRow = Schema.Struct({
-  id: Domain.BlockId,
-  task: Domain.TaskId,
+  id: Block.BlockId,
+  task: Task.TaskId,
   taskTitle: Schema.String,
   project: Schema.NullOr(Schema.String),
   calendar: Calendar.CalendarId,
@@ -61,11 +63,11 @@ export class BlockRepository extends Context.Service<
     /** The blocks that overlap the span; a running block takes its time until `now`. */
     readonly overlapping: (span: Span, now: string) => Effect.Effect<ReadonlyArray<StoredBlock>>
     readonly draftsInSpan: (span: Span) => Effect.Effect<ReadonlyArray<StoredBlock>>
-    readonly ofTask: (task: Domain.TaskId) => Effect.Effect<ReadonlyArray<StoredBlock>>
-    readonly ofProject: (project: Domain.ProjectId) => Effect.Effect<ReadonlyArray<StoredBlock>>
+    readonly ofTask: (task: Task.TaskId) => Effect.Effect<ReadonlyArray<StoredBlock>>
+    readonly ofProject: (project: Project.ProjectId) => Effect.Effect<ReadonlyArray<StoredBlock>>
     readonly allDrafts: Effect.Effect<ReadonlyArray<StoredBlock>>
     readonly save: (block: StoredBlock) => Effect.Effect<void, never, Global.Transaction>
-    readonly delete: (id: Domain.BlockId) => Effect.Effect<void, never, Global.Transaction>
+    readonly delete: (id: Block.BlockId) => Effect.Effect<void, never, Global.Transaction>
     readonly deleteDrafts: Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/work/BlockRepository") {

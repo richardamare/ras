@@ -9,7 +9,10 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
 import * as Blocks from "../blocks/Blocks.ts"
-import * as Domain from "../Domain.ts"
+import * as Project from "./Project.ts"
+import * as ProjectDetail from "./ProjectDetail.ts"
+import * as Space from "./Space.ts"
+import * as Task from "./Task.ts"
 import * as BlockRepository from "../blocks/BlockRepository.ts"
 import * as ProjectRepository from "./ProjectRepository.ts"
 import * as SpaceRepository from "./SpaceRepository.ts"
@@ -23,11 +26,11 @@ const refuse = (code: string, reason: string, instead?: string) =>
   Effect.fail(new Errors.Refused({ code, reason, ...(instead === undefined ? {} : { instead }) }))
 
 /** Who the current call speaks for: the agent it named, or the owner. */
-const speaker = Effect.map(Effect.service(Global.CurrentActor), (actor): Domain.Person =>
+const speaker = Effect.map(Effect.service(Global.CurrentActor), (actor): Task.Person =>
   Option.getOrElse(actor.agent, () => "owner" as const)
 )
 
-const columns = (summary: Domain.TaskSummary, body: string): TaskRepository.TaskColumns => ({
+const columns = (summary: Task.TaskSummary, body: string): TaskRepository.TaskColumns => ({
   title: summary.title,
   body,
   status: summary.status,
@@ -42,23 +45,23 @@ const columns = (summary: Domain.TaskSummary, body: string): TaskRepository.Task
 export class Board extends Context.Service<
   Board,
   {
-    readonly spaces: Effect.Effect<ReadonlyArray<Domain.Space>>
-    readonly addSpace: (space: typeof Domain.NewSpace.Type) => Global.Write<Domain.Space>
-    readonly changeSpace: (id: Domain.SpaceId, change: typeof Domain.SpaceChange.Type) => Global.Write<Domain.Space>
-    readonly archiveSpace: (id: Domain.SpaceId) => Global.Write<Domain.Space>
-    readonly projects: (space: Option.Option<Domain.SpaceId>) => Effect.Effect<ReadonlyArray<Domain.Project>>
-    readonly project: (id: Domain.ProjectId) => Read<Domain.ProjectDetail>
-    readonly addProject: (project: Domain.NewProject) => Global.Write<Domain.Project>
-    readonly changeProject: (id: Domain.ProjectId, change: Domain.ProjectChange) => Global.Write<Domain.Project>
-    readonly tasks: (filter: Domain.TaskFilter) => Read<ReadonlyArray<Domain.TaskSummary>>
-    readonly task: (id: Domain.TaskId) => Read<Domain.Task>
-    readonly addTask: (task: Domain.NewTask) => Global.Write<Domain.Task>
-    readonly changeTask: (id: Domain.TaskId, change: Domain.TaskChange) => Global.Write<Domain.Task>
+    readonly spaces: Effect.Effect<ReadonlyArray<Space.Space>>
+    readonly addSpace: (space: typeof Space.NewSpace.Type) => Global.Write<Space.Space>
+    readonly changeSpace: (id: Space.SpaceId, change: typeof Space.SpaceChange.Type) => Global.Write<Space.Space>
+    readonly archiveSpace: (id: Space.SpaceId) => Global.Write<Space.Space>
+    readonly projects: (space: Option.Option<Space.SpaceId>) => Effect.Effect<ReadonlyArray<Project.Project>>
+    readonly project: (id: Project.ProjectId) => Read<ProjectDetail.ProjectDetail>
+    readonly addProject: (project: Project.NewProject) => Global.Write<Project.Project>
+    readonly changeProject: (id: Project.ProjectId, change: Project.ProjectChange) => Global.Write<Project.Project>
+    readonly tasks: (filter: Task.TaskFilter) => Read<ReadonlyArray<Task.TaskSummary>>
+    readonly task: (id: Task.TaskId) => Read<Task.Task>
+    readonly addTask: (task: Task.NewTask) => Global.Write<Task.Task>
+    readonly changeTask: (id: Task.TaskId, change: Task.TaskChange) => Global.Write<Task.Task>
     /** Deletes a task with its blocks; a task with work begun on it is moved to done instead, and answered. */
-    readonly deleteTask: (id: Domain.TaskId) => Global.Write<Option.Option<Domain.Task>>
-    readonly comment: (id: Domain.TaskId, comment: Domain.NewComment) => Global.Write<Domain.Task>
-    readonly link: (id: Domain.TaskId, url: string) => Global.Write<Domain.Task>
-    readonly unlink: (id: Domain.TaskId, url: string) => Global.Write<Domain.Task>
+    readonly deleteTask: (id: Task.TaskId) => Global.Write<Option.Option<Task.Task>>
+    readonly comment: (id: Task.TaskId, comment: Task.NewComment) => Global.Write<Task.Task>
+    readonly link: (id: Task.TaskId, url: string) => Global.Write<Task.Task>
+    readonly unlink: (id: Task.TaskId, url: string) => Global.Write<Task.Task>
   }
 >()("@ras/work/Board") {
   static readonly layer = Layer.effect(
@@ -77,10 +80,10 @@ export class Board extends Context.Service<
       const project = (id: string) => projects.byId(id).pipe(Effect.flatMap(Errors.orNotFound("project", id)))
       const stored = (id: string) => tasks.byId(id).pipe(Effect.flatMap(Errors.orNotFound("task", id)))
 
-      const task = (id: Domain.TaskId) =>
+      const task = (id: Task.TaskId) =>
         Effect.gen(function* () {
           const { summary, body } = yield* stored(id)
-          return new Domain.Task({
+          return new Task.Task({
             ...summary,
             spent: Blocks.spent(yield* storedBlocks.ofTask(id), yield* DateTime.now),
             body,
@@ -111,7 +114,7 @@ export class Board extends Context.Service<
           return found
         })
 
-      const assignable = (person: Domain.Person) =>
+      const assignable = (person: Task.Person) =>
         person === "owner" ? Effect.void : Effect.asVoid(agents.active(person))
 
       const run = <A, E, R>(
@@ -131,7 +134,7 @@ export class Board extends Context.Service<
           }))
         )
 
-      const changeTask = (id: Domain.TaskId, change: Domain.TaskChange) =>
+      const changeTask = (id: Task.TaskId, change: Task.TaskChange) =>
         Effect.gen(function* () {
           const author = yield* speaker
           const { summary, body } = yield* stored(id)
@@ -143,7 +146,7 @@ export class Board extends Context.Service<
             )
           }
           const status = change.status ?? summary.status
-          if (status !== summary.status && Domain.explained.includes(status) && change.comment === undefined) {
+          if (status !== summary.status && Task.explained.includes(status) && change.comment === undefined) {
             return yield* refuse(
               "work.task.comment",
               `A move to ${status} needs a comment in the same call.`,
@@ -153,9 +156,9 @@ export class Board extends Context.Service<
           if (change.assignee !== undefined) yield* assignable(change.assignee)
           const inProject =
             change.project === undefined
-              ? Option.none<Domain.Project>()
+              ? Option.none<Project.Project>()
               : change.project === null
-                ? Option.none<Domain.Project>()
+                ? Option.none<Project.Project>()
                 : Option.some(yield* project(change.project))
           const home = Option.isSome(inProject)
             ? inProject.value.space
@@ -179,7 +182,7 @@ export class Board extends Context.Service<
           const write = Effect.gen(function* () {
             yield* tasks.update(id, after, at)
             if (change.comment !== undefined) {
-              const comment = { id: yield* Id.generate(Domain.CommentId), author, at, text: change.comment }
+              const comment = { id: yield* Id.generate(Task.CommentId), author, at, text: change.comment }
               yield* tasks.addComment(id, comment)
             }
           })
@@ -199,8 +202,8 @@ export class Board extends Context.Service<
         addSpace: (input) =>
           Effect.gen(function* () {
             const position = (yield* spaces.all).length
-            const added = new Domain.Space({
-              id: yield* Id.generate(Domain.SpaceId),
+            const added = new Space.Space({
+              id: yield* Id.generate(Space.SpaceId),
               name: input.name,
               color: input.color,
               position,
@@ -213,7 +216,7 @@ export class Board extends Context.Service<
               `space/${added.id}`,
               Option.none(),
               Effect.as(spaces.insert(added), added),
-              (result) => Option.some(Global.snapshot(Domain.Space, result))
+              (result) => Option.some(Global.snapshot(Space.Space, result))
             )
           }),
 
@@ -227,8 +230,8 @@ export class Board extends Context.Service<
               )
             }
             if (change.calendar !== undefined && change.calendar !== null) yield* personal(change.calendar)
-            const after = new Domain.Space({ ...before, ...change, default: change.default ?? before.default })
-            const diff = Global.changed(Global.snapshot(Domain.Space, before), Global.snapshot(Domain.Space, after))
+            const after = new Space.Space({ ...before, ...change, default: change.default ?? before.default })
+            const diff = Global.changed(Global.snapshot(Space.Space, before), Global.snapshot(Space.Space, after))
             return yield* run(
               "work.space.changed",
               `space/${id}`,
@@ -249,7 +252,7 @@ export class Board extends Context.Service<
               )
             }
             if (before.archived) return before
-            const after = new Domain.Space({ ...before, archived: true })
+            const after = new Space.Space({ ...before, archived: true })
             return yield* run(
               "work.space.archived",
               `space/${id}`,
@@ -264,7 +267,7 @@ export class Board extends Context.Service<
         project: (id) =>
           Effect.gen(function* () {
             const found = yield* project(id)
-            return new Domain.ProjectDetail({
+            return new ProjectDetail.ProjectDetail({
               ...found,
               spent: Blocks.spent(yield* storedBlocks.ofProject(id), yield* DateTime.now),
               tasks: yield* tasks.list({ project: id })
@@ -274,8 +277,8 @@ export class Board extends Context.Service<
         addProject: (input) =>
           Effect.gen(function* () {
             const home = input.space === undefined ? yield* spaces.defaultSpace : yield* open(input.space)
-            const added = new Domain.Project({
-              id: yield* Id.generate(Domain.ProjectId),
+            const added = new Project.Project({
+              id: yield* Id.generate(Project.ProjectId),
               space: home.id,
               name: input.name,
               status: input.status ?? "active",
@@ -287,7 +290,7 @@ export class Board extends Context.Service<
               `project/${added.id}`,
               Option.none(),
               Effect.as(projects.insert(added), added),
-              (result) => Option.some(Global.snapshot(Domain.Project, result))
+              (result) => Option.some(Global.snapshot(Project.Project, result))
             )
           }),
 
@@ -295,8 +298,11 @@ export class Board extends Context.Service<
           Effect.gen(function* () {
             const before = yield* project(id)
             if (change.space !== undefined && change.space !== before.space) yield* open(change.space)
-            const after = new Domain.Project({ ...before, ...change })
-            const diff = Global.changed(Global.snapshot(Domain.Project, before), Global.snapshot(Domain.Project, after))
+            const after = new Project.Project({ ...before, ...change })
+            const diff = Global.changed(
+              Global.snapshot(Project.Project, before),
+              Global.snapshot(Project.Project, after)
+            )
             return yield* run(
               "work.project.changed",
               `project/${id}`,
@@ -328,7 +334,7 @@ export class Board extends Context.Service<
             yield* assignable(assignee)
             const at = yield* now
             const status = input.status ?? (author === "owner" ? "todo" : "inbox")
-            const id = yield* Id.generate(Domain.TaskId)
+            const id = yield* Id.generate(Task.TaskId)
             const row: TaskRepository.TaskColumns = {
               title: input.title,
               body: input.body ?? "",
@@ -358,7 +364,7 @@ export class Board extends Context.Service<
             yield* run(
               "work.task.deleted",
               `task/${id}`,
-              Option.some({ ...Global.snapshot(Domain.TaskSummary, summary), body }),
+              Option.some({ ...Global.snapshot(Task.TaskSummary, summary), body }),
               tasks.delete(id),
               () => Option.none()
             )
@@ -370,7 +376,7 @@ export class Board extends Context.Service<
             yield* stored(id)
             const author = yield* speaker
             const at = yield* now
-            const added = { id: yield* Id.generate(Domain.CommentId), author, at, ...input }
+            const added = { id: yield* Id.generate(Task.CommentId), author, at, ...input }
             yield* run(
               "work.task.commented",
               `task/${id}`,

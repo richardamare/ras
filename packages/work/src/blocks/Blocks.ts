@@ -9,7 +9,8 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Block from "./Block.ts"
+import * as Task from "../board/Task.ts"
 import * as BlockRepository from "./BlockRepository.ts"
 import * as ProjectRepository from "../board/ProjectRepository.ts"
 import * as SpaceRepository from "../board/SpaceRepository.ts"
@@ -25,7 +26,7 @@ const refuse = (code: string, reason: string, instead: string) =>
 
 const millis = DateTime.toEpochMillis
 
-export const stateOf = (row: BlockRepository.StoredBlock, now: DateTime.Utc): Domain.BlockState =>
+export const stateOf = (row: BlockRepository.StoredBlock, now: DateTime.Utc): Block.BlockState =>
   Option.isNone(row.event)
     ? "draft"
     : Option.match(row.end, {
@@ -46,7 +47,7 @@ export const spent = (rows: ReadonlyArray<BlockRepository.StoredBlock>, now: Dat
   )
 
 export const view = (row: BlockRepository.StoredBlock, now: DateTime.Utc) =>
-  new Domain.Block({
+  new Block.Block({
     id: row.id,
     task: row.task,
     title: row.title,
@@ -66,24 +67,24 @@ export class Blocks extends Context.Service<
     readonly blocks: (window: {
       readonly from: Time.PragueLocal
       readonly to: Time.PragueLocal
-    }) => Effect.Effect<ReadonlyArray<Domain.Block>, Errors.Invalid>
-    readonly running: Effect.Effect<Option.Option<Domain.Block>>
+    }) => Effect.Effect<ReadonlyArray<Block.Block>, Errors.Invalid>
+    readonly running: Effect.Effect<Option.Option<Block.Block>>
     /** Plans a block of an open task at a start and a length; a draft has no event until it is confirmed. */
-    readonly plan: (input: Domain.PlanWork) => Global.Write<Domain.Block>
+    readonly plan: (input: Block.PlanWork) => Global.Write<Block.Block>
     /** Starts a block of an open task now; one block runs at a time. */
-    readonly start: (task: Domain.TaskId) => Global.Write<Domain.Block>
+    readonly start: (task: Task.TaskId) => Global.Write<Block.Block>
     /** Ends the running block now, and its event with it. */
-    readonly stop: Global.Write<Domain.Block>
+    readonly stop: Global.Write<Block.Block>
     /** Records work that already happened, ending at `end`. */
-    readonly log: (input: Domain.LogWork) => Global.Write<Domain.Block>
+    readonly log: (input: Block.LogWork) => Global.Write<Block.Block>
     /** Moves or resizes a block that is not running, with its event. */
-    readonly move: (input: Domain.MoveWork) => Global.Write<Domain.Block>
+    readonly move: (input: Block.MoveWork) => Global.Write<Block.Block>
     /** Removes a block that is not running, with its event. */
-    readonly remove: (id: Domain.BlockId) => Global.Write<void>
+    readonly remove: (id: Block.BlockId) => Global.Write<void>
     /** Writes a draft block's event into its calendar; a draft the calendar refuses stays a draft. */
-    readonly confirm: (id: Domain.BlockId) => Global.Write<Domain.Block>
+    readonly confirm: (id: Block.BlockId) => Global.Write<Block.Block>
     /** Removes a task's blocks that have not started, drafts included, with their events. */
-    readonly release: (task: Domain.TaskId) => Global.Write<void>
+    readonly release: (task: Task.TaskId) => Global.Write<void>
   }
 >()("@ras/work/Blocks") {
   static readonly layer = Layer.effect(
@@ -100,7 +101,7 @@ export class Blocks extends Context.Service<
       const block = (id: string) => Effect.flatMap(storedBlocks.byId(id), Errors.orNotFound("work block", id))
 
       /** An open task of the owner's, in a space whose calendar takes its blocks. */
-      const workable = (id: Domain.TaskId, verb: string) =>
+      const workable = (id: Task.TaskId, verb: string) =>
         Effect.gen(function* () {
           const found = yield* tasks.byId(id)
           if (Option.isNone(found)) return yield* new Errors.NotFound({ subject: "task", id })
@@ -128,7 +129,7 @@ export class Blocks extends Context.Service<
         })
 
       /** Refuses a span another block already takes; a running block takes its time until now. */
-      const free = (start: DateTime.Utc, end: DateTime.Utc, now: DateTime.Utc, except: Option.Option<Domain.BlockId>) =>
+      const free = (start: DateTime.Utc, end: DateTime.Utc, now: DateTime.Utc, except: Option.Option<Block.BlockId>) =>
         Effect.gen(function* () {
           const overlapping = (yield* storedBlocks.overlapping(
             { start: DateTime.formatIso(start), end: DateTime.formatIso(end) },
@@ -191,13 +192,13 @@ export class Blocks extends Context.Service<
       /** A new block's row, with the event its calendar took unless it is a draft. */
       const create = (
         action: Global.Action,
-        target: { readonly task: Domain.TaskSummary; readonly calendar: Calendar.CalendarId },
+        target: { readonly task: Task.TaskSummary; readonly calendar: Calendar.CalendarId },
         start: DateTime.Utc,
         end: Option.Option<DateTime.Utc>,
         eventEnd: Option.Option<DateTime.Utc>
       ) =>
         Effect.gen(function* () {
-          const id = yield* Id.generate(Domain.BlockId)
+          const id = yield* Id.generate(Block.BlockId)
           const project = target.task.project === null ? Option.none() : yield* projects.byId(target.task.project)
           const title = Option.match(project, {
             onNone: () => target.task.title,

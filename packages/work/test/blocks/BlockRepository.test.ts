@@ -10,7 +10,8 @@ import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as KernelModule from "@ras/kernel/Module"
 import * as BlockRepository from "../../src/blocks/BlockRepository.ts"
-import * as Domain from "../../src/Domain.ts"
+import * as Block from "../../src/blocks/Block.ts"
+import * as Task from "../../src/board/Task.ts"
 import * as Migrations from "../../src/Migrations.ts"
 import * as SpaceRepository from "../../src/board/SpaceRepository.ts"
 import * as TaskRepository from "../../src/board/TaskRepository.ts"
@@ -23,12 +24,12 @@ const repositories = Layer.mergeAll(
   TaskRepository.TaskRepository.layer
 ).pipe(Layer.provideMerge(Testing.layer([tables])))
 
-const task = Domain.TaskId.make("00000000-0000-4000-8000-0000000000a1")
+const task = Task.TaskId.make("00000000-0000-4000-8000-0000000000a1")
 const at = (iso: string) => DateTime.makeUnsafe(iso)
 const entry = { subject: "probe", before: Option.none(), after: Option.none() }
 
 const block = (n: number, start: string, end: Option.Option<string>, event: Option.Option<string>) => ({
-  id: Domain.BlockId.make(`00000000-0000-4000-8000-00000000000${n}`),
+  id: Block.BlockId.make(`00000000-0000-4000-8000-00000000000${n}`),
   task,
   title: "Plan the week",
   calendar: Calendar.CalendarId.make(1),

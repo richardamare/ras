@@ -8,19 +8,20 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Project from "./Project.ts"
+import * as Space from "./Space.ts"
 
 const ProjectRow = Schema.Struct({
-  id: Domain.ProjectId,
-  space: Domain.SpaceId,
+  id: Project.ProjectId,
+  space: Space.SpaceId,
   name: Schema.String,
-  status: Domain.ProjectStatus,
+  status: Project.ProjectStatus,
   deadline: Schema.NullOr(Time.PragueDate),
   description: Schema.NullOr(Schema.String)
 })
 type ProjectRow = typeof ProjectRow.Type
 
-const toProject = (row: ProjectRow): Domain.Project => new Domain.Project(row)
+const toProject = (row: ProjectRow): Project.Project => new Project.Project(row)
 
 const write = <A, E>(statement: Effect.Effect<A, E>) => Global.write(Effect.asVoid(Effect.orDie(statement)))
 
@@ -29,12 +30,12 @@ export class ProjectRepository extends Context.Service<
   {
     /** Open projects first, by deadline. */
     readonly list: (filter: {
-      readonly space: Option.Option<Domain.SpaceId>
-    }) => Effect.Effect<ReadonlyArray<Domain.Project>>
-    readonly byId: (id: string) => Effect.Effect<Option.Option<Domain.Project>>
-    readonly insert: (project: Domain.Project) => Effect.Effect<void, never, Global.Transaction>
+      readonly space: Option.Option<Space.SpaceId>
+    }) => Effect.Effect<ReadonlyArray<Project.Project>>
+    readonly byId: (id: string) => Effect.Effect<Option.Option<Project.Project>>
+    readonly insert: (project: Project.Project) => Effect.Effect<void, never, Global.Transaction>
     /** Saves the project; a project that moved space takes its tasks along. */
-    readonly update: (project: Domain.Project) => Effect.Effect<void, never, Global.Transaction>
+    readonly update: (project: Project.Project) => Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/work/ProjectRepository") {
   static readonly layer = Layer.effect(

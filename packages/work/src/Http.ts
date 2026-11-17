@@ -9,140 +9,141 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Blocks from "./blocks/Blocks.ts"
 import * as Board from "./board/Board.ts"
-import * as Domain from "./Domain.ts"
+import * as Block from "./blocks/Block.ts"
+import * as Project from "./board/Project.ts"
+import * as ProjectDetail from "./board/ProjectDetail.ts"
+import * as Space from "./board/Space.ts"
+import * as Task from "./board/Task.ts"
+import * as Confirmation from "./drafts/Confirmation.ts"
 import * as Drafts from "./drafts/Drafts.ts"
 
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 
 export const group = HttpApiGroup.make("work")
-  .add(HttpApiEndpoint.get("spaces", "/spaces", { success: Schema.Array(Domain.Space) }))
-  .add(
-    HttpApiEndpoint.post("addSpace", "/spaces", { payload: Domain.NewSpace, success: Domain.Space, error: failures })
-  )
+  .add(HttpApiEndpoint.get("spaces", "/spaces", { success: Schema.Array(Space.Space) }))
+  .add(HttpApiEndpoint.post("addSpace", "/spaces", { payload: Space.NewSpace, success: Space.Space, error: failures }))
   .add(
     HttpApiEndpoint.patch("changeSpace", "/spaces/:id", {
-      params: { id: Domain.SpaceId },
-      payload: Domain.SpaceChange,
-      success: Domain.Space,
+      params: { id: Space.SpaceId },
+      payload: Space.SpaceChange,
+      success: Space.Space,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.post("archiveSpace", "/spaces/:id/archive", {
-      params: { id: Domain.SpaceId },
-      success: Domain.Space,
+      params: { id: Space.SpaceId },
+      success: Space.Space,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("projects", "/projects", {
-      query: { space: Schema.optionalKey(Domain.SpaceId) },
-      success: Schema.Array(Domain.Project)
+      query: { space: Schema.optionalKey(Space.SpaceId) },
+      success: Schema.Array(Project.Project)
     })
   )
   .add(
     HttpApiEndpoint.get("project", "/projects/:id", {
-      params: { id: Domain.ProjectId },
-      success: Domain.ProjectDetail,
+      params: { id: Project.ProjectId },
+      success: ProjectDetail.ProjectDetail,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.post("addProject", "/projects", {
-      payload: Domain.NewProject,
-      success: Domain.Project,
+      payload: Project.NewProject,
+      success: Project.Project,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.patch("changeProject", "/projects/:id", {
-      params: { id: Domain.ProjectId },
-      payload: Domain.ProjectChange,
-      success: Domain.Project,
+      params: { id: Project.ProjectId },
+      payload: Project.ProjectChange,
+      success: Project.Project,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("tasks", "/tasks", {
-      query: Domain.TaskFilter.fields,
-      success: Schema.Array(Domain.TaskSummary),
+      query: Task.TaskFilter.fields,
+      success: Schema.Array(Task.TaskSummary),
       error: failures
     })
   )
-  .add(
-    HttpApiEndpoint.get("task", "/tasks/:id", { params: { id: Domain.TaskId }, success: Domain.Task, error: failures })
-  )
-  .add(HttpApiEndpoint.post("addTask", "/tasks", { payload: Domain.NewTask, success: Domain.Task, error: failures }))
+  .add(HttpApiEndpoint.get("task", "/tasks/:id", { params: { id: Task.TaskId }, success: Task.Task, error: failures }))
+  .add(HttpApiEndpoint.post("addTask", "/tasks", { payload: Task.NewTask, success: Task.Task, error: failures }))
   .add(
     HttpApiEndpoint.patch("changeTask", "/tasks/:id", {
-      params: { id: Domain.TaskId },
-      payload: Domain.TaskChange,
-      success: Domain.Task,
+      params: { id: Task.TaskId },
+      payload: Task.TaskChange,
+      success: Task.Task,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.delete("deleteTask", "/tasks/:id", {
-      params: { id: Domain.TaskId },
-      success: Schema.NullOr(Domain.Task),
+      params: { id: Task.TaskId },
+      success: Schema.NullOr(Task.Task),
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.post("comment", "/tasks/:id/comments", {
-      params: { id: Domain.TaskId },
-      payload: Domain.NewComment,
-      success: Domain.Task,
+      params: { id: Task.TaskId },
+      payload: Task.NewComment,
+      success: Task.Task,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.post("link", "/tasks/:id/links", {
-      params: { id: Domain.TaskId },
-      payload: Schema.Struct({ url: Domain.LinkUrl }),
-      success: Domain.Task,
+      params: { id: Task.TaskId },
+      payload: Schema.Struct({ url: Task.LinkUrl }),
+      success: Task.Task,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.delete("unlink", "/tasks/:id/links", {
-      params: { id: Domain.TaskId },
-      query: { url: Domain.LinkUrl },
-      success: Domain.Task,
+      params: { id: Task.TaskId },
+      query: { url: Task.LinkUrl },
+      success: Task.Task,
       error: failures
     })
   )
   .add(
     HttpApiEndpoint.get("blocks", "/blocks", {
       query: { from: Time.PragueLocal, to: Time.PragueLocal },
-      success: Schema.Array(Domain.Block),
+      success: Schema.Array(Block.Block),
       error: failures
     })
   )
-  .add(HttpApiEndpoint.get("running", "/blocks/running", { success: Schema.NullOr(Domain.Block) }))
-  .add(HttpApiEndpoint.post("plan", "/blocks", { payload: Domain.PlanWork, success: Domain.Block, error: failures }))
+  .add(HttpApiEndpoint.get("running", "/blocks/running", { success: Schema.NullOr(Block.Block) }))
+  .add(HttpApiEndpoint.post("plan", "/blocks", { payload: Block.PlanWork, success: Block.Block, error: failures }))
   .add(
     HttpApiEndpoint.post("start", "/blocks/start", {
-      payload: Schema.Struct({ task: Domain.TaskId }),
-      success: Domain.Block,
+      payload: Schema.Struct({ task: Task.TaskId }),
+      success: Block.Block,
       error: failures
     })
   )
-  .add(HttpApiEndpoint.post("stop", "/blocks/stop", { success: Domain.Block, error: failures }))
-  .add(HttpApiEndpoint.post("log", "/blocks/log", { payload: Domain.LogWork, success: Domain.Block, error: failures }))
+  .add(HttpApiEndpoint.post("stop", "/blocks/stop", { success: Block.Block, error: failures }))
+  .add(HttpApiEndpoint.post("log", "/blocks/log", { payload: Block.LogWork, success: Block.Block, error: failures }))
   .add(
     HttpApiEndpoint.patch("move", "/blocks/:id", {
-      params: { id: Domain.BlockId },
+      params: { id: Block.BlockId },
       payload: Schema.Struct({ start: Time.PragueLocal, end: Time.PragueLocal }),
-      success: Domain.Block,
+      success: Block.Block,
       error: failures
     })
   )
-  .add(HttpApiEndpoint.delete("remove", "/blocks/:id", { params: { id: Domain.BlockId }, error: failures }))
+  .add(HttpApiEndpoint.delete("remove", "/blocks/:id", { params: { id: Block.BlockId }, error: failures }))
   .add(
     HttpApiEndpoint.post("confirmDrafts", "/drafts/confirm", {
-      payload: Domain.ConfirmDrafts,
-      success: Domain.DraftsConfirmed,
+      payload: Confirmation.ConfirmDrafts,
+      success: Confirmation.DraftsConfirmed,
       error: failures
     })
   )

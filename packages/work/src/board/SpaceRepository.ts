@@ -8,12 +8,12 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
-import * as Domain from "../Domain.ts"
+import * as Space from "./Space.ts"
 
 const SpaceRow = Schema.Struct({
-  id: Domain.SpaceId,
+  id: Space.SpaceId,
   name: Schema.String,
-  color: Domain.Color,
+  color: Space.Color,
   position: Schema.Int,
   calendar: Schema.NullOr(Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId))),
   default: Schema.BooleanFromBit,
@@ -21,23 +21,23 @@ const SpaceRow = Schema.Struct({
 })
 type SpaceRow = typeof SpaceRow.Type
 
-const toSpace = (row: SpaceRow): Domain.Space => new Domain.Space(row)
+const toSpace = (row: SpaceRow): Space.Space => new Space.Space(row)
 
 /** The column keeps the calendar's id as text. */
-const calendarText = (space: Domain.Space) => (space.calendar === null ? null : String(space.calendar))
+const calendarText = (space: Space.Space) => (space.calendar === null ? null : String(space.calendar))
 
 const write = <A, E>(statement: Effect.Effect<A, E>) => Global.write(Effect.asVoid(Effect.orDie(statement)))
 
 export class SpaceRepository extends Context.Service<
   SpaceRepository,
   {
-    readonly all: Effect.Effect<ReadonlyArray<Domain.Space>>
-    readonly byId: (id: string) => Effect.Effect<Option.Option<Domain.Space>>
-    readonly defaultSpace: Effect.Effect<Domain.Space>
-    readonly insert: (space: Domain.Space) => Effect.Effect<void, never, Global.Transaction>
+    readonly all: Effect.Effect<ReadonlyArray<Space.Space>>
+    readonly byId: (id: string) => Effect.Effect<Option.Option<Space.Space>>
+    readonly defaultSpace: Effect.Effect<Space.Space>
+    readonly insert: (space: Space.Space) => Effect.Effect<void, never, Global.Transaction>
     /** A space made the default takes that from the one that was. */
-    readonly update: (space: Domain.Space) => Effect.Effect<void, never, Global.Transaction>
-    readonly archive: (id: Domain.SpaceId, at: string) => Effect.Effect<void, never, Global.Transaction>
+    readonly update: (space: Space.Space) => Effect.Effect<void, never, Global.Transaction>
+    readonly archive: (id: Space.SpaceId, at: string) => Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/work/SpaceRepository") {
   static readonly layer = Layer.effect(

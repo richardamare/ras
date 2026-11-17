@@ -9,46 +9,48 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Project from "./Project.ts"
+import * as Space from "./Space.ts"
+import * as Task from "./Task.ts"
 
 /** The columns of a task a write sets. `updated_at` is the write's instant, and `closed_at` follows the status. */
 export type TaskColumns = {
   readonly title: string
   readonly body: string
-  readonly status: Domain.Status
-  readonly assignee: Domain.Person
-  readonly priority: Domain.Priority
+  readonly status: Task.Status
+  readonly assignee: Task.Person
+  readonly priority: Task.Priority
   readonly deadline: Time.PragueDate | null
   readonly estimate: number | null
-  readonly project: Domain.ProjectId | null
-  readonly space: Domain.SpaceId
+  readonly project: Project.ProjectId | null
+  readonly space: Space.SpaceId
 }
 
 /** The task with its body, as the row stores it. */
 export interface StoredTask {
-  readonly summary: Domain.TaskSummary
+  readonly summary: Task.TaskSummary
   readonly body: string
 }
 
 const TaskRow = Schema.Struct({
-  id: Domain.TaskId,
+  id: Task.TaskId,
   title: Schema.String,
   body: Schema.String,
-  status: Domain.Status,
-  assignee: Domain.Person,
-  priority: Domain.Priority,
+  status: Task.Status,
+  assignee: Task.Person,
+  priority: Task.Priority,
   deadline: Schema.NullOr(Time.PragueDate),
   estimate: Schema.NullOr(Schema.Int),
-  project: Schema.NullOr(Domain.ProjectId),
-  space: Domain.SpaceId,
+  project: Schema.NullOr(Project.ProjectId),
+  space: Space.SpaceId,
   created: Schema.String,
   updated: Schema.String,
   closed: Schema.NullOr(Schema.String)
 })
 type TaskRow = typeof TaskRow.Type
 
-const toTaskSummary = (row: TaskRow): Domain.TaskSummary =>
-  new Domain.TaskSummary({
+const toTaskSummary = (row: TaskRow): Task.TaskSummary =>
+  new Task.TaskSummary({
     ...Struct.omit(row, ["body"]),
     created: Time.pragueLocalOf(row.created),
     updated: Time.pragueLocalOf(row.updated),
@@ -58,17 +60,17 @@ const toTaskSummary = (row: TaskRow): Domain.TaskSummary =>
 const toStoredTask = (row: TaskRow): StoredTask => ({ summary: toTaskSummary(row), body: row.body })
 
 const CommentRow = Schema.Struct({
-  id: Domain.CommentId,
-  author: Domain.Person,
+  id: Task.CommentId,
+  author: Task.Person,
   at: Schema.String,
   text: Schema.String,
   link: Schema.NullOr(Schema.String)
 })
 type CommentRow = typeof CommentRow.Type
 
-const toComment = (row: CommentRow): Domain.Comment => new Domain.Comment({ ...row, at: Time.pragueLocalOf(row.at) })
+const toComment = (row: CommentRow): Task.Comment => new Task.Comment({ ...row, at: Time.pragueLocalOf(row.at) })
 
-const LinkRow = Schema.Struct({ url: Domain.LinkUrl })
+const LinkRow = Schema.Struct({ url: Task.LinkUrl })
 type LinkRow = typeof LinkRow.Type
 
 const toLink = (row: LinkRow): string => row.url
@@ -80,36 +82,28 @@ export class TaskRepository extends Context.Service<
   {
     /** Open work first, by deadline; `updatedSince` is a UTC instant. */
     readonly list: (
-      filter: Omit<Domain.TaskFilter, "updatedSince"> & { readonly updatedSince?: string }
-    ) => Effect.Effect<ReadonlyArray<Domain.TaskSummary>>
+      filter: Omit<Task.TaskFilter, "updatedSince"> & { readonly updatedSince?: string }
+    ) => Effect.Effect<ReadonlyArray<Task.TaskSummary>>
     readonly byId: (id: string) => Effect.Effect<Option.Option<StoredTask>>
-    readonly comments: (task: Domain.TaskId) => Effect.Effect<ReadonlyArray<Domain.Comment>>
-    readonly links: (task: Domain.TaskId) => Effect.Effect<ReadonlyArray<string>>
-    readonly insert: (
-      id: Domain.TaskId,
-      task: TaskColumns,
-      at: string
-    ) => Effect.Effect<void, never, Global.Transaction>
+    readonly comments: (task: Task.TaskId) => Effect.Effect<ReadonlyArray<Task.Comment>>
+    readonly links: (task: Task.TaskId) => Effect.Effect<ReadonlyArray<string>>
+    readonly insert: (id: Task.TaskId, task: TaskColumns, at: string) => Effect.Effect<void, never, Global.Transaction>
     /** A task keeps the time it was first closed while it stays done, and loses it when it reopens. */
-    readonly update: (
-      id: Domain.TaskId,
-      task: TaskColumns,
-      at: string
-    ) => Effect.Effect<void, never, Global.Transaction>
+    readonly update: (id: Task.TaskId, task: TaskColumns, at: string) => Effect.Effect<void, never, Global.Transaction>
     /** Marks the task changed, as a comment or a link does. */
-    readonly touch: (id: Domain.TaskId, at: string) => Effect.Effect<void, never, Global.Transaction>
+    readonly touch: (id: Task.TaskId, at: string) => Effect.Effect<void, never, Global.Transaction>
     /** Deletes the task with its comments and links. */
-    readonly delete: (id: Domain.TaskId) => Effect.Effect<void, never, Global.Transaction>
+    readonly delete: (id: Task.TaskId) => Effect.Effect<void, never, Global.Transaction>
     readonly addComment: (
-      task: Domain.TaskId,
+      task: Task.TaskId,
       comment: {
-        readonly id: Domain.CommentId
-        readonly author: Domain.Person
+        readonly id: Task.CommentId
+        readonly author: Task.Person
         readonly at: string
-      } & Domain.NewComment
+      } & Task.NewComment
     ) => Effect.Effect<void, never, Global.Transaction>
-    readonly addLink: (task: Domain.TaskId, url: string) => Effect.Effect<void, never, Global.Transaction>
-    readonly removeLink: (task: Domain.TaskId, url: string) => Effect.Effect<void, never, Global.Transaction>
+    readonly addLink: (task: Task.TaskId, url: string) => Effect.Effect<void, never, Global.Transaction>
+    readonly removeLink: (task: Task.TaskId, url: string) => Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/work/TaskRepository") {
   static readonly layer = Layer.effect(
