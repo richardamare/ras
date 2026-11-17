@@ -276,8 +276,8 @@ export class Calendar extends Context.Service<
         Effect.gen(function* () {
           const span = yield* spanOf(window)
           const found = yield* entries(span)
-          const calendars = Arr.map(yield* connected, ({ calendar }) => calendar)
-          return Busy.conflicts(found, calendars, span)
+          const shownCalendars = Arr.map(yield* connected, ({ calendar }) => calendar)
+          return Busy.conflicts(found, shownCalendars, span)
         }),
 
       workHours: (month, categories) =>
@@ -297,13 +297,18 @@ export class Calendar extends Context.Service<
                   Effect.map(read(day), (found) =>
                     Arr.findFirst(
                       found,
-                      (entry) =>
-                        entry.ref.calendar === ref.calendar && entry.ref.id === ref.id && entry.ref.date === ref.date
+                      (candidate) =>
+                        candidate.ref.calendar === ref.calendar &&
+                        candidate.ref.id === ref.id &&
+                        candidate.ref.date === ref.date
                     )
                   ),
                 onSome: (draft) =>
                   Effect.map(drafts.byId(draft), (found) =>
-                    Option.filter(Option.map(found, entryOfDraft), (entry) => entry.ref.calendar === ref.calendar)
+                    Option.filter(
+                      Option.map(found, entryOfDraft),
+                      (candidate) => candidate.ref.calendar === ref.calendar
+                    )
                   )
               })
           const calendar = Arr.findFirst(all, (found) => found.calendar.id === ref.calendar)

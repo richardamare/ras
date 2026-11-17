@@ -16,6 +16,8 @@ const sources = Arr.map(
 const offending = (rule: RegExp, allowed: (path: string) => boolean) =>
   Arr.filter(sources, (file) => !allowed(file.path) && rule.test(file.text)).map((file) => file.path)
 
+const owner = (path: string) => /^packages\/([a-z]+)\/src\//.exec(path)?.[1]
+
 describe("the architecture", () => {
   it("writes SQL only in a module's repositories, its migrations and the audit", () => {
     assert.deepStrictEqual(
@@ -105,7 +107,6 @@ describe("the architecture", () => {
   })
 
   it("lets a module's SQL name only its own tables", () => {
-    const owner = (path: string) => /^packages\/([a-z]+)\/src\//.exec(path)?.[1]
     const modules = new Set(
       Arr.filterMap(sources, (file) =>
         /^packages\/[a-z]+\/src\/Module\.ts$/.test(file.path)

@@ -61,6 +61,20 @@ const span = (start: DateTime.Utc, end: DateTime.Utc): Calendar.Span => ({ start
 
 const clock = (instant: DateTime.Utc) => Time.toPragueLocal(instant).slice(11)
 
+const length = (min: number, start: DateTime.Utc, end: DateTime.Utc, what: string) => {
+  const minutes = (millis(end) - millis(start)) / 60_000
+  return minutes < min || minutes > 720
+    ? Effect.fail(new Errors.Invalid({ reason: `${what} runs from ${min} minutes to 12 hours.` }))
+    : Effect.void
+}
+
+const shown = (row: BlockRepository.StoredBlock) => ({
+  task: row.task,
+  start: Time.toPragueLocal(row.start),
+  end: Option.getOrNull(Option.map(row.end, Time.toPragueLocal)),
+  draft: Option.isNone(row.event)
+})
+
 export class Blocks extends Context.Service<
   Blocks,
   {
@@ -144,13 +158,6 @@ export class Blocks extends Context.Service<
           )
         })
 
-      const length = (min: number, start: DateTime.Utc, end: DateTime.Utc, what: string) => {
-        const minutes = (millis(end) - millis(start)) / 60_000
-        return minutes < min || minutes > 720
-          ? Effect.fail(new Errors.Invalid({ reason: `${what} runs from ${min} minutes to 12 hours.` }))
-          : Effect.void
-      }
-
       const save = <A>(
         action: Global.Action,
         row: BlockRepository.StoredBlock,
@@ -167,13 +174,6 @@ export class Blocks extends Context.Service<
             after: after as Option.Option<Global.Snapshot>
           })
         )
-
-      const shown = (row: BlockRepository.StoredBlock) => ({
-        task: row.task,
-        start: Time.toPragueLocal(row.start),
-        end: Option.getOrNull(Option.map(row.end, Time.toPragueLocal)),
-        draft: Option.isNone(row.event)
-      })
 
       const discard = (row: BlockRepository.StoredBlock) =>
         Effect.gen(function* () {
