@@ -14,6 +14,7 @@ const config: UserConfig = {
         "deps",
         "deps-dev",
         "docs",
+        "e2e",
         "global",
         "kernel",
         "mail",
