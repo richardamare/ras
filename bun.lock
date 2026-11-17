@@ -54,6 +54,7 @@
       "dependencies": {
         "@effect/platform-bun": "catalog:",
         "@ras/api": "workspace:*",
+        "@ras/calendar": "workspace:*",
         "@ras/global": "workspace:*",
         "@ras/kernel": "workspace:*",
         "effect": "catalog:",
