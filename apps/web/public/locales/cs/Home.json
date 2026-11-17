@@ -1,4 +1,21 @@
 {
   "title": "Domů",
-  "signedInAs": "Přihlášen jako {{email}}."
+  "running": { "title": "Běží", "none": "Žádný blok neběží.", "stop": "Zastavit" },
+  "stopFailed": "Blok se nepodařilo zastavit.",
+  "counts": { "open": "Otevřené", "overdue": "Po termínu", "inReview": "Ke kontrole" },
+  "deadlines": {
+    "today": "Termín dnes",
+    "tomorrow": "Termín zítra",
+    "thisWeek": "Termín tento týden",
+    "none": "Nic nemá termín."
+  },
+  "waiting": { "title": "Čeká na tebe", "none": "Nic na tebe nečeká." },
+  "status": {
+    "inbox": "Inbox",
+    "todo": "K udělání",
+    "in_progress": "Rozpracované",
+    "blocked": "Blokované",
+    "review": "Ke kontrole",
+    "done": "Hotovo"
+  }
 }
