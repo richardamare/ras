@@ -106,16 +106,8 @@ const imapDay = (day: Time.PragueDate) => new Date(`${day}T00:00:00Z`)
 
 const fetched = { uid: true, envelope: true, bodyStructure: true, internalDate: true } as const
 
-const bytesOf = async (download: Imap.DownloadObject | Imap.DownloadNotFound) => {
-  if (download.content === undefined) return new Uint8Array()
-  const chunks: Array<Uint8Array> = []
-  for await (const chunk of download.content) chunks.push(chunk as Uint8Array)
-  return Buffer.concat(chunks)
-}
-
 /** The failure an IMAP error stands for; a folder the account lacks is not found. */
 const failure = (folder: string) => (error: unknown) => {
-  if (error instanceof Errors.NotFound) return error
   const { authenticationFailed, serverResponseCode, responseText } = (error ?? {}) as {
     authenticationFailed?: boolean
     serverResponseCode?: string
@@ -130,11 +122,93 @@ const failure = (folder: string) => (error: unknown) => {
   return failed("iCloud Mail could not be reached. Try again in a minute.")
 }
 
+type Failure = Errors.NotFound | Errors.SourceFailed
+
+/** A folder open for reading; `run` calls the IMAP client and fails with what its error stands for. */
+interface Session {
+  readonly box: Imap.MailboxObject
+  readonly folder: string
+  readonly run: <A>(call: (client: Imap.ImapFlow) => Promise<A>) => Effect.Effect<A, Failure>
+}
+
+/** A part's bytes; a part the server no longer has reads as empty. */
+const download = (session: Session, uid: number, part: Part, maxBytes?: number) =>
+  Effect.flatMap(
+    session.run((client) =>
+      client.download(String(uid), part.id, { uid: true, ...(maxBytes === undefined ? {} : { maxBytes }) })
+    ),
+    ({ content }) =>
+      content === undefined
+        ? Effect.succeed(new Uint8Array())
+        : Effect.map(
+            session.run(() => Array.fromAsync(content)),
+            (chunks) => Buffer.concat(chunks as Array<Uint8Array>)
+          )
+  )
+
+const textIn = (session: Session, uid: number, parts: ReadonlyArray<Part>, maxBytes?: number) =>
+  Option.match(textPart(parts), {
+    onNone: () => Effect.succeed(""),
+    onSome: (part) =>
+      Effect.map(download(session, uid, part, maxBytes), (bytes) => textOf(part, new TextDecoder().decode(bytes)))
+  })
+
+const summaries = (session: Session, range: Imap.MessageRange) =>
+  session
+    .run((client) => client.fetchAll(range, fetched, { uid: true }))
+    .pipe(
+      Effect.flatMap((messages) =>
+        Effect.forEach(messages, (message) => {
+          const parts = partsOf(message.bodyStructure)
+          return Effect.map(
+            textIn(session, message.uid, parts, 64 * 1024),
+            (text) =>
+              new Message.Summary({
+                id: Message.messageId({
+                  folder: session.folder,
+                  uidValidity: Number(session.box.uidValidity),
+                  uid: message.uid
+                }),
+                sent: sentOf(message),
+                from: addresses(message.envelope?.from),
+                to: addresses(message.envelope?.to),
+                subject: message.envelope?.subject ?? "",
+                snippet: Text.snippet(text, snippetLength),
+                pdf: parts.some(isPdf)
+              })
+          )
+        })
+      ),
+      Effect.map((found): ReadonlyArray<Message.Summary> => found.toSorted((a, b) => b.sent.localeCompare(a.sent)))
+    )
+
+/** The PDFs of a message, in order, until the next one would take the answer past the budget. */
+const pdfs = (session: Session, uid: number, parts: ReadonlyArray<Part>) =>
+  Effect.gen(function* () {
+    const files: Array<Message.File> = []
+    const skipped: Array<string> = []
+    let total = 0
+    for (const part of parts.filter(isPdf)) {
+      const name = attachmentOf(part).name
+      if (total + part.size > budget) {
+        skipped.push(name)
+        continue
+      }
+      const bytes = yield* download(session, uid, part)
+      total += bytes.length
+      files.push(new Message.File({ name, mimeType: Pdf, content: Base64.encode(bytes) }))
+    }
+    return new Message.Files({ files, skipped })
+  })
+
+const none = Effect.succeed<ReadonlyArray<Message.Summary>>([])
+
 export const make = (username: string, password: Redacted.Redacted) => {
   /** Signs in, opens one folder read-only, runs `use` and signs out, whatever `use` answers. */
-  const inFolder = <A>(folder: string, use: (client: Imap.ImapFlow, box: Imap.MailboxObject) => Promise<A>) =>
-    Effect.tryPromise({
-      try: async () => {
+  const inFolder = <A>(folder: string, use: (session: Session) => Effect.Effect<A, Failure>) => {
+    const attempt = <B>(call: () => Promise<B>) => Effect.tryPromise({ try: call, catch: failure(folder) })
+    return Effect.acquireUseRelease(
+      Effect.suspend(() => {
         const client = new Imap.ImapFlow({
           host,
           port: 993,
@@ -144,141 +218,97 @@ export const make = (username: string, password: Redacted.Redacted) => {
           disableAutoIdle: true,
           socketTimeout: 30_000
         })
-        await client.connect()
-        try {
-          return await use(client, await client.mailboxOpen(folder, { readOnly: true }))
-        } finally {
-          await client.logout().catch(() => client.close())
-        }
-      },
-      catch: failure(folder)
-    }).pipe(
+        return Effect.as(
+          attempt(() => client.connect()),
+          client
+        )
+      }),
+      (client) =>
+        Effect.flatMap(
+          attempt(() => client.mailboxOpen(folder, { readOnly: true })),
+          (box) => use({ box, folder, run: (call) => attempt(() => call(client)) })
+        ),
+      (client) => Effect.tryPromise(() => client.logout()).pipe(Effect.catch(() => Effect.sync(() => client.close())))
+    ).pipe(
       Effect.tapError((error) =>
         error._tag === "SourceFailed" ? Effect.logWarning("iCloud Mail failed", folder, error.reason) : Effect.void
       ),
       Effect.withSpan("icloud", { attributes: { folder } })
     )
-
-  const text = async (client: Imap.ImapFlow, uid: number, parts: ReadonlyArray<Part>, maxBytes?: number) =>
-    Option.match(textPart(parts), {
-      onNone: async () => "",
-      onSome: async (part) =>
-        textOf(
-          part,
-          new TextDecoder().decode(
-            await bytesOf(
-              await client.download(String(uid), part.id, {
-                uid: true,
-                ...(maxBytes === undefined ? {} : { maxBytes })
-              })
-            )
-          )
-        )
-    })
-
-  const summaries = async (
-    client: Imap.ImapFlow,
-    box: Imap.MailboxObject,
-    folder: string,
-    range: Imap.MessageRange
-  ) => {
-    const found: Array<Message.Summary> = []
-    for (const message of await client.fetchAll(range, fetched, { uid: true })) {
-      const parts = partsOf(message.bodyStructure)
-      found.push(
-        new Message.Summary({
-          id: Message.messageId({ folder, uidValidity: Number(box.uidValidity), uid: message.uid }),
-          sent: sentOf(message),
-          from: addresses(message.envelope?.from),
-          to: addresses(message.envelope?.to),
-          subject: message.envelope?.subject ?? "",
-          snippet: Text.snippet(await text(client, message.uid, parts, 64 * 1024), snippetLength),
-          pdf: parts.some(isPdf)
-        })
-      )
-    }
-    return found.toSorted((a, b) => b.sent.localeCompare(a.sent))
   }
 
   /** The message at `id`, or not found when its folder's UIDVALIDITY moved on or the UID is gone. */
   const inMessage = <A>(
     id: Message.MessageId,
-    use: (client: Imap.ImapFlow, message: Imap.FetchMessageObject, parts: ReadonlyArray<Part>) => Promise<A>
+    use: (session: Session, message: Imap.FetchMessageObject, parts: ReadonlyArray<Part>) => Effect.Effect<A, Failure>
   ) =>
     Effect.flatMap(Errors.orNotFound("mail message", id)(Message.messageRef(id)), (ref) =>
-      inFolder(ref.folder, async (client, box) => {
-        const message =
-          Number(box.uidValidity) === ref.uidValidity
-            ? await client.fetchOne(String(ref.uid), fetched, { uid: true })
-            : false
-        if (message === false) throw new Errors.NotFound({ subject: "mail message", id })
-        return use(client, message, partsOf(message.bodyStructure))
-      })
+      inFolder(ref.folder, (session) =>
+        Effect.flatMap(
+          Number(session.box.uidValidity) === ref.uidValidity
+            ? session.run((client) => client.fetchOne(String(ref.uid), fetched, { uid: true }))
+            : Effect.succeed(false as const),
+          (message) =>
+            message === false
+              ? Effect.fail(new Errors.NotFound({ subject: "mail message", id }))
+              : use(session, message, partsOf(message.bodyStructure))
+        )
+      )
     )
 
   return Mailbox.of({
     search: (search) =>
-      Effect.andThen(checkDays(search), () => {
-        const folder = search.folder ?? Search.inbox
-        return inFolder(folder, async (client, box) => {
-          const query = search.query
-          const uids =
-            (await client.search(
-              {
-                or: [{ subject: query }, { from: query }, { body: query }],
-                ...(search.since === undefined ? {} : { sentSince: imapDay(search.since) }),
-                ...(search.until === undefined ? {} : { sentBefore: imapDay(Time.addDays(search.until, 1)) })
-              },
-              { uid: true }
-            )) || []
-          const newest = uids.toSorted((a, b) => b - a).slice(0, search.limit ?? defaultLimit)
-          return newest.length === 0 ? [] : summaries(client, box, folder, newest)
-        })
-      }),
-
-    recent: (recent) => {
-      const folder = recent.folder ?? Search.inbox
-      return inFolder(folder, async (client, box) => {
-        if (box.exists === 0) return []
-        const first = Math.max(1, box.exists - (recent.limit ?? defaultLimit) + 1)
-        const uids = (await client.search({ seq: `${first}:*` }, { uid: true })) || []
-        return uids.length === 0 ? [] : summaries(client, box, folder, uids)
-      })
-    },
-
-    message: (id) =>
-      inMessage(
-        id,
-        async (client, message, parts) =>
-          new Message.Message({
-            id,
-            sent: sentOf(message),
-            from: addresses(message.envelope?.from),
-            to: addresses(message.envelope?.to),
-            cc: addresses(message.envelope?.cc),
-            subject: message.envelope?.subject ?? "",
-            body: await text(client, message.uid, parts),
-            attachments: parts.filter((part) => part.attachment).map(attachmentOf)
-          })
+      Effect.andThen(checkDays(search), () =>
+        inFolder(search.folder ?? Search.inbox, (session) =>
+          session
+            .run((client) =>
+              client.search(
+                {
+                  or: [{ subject: search.query }, { from: search.query }, { body: search.query }],
+                  ...(search.since === undefined ? {} : { sentSince: imapDay(search.since) }),
+                  ...(search.until === undefined ? {} : { sentBefore: imapDay(Time.addDays(search.until, 1)) })
+                },
+                { uid: true }
+              )
+            )
+            .pipe(
+              Effect.flatMap((uids) => {
+                const newest = (uids || []).toSorted((a, b) => b - a).slice(0, search.limit ?? defaultLimit)
+                return newest.length === 0 ? none : summaries(session, newest)
+              })
+            )
+        )
       ),
 
-    attachments: (id) =>
-      inMessage(id, async (client, message, parts) => {
-        const files: Array<Message.File> = []
-        const skipped: Array<string> = []
-        let total = 0
-        for (const part of parts.filter(isPdf)) {
-          const name = attachmentOf(part).name
-          if (total + part.size > budget) {
-            skipped.push(name)
-            continue
-          }
-          const bytes = await bytesOf(await client.download(String(message.uid), part.id, { uid: true }))
-          total += bytes.length
-          files.push(new Message.File({ name, mimeType: Pdf, content: Base64.encode(bytes) }))
-        }
-        return new Message.Files({ files, skipped })
-      })
+    recent: (recent) =>
+      inFolder(recent.folder ?? Search.inbox, (session) => {
+        if (session.box.exists === 0) return none
+        const first = Math.max(1, session.box.exists - (recent.limit ?? defaultLimit) + 1)
+        return Effect.flatMap(
+          session.run((client) => client.search({ seq: `${first}:*` }, { uid: true })),
+          (uids) => (!uids || uids.length === 0 ? none : summaries(session, uids))
+        )
+      }),
+
+    message: (id) =>
+      inMessage(id, (session, message, parts) =>
+        Effect.map(
+          textIn(session, message.uid, parts),
+          (body) =>
+            new Message.Message({
+              id,
+              sent: sentOf(message),
+              from: addresses(message.envelope?.from),
+              to: addresses(message.envelope?.to),
+              cc: addresses(message.envelope?.cc),
+              subject: message.envelope?.subject ?? "",
+              body,
+              attachments: parts.filter((part) => part.attachment).map(attachmentOf)
+            })
+        )
+      ),
+
+    attachments: (id) => inMessage(id, (session, message, parts) => pdfs(session, message.uid, parts))
   })
 }
 
@@ -354,33 +384,38 @@ const sampleMessages: ReadonlyArray<SampleMessage> = [
 /** The bytes the sample serves as every PDF. */
 export const samplePdf = new TextEncoder().encode("%PDF-1.4\n% invented\n%%EOF\n")
 
+const sampleId = (message: SampleMessage) =>
+  Message.messageId({ folder: message.folder, uidValidity: 1, uid: message.uid })
+
+const sampleBody = (message: SampleMessage) =>
+  message.body.startsWith("<") ? Text.fromHtml(message.body) : message.body
+
+const sampleFolder = (folder: string) =>
+  sampleMessages.some((message) => message.folder === folder)
+    ? Effect.succeed(sampleMessages.filter((message) => message.folder === folder))
+    : Effect.fail(new Errors.NotFound({ subject: "mail folder", id: folder }))
+
+const sampleMessage = (messageId: Message.MessageId) =>
+  Errors.orNotFound(
+    "mail message",
+    messageId
+  )(Option.fromUndefinedOr(sampleMessages.find((message) => sampleId(message) === messageId)))
+
 export const sample = Layer.effect(
   Mailbox,
   Effect.map(DateTime.now, (now) => {
     const sent = (message: SampleMessage) => Time.toPragueLocal(DateTime.subtract(now, { hours: message.hoursAgo }))
-    const id = (message: SampleMessage) =>
-      Message.messageId({ folder: message.folder, uidValidity: 1, uid: message.uid })
-    const html = (message: SampleMessage) => message.body.startsWith("<")
-    const body = (message: SampleMessage) => (html(message) ? Text.fromHtml(message.body) : message.body)
+    const day = (message: SampleMessage) => sent(message).slice(0, 10)
     const summary = (message: SampleMessage) =>
       new Message.Summary({
-        id: id(message),
+        id: sampleId(message),
         sent: sent(message),
         from: message.from,
         to: "Owner <owner@example.com>",
         subject: message.subject,
-        snippet: Text.snippet(body(message), snippetLength),
+        snippet: Text.snippet(sampleBody(message), snippetLength),
         pdf: Option.isSome(message.pdf)
       })
-    const inFolder = (folder: string) =>
-      sampleMessages.some((message) => message.folder === folder)
-        ? Effect.succeed(sampleMessages.filter((message) => message.folder === folder))
-        : Effect.fail(new Errors.NotFound({ subject: "mail folder", id: folder }))
-    const found = (messageId: Message.MessageId) =>
-      Errors.orNotFound(
-        "mail message",
-        messageId
-      )(Option.fromUndefinedOr(sampleMessages.find((message) => id(message) === messageId)))
     const newest = (messages: ReadonlyArray<SampleMessage>, limit: number | undefined) =>
       messages
         .map(summary)
@@ -390,13 +425,14 @@ export const sample = Layer.effect(
     return Mailbox.of({
       search: (search) =>
         Effect.andThen(checkDays(search), () =>
-          Effect.map(inFolder(search.folder ?? Search.inbox), (messages) => {
+          Effect.map(sampleFolder(search.folder ?? Search.inbox), (messages) => {
             const query = search.query.toLowerCase()
-            const day = (message: SampleMessage) => sent(message).slice(0, 10)
             return newest(
               messages.filter(
                 (message) =>
-                  [message.subject, message.from, body(message)].some((field) => field.toLowerCase().includes(query)) &&
+                  [message.subject, message.from, sampleBody(message)].some((field) =>
+                    field.toLowerCase().includes(query)
+                  ) &&
                   (search.since === undefined || day(message) >= search.since) &&
                   (search.until === undefined || day(message) <= search.until)
               ),
@@ -405,15 +441,15 @@ export const sample = Layer.effect(
           })
         ),
       recent: (recent) =>
-        Effect.map(inFolder(recent.folder ?? Search.inbox), (messages) => newest(messages, recent.limit)),
+        Effect.map(sampleFolder(recent.folder ?? Search.inbox), (messages) => newest(messages, recent.limit)),
       message: (messageId) =>
         Effect.map(
-          found(messageId),
+          sampleMessage(messageId),
           (message) =>
             new Message.Message({
               ...summary(message),
               cc: "",
-              body: body(message),
+              body: sampleBody(message),
               attachments: Option.match(message.pdf, {
                 onNone: () => [],
                 onSome: (name) => [new Message.Attachment({ name, mimeType: Pdf, size: samplePdf.length, pdf: true })]
@@ -422,7 +458,7 @@ export const sample = Layer.effect(
         ),
       attachments: (messageId) =>
         Effect.map(
-          found(messageId),
+          sampleMessage(messageId),
           (message) =>
             new Message.Files({
               files: Option.match(message.pdf, {
