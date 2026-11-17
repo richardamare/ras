@@ -17,13 +17,12 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Actor from "./Actor.ts"
 import * as Auth from "./Auth.ts"
 import * as Pages from "./Pages.ts"
-import * as Store from "./Store.ts"
+import * as GraphTokenRepository from "./GraphTokenRepository.ts"
 import * as Writes from "./Writes.ts"
 
 /** Personal Microsoft accounts sign in through the consumers tenant. */
@@ -118,7 +117,7 @@ const sealer = (secret: Redacted.Redacted) =>
   })
 
 export const make = Effect.gen(function* () {
-  const sql = yield* SqlClient.SqlClient
+  const tokens = yield* GraphTokenRepository.GraphTokenRepository
   const writes = yield* Writes.Writes
   const http = yield* HttpClient.HttpClient
   const auth = yield* Auth.settings
@@ -129,8 +128,7 @@ export const make = Effect.gen(function* () {
   const one = yield* Semaphore.make(1)
   const redirect = new URL(callbackPath, auth.url).href
 
-  const db = Effect.provideService(SqlClient.SqlClient, sql)
-  const stored = db(Store.graphTokens)
+  const stored = tokens.tokens
 
   const unset = "ras has no Microsoft app to connect Outlook with. Set RAS_GRAPH_CLIENT_ID and RAS_GRAPH_CLIENT_SECRET."
 
@@ -195,7 +193,7 @@ export const make = Effect.gen(function* () {
     const refresh = yield* open(row.value.refresh)
     const answer = yield* redeem({ grant_type: "refresh_token", refresh_token: refresh })
     const next = yield* columns(answer, refresh)
-    yield* db(Store.refreshGraph(next))
+    yield* tokens.refresh(next)
     return Redacted.make(answer.access_token)
   }).pipe(one.withPermit)
 
@@ -209,7 +207,7 @@ export const make = Effect.gen(function* () {
       )
       const now = yield* DateTime.now
       const expires = DateTime.formatIso(DateTime.addDuration(now, attemptLifetime))
-      yield* db(Store.startGraphAttempt(state, verifier, expires, DateTime.formatIso(now)))
+      yield* tokens.startAttempt(state, verifier, expires, DateTime.formatIso(now))
       const url = new URL(`${authority}/authorize`)
       url.search = new URLSearchParams({
         client_id: app.value.id,
@@ -227,7 +225,7 @@ export const make = Effect.gen(function* () {
 
     complete: (state, code) =>
       Effect.gen(function* () {
-        const taken = yield* db(Store.takeGraphAttempt(state))
+        const taken = yield* tokens.takeAttempt(state)
         const now = yield* DateTime.now
         const attempt = Option.getOrUndefined(taken)
         if (attempt === undefined || DateTime.isLessThan(DateTime.makeUnsafe(attempt.expires), now))
@@ -248,7 +246,7 @@ export const make = Effect.gen(function* () {
         const connection = new Connection({ account: accountOf(answer.id_token), connected: Time.toPragueLocal(now) })
         return yield* writes.run(
           "global.graph.connected",
-          Effect.as(db(Store.connectGraph(connection.account, next, DateTime.formatIso(now))), {
+          Effect.as(tokens.connect(connection.account, next, DateTime.formatIso(now)), {
             result: connection,
             subject: "graph",
             before: Option.none(),
@@ -268,7 +266,9 @@ export const make = Effect.gen(function* () {
   })
 })
 
-export const layer = Layer.effect(Graph, Effect.orDie(make)).pipe(Layer.provide(FetchHttpClient.layer))
+export const layer = Layer.effect(Graph, Effect.orDie(make)).pipe(
+  Layer.provide(Layer.merge(FetchHttpClient.layer, GraphTokenRepository.GraphTokenRepository.layer))
+)
 
 /** The owner at the console, who started the connection in their browser. */
 const owner = new Actor.Actor({ channel: { _tag: "Console" }, agent: Option.none() })

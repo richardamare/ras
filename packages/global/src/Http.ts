@@ -11,9 +11,10 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Module from "@ras/kernel/Module"
 import * as Actor from "./Actor.ts"
 import * as Agents from "./Agents.ts"
+import * as Client from "./Client.ts"
 import * as Clients from "./Clients.ts"
 import * as Graph from "./Graph.ts"
-import * as Store from "./Store.ts"
+import * as Agent from "./Agent.ts"
 
 export class Authenticated extends HttpApiMiddleware.Service<Authenticated, { provides: Actor.CurrentActor }>()(
   "@ras/global/Authenticated",
@@ -31,18 +32,18 @@ export const Me = Schema.Struct({ channel: Schema.String, agent: Schema.NullOr(S
 
 export const group = HttpApiGroup.make("global")
   .add(HttpApiEndpoint.get("whoami", "/me", { success: Me }))
-  .add(HttpApiEndpoint.get("agents", "/agents", { success: Schema.Array(Store.Agent) }))
+  .add(HttpApiEndpoint.get("agents", "/agents", { success: Schema.Array(Agent.Agent) }))
   .add(
     HttpApiEndpoint.post("addAgent", "/agents", {
       payload: Schema.Struct({ slug: Actor.AgentSlug, name: Schema.String.check(Schema.isNonEmpty()) }),
-      success: Store.Agent,
+      success: Agent.Agent,
       error: Errors.Refused
     })
   )
   .add(
     HttpApiEndpoint.post("archiveAgent", "/agents/:slug/archive", {
       params: { slug: Actor.AgentSlug },
-      success: Store.Agent,
+      success: Agent.Agent,
       error: Errors.NotFound
     })
   )
@@ -57,7 +58,7 @@ export const group = HttpApiGroup.make("global")
       error: Errors.Refused
     })
   )
-  .add(HttpApiEndpoint.get("clients", "/clients", { success: Schema.Array(Clients.Client) }))
+  .add(HttpApiEndpoint.get("clients", "/clients", { success: Schema.Array(Client.Client) }))
   .add(
     HttpApiEndpoint.post("revokeClient", "/clients/:id/revoke", {
       params: { id: Schema.String },

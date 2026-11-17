@@ -17,10 +17,12 @@ const offending = (rule: RegExp, allowed: (path: string) => boolean) =>
   Arr.filter(sources, (file) => !allowed(file.path) && rule.test(file.text)).map((file) => file.path)
 
 describe("the architecture", () => {
-  it("writes SQL only in a module's Store.ts, its migrations and the audit", () => {
+  it("writes SQL only in a module's repositories, its migrations and the audit", () => {
     assert.deepStrictEqual(
       offending(/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|\w+\s+SET)\b/, (path) =>
-        /\/test\/|\/src\/(Store|Migrations|Writes)\.ts$/.test(path)
+        /\/test\/|\/src\/Store\.ts$|\/[A-Z][A-Za-z]*Repository\.ts$|\/Migrations\.ts$|^packages\/global\/src\/(.+\/)?Writes\.ts$/.test(
+          path
+        )
       ),
       []
     )
