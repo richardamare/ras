@@ -8,6 +8,7 @@ import * as Button from "@/components/ui/button"
 import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Summary from "@/features/home/summary"
+import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
@@ -23,9 +24,6 @@ const useNow = (period: number) => {
 }
 
 const elapsed = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`
-
-const reasonOf = (error: unknown) =>
-  typeof error === "object" && error !== null && "reason" in error ? String(error.reason) : undefined
 
 function Count({ label, value, tone }: { label: string; value: number; tone?: "warning" }) {
   return (
@@ -50,7 +48,7 @@ function Running() {
   const stop = ReactQuery.useMutation({
     ...Queries.workStopMutation(),
     onSuccess: () => client.invalidateQueries(),
-    onError: (error) => Sonner.toast.error(reasonOf(error) ?? t("stopFailed"))
+    onError: (error) => Sonner.toast.error(Work.reasonOf(error) ?? t("stopFailed"))
   })
   const block = running.data ?? null
 
@@ -81,7 +79,7 @@ function Running() {
 }
 
 function TaskList({ title, tasks, empty }: { title: string; tasks: Api.TaskSummaryEncoded[]; empty: string }) {
-  const { t } = ReactI18next.useTranslation("Home")
+  const { t } = ReactI18next.useTranslation("Work")
   return (
     <Card.Card size="sm">
       <Card.CardHeader>
