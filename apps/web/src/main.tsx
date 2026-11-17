@@ -7,7 +7,6 @@ import * as ErrorBoundary from "@/components/error-boundary"
 import * as PageLoader from "@/components/page-loader"
 import * as ThemeProvider from "@/components/theme-provider"
 import * as Tooltip from "@/components/ui/tooltip"
-import * as Palette from "@/lib/palette"
 import * as Router from "@/router"
 import "@/lib/i18n"
 import "@/app.css"
@@ -24,8 +23,6 @@ import "@/app.css"
 const Devtools = import.meta.env.DEV
   ? React.lazy(() => import("@/components/devtools").then((m) => ({ default: m.Devtools })))
   : () => null
-
-Palette.initPalette()
 
 const root = Client.createRoot(document.getElementById("root") as HTMLElement)
 
