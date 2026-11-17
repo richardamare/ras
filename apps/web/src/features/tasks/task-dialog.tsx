@@ -10,6 +10,7 @@ import * as Select from "@/components/ui/select"
 import * as Separator from "@/components/ui/separator"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Textarea from "@/components/ui/textarea"
+import * as Completion from "@/features/tasks/completion"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
@@ -84,6 +85,9 @@ function Details({ id, comment: pointed }: { id: string; comment: string | null 
   return (
     <>
       <Dialog.DialogHeader className="flex-row items-start gap-1">
+        <span className="flex pt-1.5 pe-1.5">
+          <Completion.DoneCheckbox task={found} />
+        </span>
         <Dialog.DialogTitle className="min-w-0 flex-1 pt-1">{found.title}</Dialog.DialogTitle>
         <CopyLink.CopyLink url={TaskUrl.taskUrl(id)} className="-my-1 size-8 shrink-0" />
       </Dialog.DialogHeader>

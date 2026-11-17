@@ -44,6 +44,9 @@ export class Locator {
   click() {
     return Effect.promise(() => this.raw.click())
   }
+  hover() {
+    return Effect.promise(() => this.raw.hover())
+  }
   fill(value: string) {
     return Effect.promise(() => this.raw.fill(value))
   }

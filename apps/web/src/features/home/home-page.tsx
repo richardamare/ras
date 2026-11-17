@@ -10,6 +10,7 @@ import * as Button from "@/components/ui/button"
 import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Summary from "@/features/home/summary"
+import * as Completion from "@/features/tasks/completion"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
@@ -98,24 +99,35 @@ function TaskRows({
   tasks: ReadonlyArray<Api.TaskSummaryEncoded>
   onOpen: (task: Api.TaskSummaryEncoded) => void
 }) {
+  const completion = Completion.useTaskCompletion()
   return (
     <ul className="-mx-2 flex flex-col">
-      {tasks.map((task) => (
-        <li key={task.id}>
-          <button
-            type="button"
-            onClick={() => onOpen(task)}
-            className="flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
+      {tasks.map((task) => {
+        const phase = completion.phaseOf(task.id)
+        return (
+          <li
+            key={task.id}
+            className={Utils.cn(
+              "flex items-center gap-1 rounded-md ps-2 hover:bg-accent",
+              phase !== undefined && Completion.rowClass[phase]
+            )}
           >
-            <span className="min-w-0 truncate font-medium">{task.title}</span>
-            <TaskBits.PriorityFlag priority={task.priority} />
-            <span className="ms-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-              {task.assignee !== "owner" && <TaskBits.Assignee assignee={task.assignee} />}
-              <TaskBits.StatusBadge status={task.status} />
-            </span>
-          </button>
-        </li>
-      ))}
+            <Completion.DoneCheckbox task={task} />
+            <button
+              type="button"
+              onClick={() => onOpen(task)}
+              className="flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              <span className="min-w-0 truncate font-medium">{task.title}</span>
+              <TaskBits.PriorityFlag priority={task.priority} />
+              <span className="ms-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                {task.assignee !== "owner" && <TaskBits.Assignee assignee={task.assignee} />}
+                <TaskBits.StatusBadge status={task.status} />
+              </span>
+            </button>
+          </li>
+        )
+      })}
     </ul>
   )
 }
