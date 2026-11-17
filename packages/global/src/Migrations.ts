@@ -63,5 +63,23 @@ export const migrations: Module.Migrations = {
         name TEXT NOT NULL,
         archived_at TEXT
       ) STRICT`
-  )
+  ),
+  "0004_create_graph": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient
+    yield* sql`
+      CREATE TABLE global_graph_tokens (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        account TEXT NOT NULL,
+        access_token TEXT NOT NULL,
+        refresh_token TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        connected_at TEXT NOT NULL
+      ) STRICT`
+    yield* sql`
+      CREATE TABLE global_graph_attempts (
+        state TEXT PRIMARY KEY,
+        verifier TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      ) STRICT`
+  })
 }

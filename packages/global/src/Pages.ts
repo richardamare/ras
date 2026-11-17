@@ -78,3 +78,10 @@ const answer = (accept) => async () => {
 document.getElementById("allow").addEventListener("click", answer(true))
 document.getElementById("deny").addEventListener("click", answer(false))`
 )
+
+const escape = (text: string) =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+
+/** A page that only tells the owner what happened, such as the end of connecting Outlook. */
+export const notice = (title: string, text: string, status = 200) =>
+  HttpServerResponse.setStatus(page(escape(title), `<p>${escape(text)}</p>`, ""), status)
