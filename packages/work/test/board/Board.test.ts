@@ -7,8 +7,8 @@ import * as CalendarTesting from "@ras/calendar/testing"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as KernelTesting from "@ras/kernel/Testing"
-import * as Board from "../src/Board.ts"
-import * as Module from "../src/Module.ts"
+import * as Board from "../../src/board/Board.ts"
+import * as Module from "../../src/Module.ts"
 
 const scheduler = Global.AgentSlug.make("scheduler")
 const ghost = Global.AgentSlug.make("ghost")

@@ -9,7 +9,7 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 /** The columns of a task a write sets. `updated_at` is the write's instant, and `closed_at` follows the status. */
 export type TaskColumns = {

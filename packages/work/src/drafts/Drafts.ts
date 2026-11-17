@@ -6,9 +6,9 @@ import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Blocks from "./Blocks.ts"
-import * as Domain from "./Domain.ts"
-import * as BlockRepository from "./BlockRepository.ts"
+import * as Blocks from "../blocks/Blocks.ts"
+import * as Domain from "../Domain.ts"
+import * as BlockRepository from "../blocks/BlockRepository.ts"
 
 interface Pending {
   readonly id: string

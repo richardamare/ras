@@ -3,10 +3,10 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
-import * as Blocks from "./Blocks.ts"
-import * as Board from "./Board.ts"
+import * as Blocks from "./blocks/Blocks.ts"
+import * as Board from "./board/Board.ts"
 import * as Domain from "./Domain.ts"
-import * as Drafts from "./Drafts.ts"
+import * as Drafts from "./drafts/Drafts.ts"
 
 const TaskRef = { task: Domain.TaskId }
 

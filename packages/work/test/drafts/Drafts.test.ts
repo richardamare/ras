@@ -6,10 +6,10 @@ import * as Calendar from "@ras/calendar"
 import * as CalendarTesting from "@ras/calendar/testing"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
-import * as Blocks from "../src/Blocks.ts"
-import * as Board from "../src/Board.ts"
-import * as Drafts from "../src/Drafts.ts"
-import * as Module from "../src/Module.ts"
+import * as Blocks from "../../src/blocks/Blocks.ts"
+import * as Board from "../../src/board/Board.ts"
+import * as Drafts from "../../src/drafts/Drafts.ts"
+import * as Module from "../../src/Module.ts"
 
 const inHours = (hours: number) => Effect.map(DateTime.now, (now) => Time.toPragueLocal(DateTime.add(now, { hours })))
 

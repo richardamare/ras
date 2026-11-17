@@ -12,9 +12,9 @@ import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
 import * as KernelTesting from "@ras/kernel/Testing"
-import * as Blocks from "../src/Blocks.ts"
-import * as Board from "../src/Board.ts"
-import * as Module from "../src/Module.ts"
+import * as Blocks from "../../src/blocks/Blocks.ts"
+import * as Board from "../../src/board/Board.ts"
+import * as Module from "../../src/Module.ts"
 
 const calls = Ref.getAndSet(CalendarTesting.sampleCalls, [])
 

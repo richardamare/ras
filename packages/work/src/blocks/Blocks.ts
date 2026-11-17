@@ -9,11 +9,11 @@ import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 import * as BlockRepository from "./BlockRepository.ts"
-import * as ProjectRepository from "./ProjectRepository.ts"
-import * as SpaceRepository from "./SpaceRepository.ts"
-import * as TaskRepository from "./TaskRepository.ts"
+import * as ProjectRepository from "../board/ProjectRepository.ts"
+import * as SpaceRepository from "../board/SpaceRepository.ts"
+import * as TaskRepository from "../board/TaskRepository.ts"
 
 /** A started block's event first runs this long; stopping it sets the real end. */
 const runningEvent = 15 * 60_000

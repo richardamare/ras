@@ -10,7 +10,7 @@ import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 /** A block as its row keeps it: no end while it runs, no event while it is a draft. */
 export interface StoredBlock {

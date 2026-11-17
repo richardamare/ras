@@ -8,7 +8,7 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 const SpaceRow = Schema.Struct({
   id: Domain.SpaceId,

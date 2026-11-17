@@ -7,10 +7,10 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Blocks from "./Blocks.ts"
-import * as Board from "./Board.ts"
+import * as Blocks from "./blocks/Blocks.ts"
+import * as Board from "./board/Board.ts"
 import * as Domain from "./Domain.ts"
-import * as Drafts from "./Drafts.ts"
+import * as Drafts from "./drafts/Drafts.ts"
 
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 

@@ -9,11 +9,11 @@ import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as KernelModule from "@ras/kernel/Module"
-import * as BlockRepository from "../src/BlockRepository.ts"
-import * as Domain from "../src/Domain.ts"
-import * as Migrations from "../src/Migrations.ts"
-import * as SpaceRepository from "../src/SpaceRepository.ts"
-import * as TaskRepository from "../src/TaskRepository.ts"
+import * as BlockRepository from "../../src/blocks/BlockRepository.ts"
+import * as Domain from "../../src/Domain.ts"
+import * as Migrations from "../../src/Migrations.ts"
+import * as SpaceRepository from "../../src/board/SpaceRepository.ts"
+import * as TaskRepository from "../../src/board/TaskRepository.ts"
 
 const tables = KernelModule.make({ name: "work", migrations: Migrations.migrations })
 
