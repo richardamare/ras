@@ -19,5 +19,8 @@
   "countryMore_one": "{{count}} more – type to narrow",
   "countryMore_other": "{{count}} more – type to narrow",
   "datePlaceholder": "Pick a date",
-  "clearDate": "Clear date"
+  "clearDate": "Clear date",
+  "copyLink": "Copy link",
+  "linkCopied": "Link copied.",
+  "linkNotCopied": "The link could not be copied."
 }

@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as ReactQuery from "@tanstack/react-query"
+import * as Nuqs from "nuqs"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
@@ -12,11 +13,11 @@ import * as PageHeader from "@/components/page-header"
 import * as Columns from "@/features/board/columns"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Utils from "@/lib/utils"
+import * as TaskUrl from "@/features/tasks/url"
 
 type Task = Api.TaskSummaryEncoded
 
@@ -138,12 +139,14 @@ function MoveDialog({
 export function BoardPage() {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
-  const [assignee, setAssignee] = React.useState(all)
-  const [space, setSpace] = React.useState(all)
-  const [project, setProject] = React.useState(all)
+  const [{ assignee, space, project }, setFilters] = Nuqs.useQueryStates({
+    assignee: Nuqs.parseAsString.withDefault(all),
+    space: Nuqs.parseAsString.withDefault(all),
+    project: Nuqs.parseAsString.withDefault(all)
+  })
   const [over, setOver] = React.useState<Work.Status | null>(null)
   const [move, setMove] = React.useState<{ task: Task; status: Work.Status } | null>(null)
-  const [open, setOpen] = React.useState<Task | null>(null)
+  const openTask = TaskUrl.useOpenTask()
 
   const query = {
     ...(assignee === all ? {} : { assignee }),
@@ -176,7 +179,7 @@ export function BoardPage() {
         <Filter
           label={t("fields.assignee")}
           value={assignee}
-          onChange={setAssignee}
+          onChange={(value) => void setFilters({ assignee: value })}
           options={[
             { value: "owner", label: t("owner") },
             ...(agents.data ?? []).map((agent) => ({ value: agent.slug, label: agent.name }))
@@ -186,8 +189,7 @@ export function BoardPage() {
           label={t("fields.space")}
           value={space}
           onChange={(value) => {
-            setSpace(value)
-            setProject(all)
+            void setFilters({ space: value, project: null })
           }}
           options={(spaces.data ?? [])
             .filter((one) => !one.archived)
@@ -196,7 +198,7 @@ export function BoardPage() {
         <Filter
           label={t("fields.project")}
           value={project}
-          onChange={setProject}
+          onChange={(value) => void setFilters({ project: value })}
           options={(projects.data ?? [])
             .filter((one) => space === all || one.space === space)
             .map((one) => ({ value: one.id, label: one.name }))}
@@ -237,7 +239,7 @@ export function BoardPage() {
                 </p>
               )}
               {column.tasks.map((task) => (
-                <Card key={task.id} task={task} projects={projectNames} onOpen={() => setOpen(task)} />
+                <Card key={task.id} task={task} projects={projectNames} onOpen={() => openTask(task.id)} />
               ))}
             </section>
           ))}
@@ -251,7 +253,6 @@ export function BoardPage() {
           setMove(null)
         }}
       />
-      <TaskDialog.TaskDialog id={open?.id ?? null} title={open?.title ?? ""} onClose={() => setOpen(null)} />
     </div>
   )
 }

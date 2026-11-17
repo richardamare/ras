@@ -20,5 +20,8 @@
   "countryMore_few": "Ještě {{count}} – zpřesněte hledání",
   "countryMore_other": "Ještě {{count}} – zpřesněte hledání",
   "datePlaceholder": "Vyberte datum",
-  "clearDate": "Smazat datum"
+  "clearDate": "Smazat datum",
+  "copyLink": "Kopírovat odkaz",
+  "linkCopied": "Odkaz je zkopírovaný.",
+  "linkNotCopied": "Odkaz se nepodařilo zkopírovat."
 }

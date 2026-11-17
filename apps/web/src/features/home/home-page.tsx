@@ -11,12 +11,12 @@ import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Summary from "@/features/home/summary"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
+import * as TaskUrl from "@/features/tasks/url"
 
 /** The Prague local time, ticking every `period` milliseconds. */
 const useNow = (period: number) => {
@@ -198,7 +198,13 @@ function Agenda({ today }: { today: string }) {
                   style={{ backgroundColor: colors.get(item.calendar) ?? "var(--primary)" }}
                   aria-hidden="true"
                 />
-                <span className="min-w-0 truncate">{item.title}</span>
+                <ReactRouter.Link
+                  to="/calendar"
+                  search={{ view: "day", date: item.start.slice(0, 10), item: item.id }}
+                  className="min-w-0 truncate rounded-sm underline-offset-4 hover:underline"
+                >
+                  {item.title}
+                </ReactRouter.Link>
               </li>
             ))}
           </ul>
@@ -213,7 +219,7 @@ export function HomePage() {
   const today = useNow(60_000).slice(0, 10)
   const tasks = ReactQuery.useQuery(Queries.workTasksOptions())
   const result = Summary.summary(tasks.data ?? [], today)
-  const [shown, setShown] = React.useState<Api.TaskSummaryEncoded | null>(null)
+  const openTask = TaskUrl.useOpenTask()
   const date = new Intl.DateTimeFormat(i18n.language, {
     weekday: "long",
     day: "numeric",
@@ -252,7 +258,7 @@ export function HomePage() {
                   {result.waiting.length === 0 ? (
                     <p className="text-sm text-muted-foreground">{t("waiting.none")}</p>
                   ) : (
-                    <TaskRows tasks={result.waiting} onOpen={setShown} />
+                    <TaskRows tasks={result.waiting} onOpen={(task) => openTask(task.id)} />
                   )}
                 </Card.CardContent>
               </Card.Card>
@@ -266,9 +272,17 @@ export function HomePage() {
                   <p className="text-sm text-muted-foreground">{t("deadlines.none")}</p>
                 ) : (
                   <>
-                    <Group title={t("deadlines.today")} tasks={deadlines.today} onOpen={setShown} />
-                    <Group title={t("deadlines.tomorrow")} tasks={deadlines.tomorrow} onOpen={setShown} />
-                    <Group title={t("deadlines.thisWeek")} tasks={deadlines.thisWeek} onOpen={setShown} />
+                    <Group title={t("deadlines.today")} tasks={deadlines.today} onOpen={(task) => openTask(task.id)} />
+                    <Group
+                      title={t("deadlines.tomorrow")}
+                      tasks={deadlines.tomorrow}
+                      onOpen={(task) => openTask(task.id)}
+                    />
+                    <Group
+                      title={t("deadlines.thisWeek")}
+                      tasks={deadlines.thisWeek}
+                      onOpen={(task) => openTask(task.id)}
+                    />
                   </>
                 )}
               </Card.CardContent>
@@ -276,7 +290,6 @@ export function HomePage() {
           </div>
         </>
       )}
-      <TaskDialog.TaskDialog id={shown?.id ?? null} title={shown?.title ?? ""} onClose={() => setShown(null)} />
     </div>
   )
 }

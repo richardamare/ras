@@ -2,6 +2,7 @@ import * as React from "react"
 import * as ReactQuery from "@tanstack/react-query"
 import * as ReactRouter from "@tanstack/react-router"
 import * as LucideReact from "lucide-react"
+import * as Nuqs from "nuqs"
 import * as ReactI18next from "react-i18next"
 
 import * as PageHeader from "@/components/page-header"
@@ -11,12 +12,11 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Table from "@/components/ui/table"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
-import * as TaskDialog from "@/features/tasks/task-dialog"
 import * as Work from "@/features/tasks/work"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
+import * as TaskUrl from "@/features/tasks/url"
 
 const open = "open"
 const all = "all"
@@ -27,9 +27,11 @@ export function TasksPage() {
   const tasks = ReactQuery.useQuery(Queries.workTasksOptions())
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())
   const blocks = ReactQuery.useQuery(Queries.workBlocksOptions({ query: Time.span }))
-  const [shown, setShown] = React.useState<Api.TaskSummaryEncoded | null>(null)
-  const [search, setSearch] = React.useState("")
-  const [status, setStatus] = React.useState<string>(open)
+  const openTask = TaskUrl.useOpenTask()
+  const [{ q: search, status }, setUrl] = Nuqs.useQueryStates({
+    q: Nuqs.parseAsString.withDefault(""),
+    status: Nuqs.parseAsString.withDefault(open)
+  })
 
   const projectNames = new Map((projects.data ?? []).map((one) => [one.id, one.name]))
   const times = Time.timeOf(blocks.data ?? [])
@@ -48,13 +50,13 @@ export function TasksPage() {
           <Input.Input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => void setUrl({ q: event.target.value === "" ? null : event.target.value })}
             placeholder={t("tasks.search")}
             aria-label={t("tasks.search")}
             className="w-56 ps-8"
           />
         </div>
-        <Select.Select value={status} onValueChange={setStatus}>
+        <Select.Select value={status} onValueChange={(value) => void setUrl({ status: value })}>
           <Select.SelectTrigger aria-label={t("fields.status")} className="min-w-40">
             <Select.SelectValue />
           </Select.SelectTrigger>
@@ -99,9 +101,9 @@ export function TasksPage() {
                     key={task.id}
                     tabIndex={0}
                     className="cursor-pointer outline-none focus-visible:bg-accent"
-                    onClick={() => setShown(task)}
+                    onClick={() => openTask(task.id)}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") setShown(task)
+                      if (event.key === "Enter") openTask(task.id)
                     }}
                   >
                     <Table.TableCell className="ps-4 font-medium">
@@ -154,7 +156,6 @@ export function TasksPage() {
           </Table.Table>
         </div>
       )}
-      <TaskDialog.TaskDialog id={shown?.id ?? null} title={shown?.title ?? ""} onClose={() => setShown(null)} />
     </div>
   )
 }

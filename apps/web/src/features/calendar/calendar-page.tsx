@@ -1,8 +1,8 @@
 import * as React from "react"
 import * as ReactQuery from "@tanstack/react-query"
-import * as ReactRouter from "@tanstack/react-router"
 import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
+import * as Nuqs from "nuqs"
 import * as Sonner from "sonner"
 
 import * as IconButton from "@/components/icon-button"
@@ -16,11 +16,12 @@ import * as MonthGrid from "@/features/calendar/month-grid"
 import * as Pointer from "@/features/calendar/pointer"
 import * as TasksPanel from "@/features/calendar/tasks-panel"
 import * as TimeGrid from "@/features/calendar/time-grid"
-import * as TaskDialog from "@/features/tasks/task-dialog"
+import * as Url from "@/features/calendar/url"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
+import * as TaskUrl from "@/features/tasks/url"
 
 const useNow = () => {
   const [now, setNow] = React.useState(() => Prague.local())
@@ -33,9 +34,10 @@ const useNow = () => {
 
 const newEventMinute = 9 * 60
 
-export function CalendarPage({ view, date }: { view: Grid.View; date: string | undefined }) {
+export function CalendarPage() {
   const { t, i18n } = ReactI18next.useTranslation("Calendar")
-  const navigate = ReactRouter.useNavigate()
+  const [{ view, date, item: itemId }, setUrl] = Nuqs.useQueryStates(Url.params)
+  const openTask = TaskUrl.useOpenTask()
   const client = ReactQuery.useQueryClient()
   const now = useNow()
   const today = now.slice(0, 10)
@@ -61,9 +63,6 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
   const [drafting, setDrafting] = React.useState(false)
   const [planner, setPlanner] = React.useState(false)
   const [dialog, setDialog] = React.useState<EventDialog.DialogState | null>(null)
-  const [opened, setOpened] = React.useState<ItemPopover.Opened | null>(null)
-  const [task, setTask] = React.useState<{ id: string; title: string } | null>(null)
-  const clicked = React.useRef<DOMRect | null>(null)
 
   const settle = {
     onSuccess: () => client.invalidateQueries(),
@@ -75,7 +74,7 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
   const confirmDay = DraftControls.useConfirmDrafts()
 
   const show = (nextView: Grid.View, nextDate: string) =>
-    void navigate({ to: "/calendar", search: { view: nextView, date: nextDate } })
+    void setUrl({ view: nextView, date: nextDate, item: null }, { history: "push" })
 
   /** With drafting on only drafts move, so nothing already in a calendar changes before the plan is confirmed. */
   const canMove = (item: Grid.Item) => Pointer.draggable(item, allCalendars) && (!drafting || Grid.isDraft(item))
@@ -86,9 +85,18 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
     else moveEvent.mutate({ path: { id: item.event.id }, body })
   }
 
-  const open = (item: Grid.Item) => {
-    if (clicked.current !== null) setOpened({ item, at: clicked.current })
-  }
+  const open = (item: Grid.Item) =>
+    void setUrl({ item: item.kind === "event" ? item.event.id : item.block.id }, { history: "push" })
+  const close = () => void setUrl({ item: null })
+
+  const openedEvent = shownEvents.find((event) => event.id === itemId)
+  const openedBlock = shownBlocks.find((block) => block.id === itemId)
+  const openedItem: Grid.Item | null =
+    openedEvent !== undefined
+      ? { kind: "event", event: openedEvent }
+      : openedBlock !== undefined
+        ? { kind: "block", block: openedBlock }
+        : null
 
   const grid = () => {
     if (events.isPending || blocks.isPending) return <Skeleton.Skeleton className="flex-1" />
@@ -220,9 +228,6 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
             fetching && "opacity-60"
           )}
           aria-busy={fetching}
-          onClickCapture={(event) => {
-            clicked.current = (event.target as HTMLElement).closest("button")?.getBoundingClientRect() ?? null
-          }}
         >
           {grid()}
         </div>
@@ -230,21 +235,20 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
       </div>
 
       <ItemPopover.ItemPopover
-        opened={opened}
+        item={openedItem}
         calendars={allCalendars}
         colorOf={colorOf}
-        onClose={() => setOpened(null)}
+        onClose={close}
         onEdit={(event) => {
-          setOpened(null)
+          close()
           setDialog({ kind: "edit", event })
         }}
         onOpenTask={(block) => {
-          setOpened(null)
-          setTask({ id: block.task, title: block.title })
+          close()
+          openTask(block.task)
         }}
       />
       <EventDialog.EventDialog state={dialog} calendars={allCalendars} onClose={() => setDialog(null)} />
-      <TaskDialog.TaskDialog id={task?.id ?? null} title={task?.title ?? ""} onClose={() => setTask(null)} />
     </div>
   )
 }

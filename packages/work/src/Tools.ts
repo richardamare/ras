@@ -32,7 +32,8 @@ export const toolkit = Toolkit.make(
     success: Schema.Array(Domain.TaskSummary)
   }),
   Global.read("task", {
-    description: "One task with its body (the brief), its comments (the log) and its links.",
+    description:
+      "One task with its body (the brief), its comments (the log) and its links. A console link the owner shares names the task in `?task=<id>`, and one of its comments in `&comment=<id>`.",
     parameters: Schema.Struct(TaskRef),
     success: Domain.Task
   }),
