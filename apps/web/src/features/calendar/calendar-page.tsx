@@ -138,7 +138,26 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex items-center gap-1">
+          <IconButton.IconButton
+            label={t(`previous.${view}`)}
+            variant="outline"
+            onClick={() => show(view, Grid.step(view, anchor, -1))}
+          >
+            <LucideReact.ChevronLeftIcon />
+          </IconButton.IconButton>
+          <Button.Button variant="outline" disabled={showsToday} onClick={() => show(view, today)}>
+            {t("today")}
+          </Button.Button>
+          <IconButton.IconButton
+            label={t(`next.${view}`)}
+            variant="outline"
+            onClick={() => show(view, Grid.step(view, anchor, 1))}
+          >
+            <LucideReact.ChevronRightIcon />
+          </IconButton.IconButton>
+        </div>
         <h1 className="me-auto text-2xl tracking-tight first-letter:uppercase">
           <span className="font-semibold">
             {TimeGrid.dayLabel(
@@ -192,25 +211,6 @@ export function CalendarPage({ view, date }: { view: Grid.View; date: string | u
           <LucideReact.PlusIcon />
           {t("newEvent")}
         </Button.Button>
-        <div className="flex items-center gap-1">
-          <IconButton.IconButton
-            label={t(`previous.${view}`)}
-            variant="outline"
-            onClick={() => show(view, Grid.step(view, anchor, -1))}
-          >
-            <LucideReact.ChevronLeftIcon />
-          </IconButton.IconButton>
-          <Button.Button variant="outline" disabled={showsToday} onClick={() => show(view, today)}>
-            {t("today")}
-          </Button.Button>
-          <IconButton.IconButton
-            label={t(`next.${view}`)}
-            variant="outline"
-            onClick={() => show(view, Grid.step(view, anchor, 1))}
-          >
-            <LucideReact.ChevronRightIcon />
-          </IconButton.IconButton>
-        </div>
       </div>
 
       {problem !== null && (

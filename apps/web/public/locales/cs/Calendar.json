@@ -65,12 +65,13 @@
     "location": "Místo",
     "showAs": "Zobrazit jako",
     "notes": "Poznámky",
-    "attendees": "Účastníci",
     "create": "Vytvořit",
     "save": "Uložit",
     "cancel": "Zrušit událost",
     "discard": "Zahodit návrh",
-    "confirm": "Potvrdit návrh"
+    "confirm": "Potvrdit návrh",
+    "organizer": "organizátor",
+    "yourReply": "Tvoje odpověď: {{reply}}"
   },
   "showAs": {
     "busy": "Zaneprázdněn",
@@ -83,5 +84,12 @@
     "accept": "Přijmout",
     "tentative": "Možná",
     "decline": "Odmítnout"
+  },
+  "rsvp": {
+    "none": "Bez odpovědi",
+    "needsAction": "Neodpovězeno",
+    "accepted": "Přijato",
+    "tentative": "Možná",
+    "declined": "Odmítnuto"
   }
 }

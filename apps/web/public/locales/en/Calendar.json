@@ -61,12 +61,13 @@
     "location": "Location",
     "showAs": "Show as",
     "notes": "Notes",
-    "attendees": "Attendees",
     "create": "Create",
     "save": "Save",
     "cancel": "Cancel event",
     "discard": "Discard draft",
-    "confirm": "Confirm draft"
+    "confirm": "Confirm draft",
+    "organizer": "organizer",
+    "yourReply": "Your reply: {{reply}}"
   },
   "showAs": {
     "busy": "Busy",
@@ -79,5 +80,12 @@
     "accept": "Accept",
     "tentative": "Maybe",
     "decline": "Decline"
+  },
+  "rsvp": {
+    "none": "No reply needed",
+    "needsAction": "Not answered",
+    "accepted": "Accepted",
+    "tentative": "Maybe",
+    "declined": "Declined"
   }
 }

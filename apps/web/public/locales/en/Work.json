@@ -38,11 +38,16 @@
     "moveTitle": "Move “{{task}}” to {{status}}",
     "whatIsNeeded": "Say what is needed.",
     "whatToCheck": "Say what to check.",
-    "move": "Move"
+    "move": "Move",
+    "empty": "Nothing here"
   },
   "tasks": {
     "title": "Tasks",
-    "none": "No tasks yet."
+    "none": "No tasks yet.",
+    "search": "Search tasks",
+    "open": "Open",
+    "all": "All",
+    "noMatch": "No task matches."
   },
   "projectStatus": {
     "active": "Active",
@@ -60,5 +65,22 @@
     "upcoming": "Upcoming blocks",
     "noBlocks": "No blocks planned.",
     "draft": "draft"
-  }
+  },
+  "day": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday"
+  },
+  "newTask": {
+    "button": "New task",
+    "title": "New task",
+    "hint": "It lands on the board in To do unless you say otherwise.",
+    "noProject": "No project",
+    "body": "Brief",
+    "create": "Create task",
+    "added": "{{title}} is on the board."
+  },
+  "brief": "Brief",
+  "comments_one": "{{count}} comment",
+  "comments_other": "{{count}} comments"
 }

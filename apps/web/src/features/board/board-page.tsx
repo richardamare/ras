@@ -8,7 +8,10 @@ import * as Dialog from "@/components/ui/dialog"
 import * as Select from "@/components/ui/select"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Textarea from "@/components/ui/textarea"
+import * as PageHeader from "@/components/page-header"
 import * as Columns from "@/features/board/columns"
+import * as NewTask from "@/features/tasks/new-task-dialog"
+import * as TaskBits from "@/features/tasks/task-bits"
 import * as TaskSheet from "@/features/tasks/task-sheet"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
@@ -49,21 +52,26 @@ function Filter({
 }
 
 function Card({ task, projects, onOpen }: { task: Task; projects: Map<string, string>; onOpen: () => void }) {
-  const { t } = ReactI18next.useTranslation("Work")
   return (
     <button
       type="button"
       draggable
       onDragStart={(event) => event.dataTransfer.setData("text/plain", task.id)}
       onClick={onOpen}
-      className="grid w-full cursor-grab gap-1 rounded-lg border bg-card p-2 text-left text-sm shadow-xs hover:border-ring active:cursor-grabbing"
+      className="grid w-full cursor-grab gap-2 rounded-lg border bg-card p-3 text-left text-sm shadow-xs transition-colors outline-none hover:border-primary/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 active:cursor-grabbing"
     >
-      <span className="font-medium">{task.title}</span>
-      <span className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-        {task.project !== null && <span>{projects.get(task.project)}</span>}
-        <span>{task.assignee === "owner" ? t("owner") : task.assignee}</span>
-        {task.priority !== "normal" && <span>{t(`priority.${task.priority}`)}</span>}
-        {task.deadline !== null && <span>{task.deadline}</span>}
+      <span className="flex items-start gap-2">
+        <span className="me-auto leading-snug font-medium">{task.title}</span>
+        <TaskBits.PriorityFlag priority={task.priority} />
+      </span>
+      {task.project !== null && (
+        <span className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+          {projects.get(task.project)}
+        </span>
+      )}
+      <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <TaskBits.Assignee assignee={task.assignee} />
+        {task.deadline !== null && <TaskBits.Due task={task} />}
       </span>
     </button>
   )
@@ -101,21 +109,26 @@ function MoveDialog({
           </Dialog.DialogDescription>
         </Dialog.DialogHeader>
         <form
-          className="grid gap-3"
+          className="contents"
           onSubmit={(event) => {
             event.preventDefault()
             onMove(comment.trim())
             setComment("")
           }}
         >
-          <Textarea.Textarea
-            aria-label={t("comment")}
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-          />
-          <Button.Button className="justify-self-end" type="submit" disabled={comment.trim().length === 0}>
-            {t("board.move")}
-          </Button.Button>
+          <Dialog.DialogBody>
+            <Textarea.Textarea
+              autoFocus
+              aria-label={t("comment")}
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+            />
+          </Dialog.DialogBody>
+          <Dialog.DialogFooter>
+            <Button.Button type="submit" disabled={comment.trim().length === 0}>
+              {t("board.move")}
+            </Button.Button>
+          </Dialog.DialogFooter>
         </form>
       </Dialog.DialogContent>
     </Dialog.Dialog>
@@ -159,8 +172,7 @@ export function BoardPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="me-auto text-2xl font-semibold tracking-tight">{t("board.title")}</h1>
+      <PageHeader.PageHeader title={t("board.title")}>
         <Filter
           label={t("fields.assignee")}
           value={assignee}
@@ -189,11 +201,12 @@ export function BoardPage() {
             .filter((one) => space === all || one.space === space)
             .map((one) => ({ value: one.id, label: one.name }))}
         />
-      </div>
+        <NewTask.NewTaskButton {...(project === all ? {} : { project })} />
+      </PageHeader.PageHeader>
       {tasks.isPending ? (
         <Skeleton.Skeleton className="h-64 w-full" />
       ) : (
-        <div className="grid min-h-0 flex-1 auto-cols-[minmax(14rem,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2">
+        <div className="-mx-1 grid min-h-0 flex-1 auto-cols-[minmax(11rem,1fr)] grid-flow-col gap-3 overflow-x-auto px-1 pt-1 pb-3">
           {Columns.columns(tasks.data ?? []).map((column) => (
             <section
               key={column.status}
@@ -208,14 +221,21 @@ export function BoardPage() {
                 drop(column.status, event.dataTransfer.getData("text/plain"))
               }}
               className={Utils.cn(
-                "flex min-h-40 flex-col gap-2 rounded-xl bg-muted/40 p-2 transition-colors",
-                over === column.status && "bg-muted ring-2 ring-ring/40"
+                "flex min-h-40 flex-col gap-2 rounded-xl border border-transparent bg-muted/60 p-2 transition-colors",
+                over === column.status && "border-dashed border-primary/50 bg-accent/60"
               )}
             >
-              <h2 className="flex items-center gap-2 px-1 text-sm font-semibold">
+              <h2 className="flex items-center justify-between gap-2 px-1 pt-0.5 text-sm font-semibold">
                 {t(`status.${column.status}`)}
-                <span className="text-xs font-normal text-muted-foreground tabular-nums">{column.tasks.length}</span>
+                <span className="rounded-full bg-background px-1.5 text-xs font-medium text-muted-foreground tabular-nums">
+                  {column.tasks.length}
+                </span>
               </h2>
+              {column.tasks.length === 0 && (
+                <p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
+                  {t("board.empty")}
+                </p>
+              )}
               {column.tasks.map((task) => (
                 <Card key={task.id} task={task} projects={projectNames} onOpen={() => setOpen(task)} />
               ))}

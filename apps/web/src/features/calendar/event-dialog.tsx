@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as ReactQuery from "@tanstack/react-query"
+import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
@@ -83,25 +84,23 @@ function Fields({
   form,
   set,
   allDay,
-  calendars,
-  readOnly
+  calendars
 }: {
   form: Form
   set: (change: Partial<Form>) => void
   allDay: boolean
   calendars: ReadonlyArray<Api.CalendarEncoded> | null
-  readOnly: boolean
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   return (
-    <fieldset disabled={readOnly} className="grid gap-3">
+    <div className="grid gap-3">
       <Field label={t("event.title")}>
         <Input.Input required value={form.title} onChange={(event) => set({ title: event.target.value })} />
       </Field>
       {calendars !== null && calendars.length > 1 && (
         <Field label={t("event.calendar")}>
           <Select.Select value={form.calendar} onValueChange={(calendar) => set({ calendar })}>
-            <Select.SelectTrigger>
+            <Select.SelectTrigger className="w-full">
               <Select.SelectValue />
             </Select.SelectTrigger>
             <Select.SelectContent>
@@ -178,7 +177,48 @@ function Fields({
       <Field label={t("event.notes")}>
         <Textarea.Textarea value={form.notes} onChange={(event) => set({ notes: event.target.value })} />
       </Field>
-    </fieldset>
+    </div>
+  )
+}
+
+const line = (icon: React.ReactNode, children: React.ReactNode) => (
+  <div className="flex items-start gap-3 text-sm">
+    <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">{icon}</span>
+    <div className="min-w-0 flex-1">{children}</div>
+  </div>
+)
+
+/** An event ras does not write, shown as what it is rather than as a form that cannot be sent. */
+function Summary({ event }: { event: Api.EventEncoded }) {
+  const { t, i18n } = ReactI18next.useTranslation("Calendar")
+  const day = (local: string) =>
+    new Intl.DateTimeFormat(i18n.language, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
+      new Date(`${local.slice(0, 10)}T12:00:00Z`)
+    )
+  const when = event.allDay
+    ? `${day(event.start)} – ${day(Prague.addDays(event.end.slice(0, 10), -1))}`
+    : `${day(event.start)}, ${event.start.slice(11)}–${event.end.slice(11)}`
+  return (
+    <div className="grid gap-3">
+      {line(<LucideReact.ClockIcon />, <span className="first-letter:uppercase">{when}</span>)}
+      {event.location !== null && line(<LucideReact.MapPinIcon />, event.location)}
+      {event.attendees.length > 0 &&
+        line(
+          <LucideReact.UsersIcon />,
+          <ul className="grid gap-1">
+            {event.attendees.map((attendee) => (
+              <li key={attendee.email ?? attendee.name} className="flex items-center gap-2">
+                <span className="truncate">{attendee.name ?? attendee.email}</span>
+                {attendee.organizer && <span className="text-xs text-muted-foreground">{t("event.organizer")}</span>}
+                <span className="ms-auto text-xs text-muted-foreground">{t(`rsvp.${attendee.rsvp}`)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      {event.notes !== null && line(<LucideReact.TextIcon />, <p className="whitespace-pre-wrap">{event.notes}</p>)}
+      {event.kind === "invitation" &&
+        line(<LucideReact.MailQuestionIcon />, <span>{t("event.yourReply", { reply: t(`rsvp.${event.rsvp}`) })}</span>)}
+    </div>
   )
 }
 
@@ -233,7 +273,7 @@ function Body({
   }
 
   return (
-    <form className="grid gap-4" onSubmit={submit}>
+    <form className="contents" onSubmit={submit}>
       <Dialog.DialogHeader>
         <Dialog.DialogTitle>
           {event === null
@@ -248,16 +288,17 @@ function Body({
               : t("event.readonly", { calendar: calendarName })}
         </Dialog.DialogDescription>
       </Dialog.DialogHeader>
-      {event?.draft?.refusal != null && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{event.draft.refusal}</p>
-      )}
-      <Fields form={form} set={set} allDay={allDay} calendars={event === null ? writable : null} readOnly={!editable} />
-      {event !== null && event.attendees.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {t("event.attendees")}: {event.attendees.map((attendee) => attendee.name ?? attendee.email).join(", ")}
-        </p>
-      )}
-      <Dialog.DialogFooter className="flex-wrap gap-2">
+      <Dialog.DialogBody className="grid gap-4">
+        {event?.draft?.refusal != null && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{event.draft.refusal}</p>
+        )}
+        {event !== null && !editable ? (
+          <Summary event={event} />
+        ) : (
+          <Fields form={form} set={set} allDay={allDay} calendars={event === null ? writable : null} />
+        )}
+      </Dialog.DialogBody>
+      <Dialog.DialogFooter className="flex-wrap">
         {event?.kind === "invitation" &&
           replies.map((answer) => (
             <Button.Button

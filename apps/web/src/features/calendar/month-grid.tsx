@@ -8,7 +8,7 @@ import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
 
 /** How many items a day cell lists before it counts the rest. */
-const listed = 4
+const listed = 3
 
 interface Props {
   readonly days: ReadonlyArray<string>

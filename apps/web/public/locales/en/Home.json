@@ -1,13 +1,31 @@
 {
   "title": "Home",
-  "running": { "title": "Running", "none": "No block is running.", "stop": "Stop" },
+  "running": {
+    "title": "Running",
+    "none": "No block is running.",
+    "stop": "Stop"
+  },
   "stopFailed": "The block could not be stopped.",
-  "counts": { "open": "Open", "overdue": "Overdue", "inReview": "In review" },
+  "counts": {
+    "open": "Open",
+    "overdue": "Overdue",
+    "inReview": "In review"
+  },
   "deadlines": {
     "today": "Due today",
     "tomorrow": "Due tomorrow",
     "thisWeek": "Due this week",
-    "none": "Nothing is due."
+    "none": "Nothing is due.",
+    "title": "Deadlines"
   },
-  "waiting": { "title": "Waiting on you", "none": "Nothing waits on you." }
+  "waiting": {
+    "title": "Waiting on you",
+    "none": "Nothing waits on you."
+  },
+  "agenda": {
+    "title": "Today in the calendar",
+    "open": "Open the day",
+    "none": "Nothing in the calendar today.",
+    "allDay": "All day"
+  }
 }
