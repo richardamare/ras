@@ -4,7 +4,7 @@ import * as Nuqs from "nuqs"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
-import * as Select from "@/components/ui/select"
+import * as Combobox from "@/components/combobox"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as PageHeader from "@/components/page-header"
 import * as Columns from "@/features/board/columns"
@@ -30,23 +30,17 @@ function Filter({
   label: string
   value: string
   onChange: (value: string) => void
-  options: ReadonlyArray<{ value: string; label: string }>
+  options: ReadonlyArray<Combobox.Option>
 }) {
   const { t } = ReactI18next.useTranslation("Work")
   return (
-    <Select.Select value={value} onValueChange={onChange}>
-      <Select.SelectTrigger aria-label={label} className="min-w-40">
-        <Select.SelectValue />
-      </Select.SelectTrigger>
-      <Select.SelectContent>
-        <Select.SelectItem value={all}>{t("board.all", { what: label })}</Select.SelectItem>
-        {options.map((option) => (
-          <Select.SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </Select.SelectItem>
-        ))}
-      </Select.SelectContent>
-    </Select.Select>
+    <Combobox.Combobox
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={[{ value: all, label: t("board.all", { what: label }) }, ...options]}
+      className="min-w-40"
+    />
   )
 }
 

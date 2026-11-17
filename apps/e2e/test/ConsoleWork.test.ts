@@ -122,6 +122,28 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("finds a project in the board's filter by typing part of its name", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const space = yield* workSpace
+        const wanted = yield* client.work.addProject({ payload: { name: Suite.unique("Accounting"), space: space.id } })
+        const other = yield* client.work.addProject({ payload: { name: Suite.unique("Logistics"), space: space.id } })
+        const inWanted = yield* client.work.addTask({ payload: { title: Suite.unique("Ledger"), project: wanted.id } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto("/board")
+        const main = page.getByRole("main")
+
+        yield* main.getByRole("combobox", { name: "Project" }).click()
+        yield* page.locator(`[data-slot="command-input"]`).fill(wanted.name.slice(-8))
+        yield* page.getByRole("option", { name: other.name }).waitFor({ state: "detached" })
+        yield* page.getByRole("option", { name: wanted.name }).click()
+
+        yield* main.getByRole("combobox", { name: "Project" }).getByText(wanted.name).waitFor()
+        yield* page.waitForURL((url) => url.searchParams.get("project") === wanted.id)
+        yield* main.getByText(inWanted.title).waitFor()
+      })
+    )
+
     it.effect("opens a task from the board, changes its status and assignee, and comments on it", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
