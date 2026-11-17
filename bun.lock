@@ -57,6 +57,7 @@
         "@ras/calendar": "workspace:*",
         "@ras/global": "workspace:*",
         "@ras/kernel": "workspace:*",
+        "@ras/memory": "workspace:*",
         "effect": "catalog:",
         "playwright": "1.65.1",
       },
