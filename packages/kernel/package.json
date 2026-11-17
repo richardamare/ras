@@ -7,6 +7,7 @@
     "./Errors": "./src/Errors.ts",
     "./Id": "./src/Id.ts",
     "./Module": "./src/Module.ts",
+    "./Sample": "./src/Sample.ts",
     "./Sql": "./src/Sql.ts",
     "./Time": "./src/Time.ts"
   },
