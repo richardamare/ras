@@ -16,7 +16,7 @@ Each module is a workspace package, `packages/<module>`, whose `dependencies` ar
 
 A module that needs data another module owns declares a port, a service in its own package. The owning module provides it in its descriptor's `ports` slot, which is built before every module's services, so calendar counts work's block drafts as busy without importing work.
 
-Every write goes through `Writes.run` in `global`. It runs the write in one SQLite transaction and appends the audit entry with the current actor before the commit. A store statement marked with `write` requires a `Transaction` value that only `Writes.run` can make, and a test fails on SQL writes outside `Store.ts`.
+Every write goes through `Writes.run` in `global`. It runs the write in one SQLite transaction and appends the audit entry with the current actor before the commit. Every SQL statement lives in a module's repository, which maps each row it reads with a local `to<Type>` function. A repository write marked with `write` requires a `Transaction` value that only `Writes.run` can make, and a test fails on SQL or the SQL client anywhere else.
 
 `packages/kernel` holds the shared vocabulary: the descriptor, the error classes, ids and Prague time. It depends on `effect` alone and holds no table, no stateful service and no outside system.
 
