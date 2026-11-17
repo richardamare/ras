@@ -30,4 +30,6 @@ jobs:
             if [ "$title" != "$TITLE" ]; then gh pr edit "$PR_URL" --title "$title"; fi
           fi
           printf '%s\n' "$title" > "$RUNNER_TEMP/title"
+          # The PR that sets a release's version is left out of the release notes, which list what changed.
+          if [[ "$title" =~ ^chore\(release\):\  ]]; then gh pr edit "$PR_URL" --add-label release; fi
       - run: bun x commitlint < "$RUNNER_TEMP/title"

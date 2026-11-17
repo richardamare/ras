@@ -1,0 +1,5 @@
+# The notes `gh release create --generate-notes` writes list the PRs since the previous release, except these.
+changelog:
+  exclude:
+    labels:
+      - release
