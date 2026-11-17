@@ -34,6 +34,14 @@ export class Reclaim extends Context.Service<
       first: Time.PragueDate,
       end: Time.PragueDate
     ) => Effect.Effect<ReadonlyArray<Domain.Entry>, Errors.SourceFailed>
+    /** The id the calendar's provider gives the event; for an occurrence of a series, the series' id. */
+    readonly providerId: (calendar: SourceCalendar, event: string) => Effect.Effect<string, Errors.SourceFailed>
+    /** Answers an invitation and lets its organizer know. */
+    readonly reply: (
+      calendar: Domain.CalendarId,
+      event: string,
+      reply: Domain.Reply
+    ) => Effect.Effect<void, Errors.SourceFailed>
   }
 >()("@ras/calendar/Reclaim") {}
 
@@ -155,17 +163,26 @@ export const entryOf = (event: WireEvent): Domain.Entry => {
   }
 }
 
+/** The answers Reclaim's RSVP takes, spelled as it expects them. */
+const responses: Record<Domain.Reply, string> = {
+  accept: "Accepted",
+  tentative: "TentativelyAccepted",
+  decline: "Declined"
+}
+
 const failed = (reason: string) => new Errors.SourceFailed({ source: "reclaim", reason })
 
 /** Reclaim's answer to a refused call, in plain words; the status and body stay in the log. */
 const refusal = (status: number) =>
   status === 401 || status === 403
     ? "Reclaim refused ras's API key. Set a current key in RAS_RECLAIM_API_KEY."
-    : status === 429
-      ? "Reclaim is limiting requests. Try again in a minute."
-      : status >= 500
-        ? "Reclaim is having trouble. Try again in a minute."
-        : `Reclaim refused the request (${status}).`
+    : status === 404
+      ? "Reclaim no longer has that event. Search the calendar again."
+      : status === 429
+        ? "Reclaim is limiting requests. Try again in a minute."
+        : status >= 500
+          ? "Reclaim is having trouble. Try again in a minute."
+          : `Reclaim refused the request (${status}).`
 
 export const make = (apiKey: Redacted.Redacted) =>
   Effect.gen(function* () {
@@ -180,8 +197,9 @@ export const make = (apiKey: Redacted.Redacted) =>
       HttpClient.retryTransient({ times: 3 })
     )
 
-    const get = <S extends Schema.Top>(path: string, schema: S) =>
-      client.get(path).pipe(
+    const send = <S extends Schema.Top>(request: HttpClientRequest.HttpClientRequest, schema: S) => {
+      const path = request.url
+      return client.execute(request).pipe(
         Effect.flatMap((response) =>
           response.status >= 200 && response.status < 300
             ? HttpClientResponse.schemaBodyJson(schema)(response).pipe(
@@ -203,6 +221,9 @@ export const make = (apiKey: Redacted.Redacted) =>
         ),
         Effect.withSpan("reclaim", { attributes: { path } })
       ) as Effect.Effect<S["Type"], Errors.SourceFailed, S["DecodingServices"]>
+    }
+
+    const get = <S extends Schema.Top>(path: string, schema: S) => send(HttpClientRequest.get(path), schema)
 
     return Reclaim.of({
       calendars: get("/api/accounts/calendars", Schema.Record(Schema.String, Schema.Array(WireCalendar))).pipe(
@@ -222,6 +243,27 @@ export const make = (apiKey: Redacted.Redacted) =>
       events: (first, end) =>
         get(`/api/events/v2?start=${first}&end=${end}&allConnected=true`, Schema.Array(WireEvent)).pipe(
           Effect.map(Arr.map(entryOf))
+        ),
+      providerId: (calendar, event) =>
+        get(
+          `/api/events/raw-event/${calendar.account}/${calendar.id}/${encodeURIComponent(event)}`,
+          Schema.Struct({ rawData: Schema.optional(Schema.NullOr(Schema.Struct({ id: Schema.String }))) })
+        ).pipe(
+          Effect.flatMap((raw) =>
+            raw.rawData == null
+              ? Effect.fail(failed("Reclaim answered with an event that has no provider id."))
+              : Effect.succeed(raw.rawData.id)
+          )
+        ),
+      reply: (calendar, event, reply) =>
+        Effect.asVoid(
+          send(
+            HttpClientRequest.bodyJsonUnsafe(
+              HttpClientRequest.put(`/api/planner/event/rsvp/${calendar}/${encodeURIComponent(event)}`),
+              { responseStatus: responses[reply], sendUpdates: true }
+            ),
+            Schema.Unknown
+          )
         )
     })
   })
@@ -234,7 +276,9 @@ export const live = Layer.effect(
     return yield* Option.match(apiKey, {
       onNone: () => {
         const unset = Effect.fail(failed("Reclaim is not connected: ras has no API key. Set RAS_RECLAIM_API_KEY."))
-        return Effect.succeed(Reclaim.of({ calendars: unset, events: () => unset }))
+        return Effect.succeed(
+          Reclaim.of({ calendars: unset, events: () => unset, providerId: () => unset, reply: () => unset })
+        )
       },
       onSome: make
     })

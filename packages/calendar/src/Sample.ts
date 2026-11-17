@@ -41,7 +41,7 @@ interface Planned {
 
 const timed = (start: string, end: string) => Option.some([start, end] as const)
 
-/** An invented fortnight: standups at work with their copies, a dentist, a habit Reclaim placed, a clash and a holiday. */
+/** An invented fortnight: standups at work with their copies, a dentist, a weekly gym, a habit Reclaim placed, a clash and a holiday. */
 const plan: ReadonlyArray<Planned> = [
   ...Arr.flatMap(Arr.range(0, 13), (day): ReadonlyArray<Planned> => [
     { calendar: work, id: `standup-${day}`, title: "Standup", day, clock: timed("09:00", "09:15"), category: "WORK" },
@@ -57,6 +57,8 @@ const plan: ReadonlyArray<Planned> = [
     { calendar: personal, id: `lunch-${day}`, title: "Lunch", day, clock: timed("12:00", "13:00"), kind: "reclaim" }
   ]),
   { calendar: personal, id: "dentist", title: "Dentist", day: 2, clock: timed("14:00", "15:00") },
+  { calendar: personal, id: "gym", title: "Gym", day: 1, clock: timed("18:00", "19:00") },
+  { calendar: personal, id: "gym", title: "Gym", day: 3, clock: timed("18:00", "19:00") },
   {
     calendar: work,
     id: "review",
@@ -88,7 +90,7 @@ export const make = (today: Time.PragueDate): Reclaim.Reclaim["Service"] => {
       showAs: planned.showAs ?? "busy",
       rsvp: planned.rsvp ?? "accepted",
       cancelled: false,
-      recurring: planned.id.startsWith("standup") || planned.id.startsWith("lunch"),
+      recurring: ["standup", "lunch", "gym"].some((series) => planned.id.startsWith(series)),
       location: Option.none(),
       category: Option.fromUndefinedOr(planned.category),
       notes: Option.none(),
@@ -98,6 +100,8 @@ export const make = (today: Time.PragueDate): Reclaim.Reclaim["Service"] => {
   })
   return Reclaim.Reclaim.of({
     calendars: Effect.succeed(calendars),
+    providerId: (_, event) => Effect.succeed(`graph-${event}`),
+    reply: () => Effect.void,
     events: (first, end) => {
       const from = Time.pragueMidnight(first)
       const to = Time.pragueMidnight(end)
