@@ -3,6 +3,7 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
+import * as Semaphore from "effect/Semaphore"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
@@ -95,6 +96,7 @@ export class Blocks extends Context.Service<
       const sql = yield* SqlClient.SqlClient
       const writes = yield* Global.Writes
       const events = yield* Calendar.Events
+      const one = yield* Semaphore.make(1)
       const db = Effect.provideService(SqlClient.SqlClient, sql)
 
       const block = (id: string) =>
@@ -255,7 +257,7 @@ export class Blocks extends Context.Service<
               Option.some(end),
               input.draft === true ? Option.none() : Option.some(end)
             )
-          }),
+          }).pipe(one.withPermit),
 
         start: (task) =>
           Effect.gen(function* () {
@@ -276,7 +278,7 @@ export class Blocks extends Context.Service<
               Option.none(),
               Option.some(DateTime.add(now, { milliseconds: runningEvent }))
             )
-          }),
+          }).pipe(one.withPermit),
 
         stop: Effect.gen(function* () {
           const found = yield* db(Store.runningBlock)
@@ -298,7 +300,7 @@ export class Blocks extends Context.Service<
             Option.some({ end: null }),
             Option.some({ end: Time.toPragueLocal(end) })
           )
-        }),
+        }).pipe(one.withPermit),
 
         log: (input) =>
           Effect.gen(function* () {
@@ -310,7 +312,7 @@ export class Blocks extends Context.Service<
               return yield* refuse("future", `${input.end} has not come yet.`, "Plan future work with plan_work.")
             yield* free(start, end, now, Option.none())
             return yield* create("work.block.logged", target, start, Option.some(end), Option.some(end))
-          }),
+          }).pipe(one.withPermit),
 
         move: (input) =>
           Effect.gen(function* () {
@@ -342,7 +344,7 @@ export class Blocks extends Context.Service<
               Option.some(shown(row)),
               Option.some(shown(moved))
             )
-          }),
+          }).pipe(one.withPermit),
 
         remove: (id) =>
           Effect.gen(function* () {
@@ -350,7 +352,7 @@ export class Blocks extends Context.Service<
             if (stateOf(row, yield* DateTime.now) === "running")
               return yield* refuse("running", `${row.title} is running.`, "Stop it with stop_work before removing it.")
             yield* discard(row)
-          }),
+          }).pipe(one.withPermit),
 
         release: (task) =>
           Effect.gen(function* () {
@@ -361,7 +363,7 @@ export class Blocks extends Context.Service<
               discard,
               { discard: true }
             )
-          }),
+          }).pipe(one.withPermit),
 
         confirm: (id) =>
           Effect.gen(function* () {
@@ -382,7 +384,7 @@ export class Blocks extends Context.Service<
               Option.some({ draft: true }),
               Option.some({ draft: false })
             )
-          })
+          }).pipe(one.withPermit)
       })
     })
   )
