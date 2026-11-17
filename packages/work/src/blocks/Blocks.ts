@@ -18,8 +18,6 @@ import * as TaskRepository from "../board/TaskRepository.ts"
 
 /** A started block's event first runs this long; stopping it sets the real end. */
 const runningEvent = 15 * 60_000
-/** A start this close behind now still counts as now. */
-const grace = 60_000
 
 const refuse = (code: string, reason: string, instead: string) =>
   Effect.fail(new Errors.Refused({ code: `work.block.${code}`, reason, instead }))
@@ -61,10 +59,10 @@ const span = (start: DateTime.Utc, end: DateTime.Utc): Calendar.Span => ({ start
 
 const clock = (instant: DateTime.Utc) => Time.toPragueLocal(instant).slice(11)
 
-const length = (min: number, start: DateTime.Utc, end: DateTime.Utc, what: string) => {
+const length = (start: DateTime.Utc, end: DateTime.Utc) => {
   const minutes = (millis(end) - millis(start)) / 60_000
-  return minutes < min || minutes > 720
-    ? Effect.fail(new Errors.Invalid({ reason: `${what} runs from ${min} minutes to 12 hours.` }))
+  return minutes < 1 || minutes > 720
+    ? Effect.fail(new Errors.Invalid({ reason: "A block runs from 1 minute to 12 hours." }))
     : Effect.void
 }
 
@@ -83,14 +81,15 @@ export class Blocks extends Context.Service<
       readonly to: Time.PragueLocal
     }) => Effect.Effect<ReadonlyArray<Block.Block>, Errors.Invalid>
     readonly running: Effect.Effect<Option.Option<Block.Block>>
-    /** Plans a block of an open task at a start and a length; a draft has no event until it is confirmed. */
-    readonly plan: (input: Block.PlanWork) => Global.Write<Block.Block>
+    /**
+     * Adds a block of an open task from its start to its end, past, future or across now; a draft has no event until it
+     * is confirmed.
+     */
+    readonly add: (input: Block.AddWork) => Global.Write<Block.Block>
     /** Starts a block of an open task now; one block runs at a time. */
     readonly start: (task: Task.TaskId) => Global.Write<Block.Block>
     /** Ends the running block now, and its event with it. */
     readonly stop: Global.Write<Block.Block>
-    /** Records work that already happened, ending at `end`. */
-    readonly log: (input: Block.LogWork) => Global.Write<Block.Block>
     /** Moves or resizes a block that is not running, with its event. */
     readonly move: (input: Block.MoveWork) => Global.Write<Block.Block>
     /** Removes a block that is not running, with its event. */
@@ -140,22 +139,6 @@ export class Blocks extends Context.Service<
               "Choose its personal calendar under Settings, Spaces."
             )
           return { task, calendar: space.calendar }
-        })
-
-      /** Refuses a span another block already takes; a running block takes its time until now. */
-      const free = (start: DateTime.Utc, end: DateTime.Utc, now: DateTime.Utc, except: Option.Option<Block.BlockId>) =>
-        Effect.gen(function* () {
-          const overlapping = (yield* storedBlocks.overlapping(
-            { start: DateTime.formatIso(start), end: DateTime.formatIso(end) },
-            DateTime.formatIso(now)
-          )).filter((other) => !Option.contains(except, other.id))
-          const other = overlapping[0]
-          if (other === undefined) return
-          return yield* refuse(
-            "overlap",
-            `${other.title} already takes ${clock(other.start)} to ${Option.match(other.end, { onNone: () => "now", onSome: clock })} that day.`,
-            "Choose a time that no other block takes."
-          )
         })
 
       const save = <A>(
@@ -239,25 +222,19 @@ export class Blocks extends Context.Service<
           return Option.map(yield* storedBlocks.running, (row) => view(row, now))
         }),
 
-        plan: (input) =>
+        add: (input) =>
           Effect.gen(function* () {
-            const target = yield* workable(input.task, "planning")
-            const now = yield* DateTime.now
+            const target = yield* workable(input.task, "adding")
             const start = yield* Time.toInstant(input.start)
-            const end = DateTime.add(start, { minutes: input.minutes })
-            if (millis(start) < millis(now) - grace)
-              return yield* refuse(
-                "past",
-                `${input.start} has passed.`,
-                "Log work that already happened with log_work."
-              )
-            yield* free(start, end, now, Option.none())
+            const end = yield* Time.toInstant(input.end)
+            yield* length(start, end)
+            const draft = input.draft === true
             return yield* create(
-              input.draft === true ? "work.block.drafted" : "work.block.planned",
+              draft ? "work.block.drafted" : "work.block.added",
               target,
               start,
               Option.some(end),
-              input.draft === true ? Option.none() : Option.some(end)
+              draft ? Option.none() : Option.some(end)
             )
           }).pipe(one.withPermit),
 
@@ -272,7 +249,6 @@ export class Blocks extends Context.Service<
                 "Stop it with stop_work first."
               )
             const now = yield* DateTime.now
-            yield* free(now, DateTime.add(now, { minutes: 1 }), now, Option.none())
             return yield* create(
               "work.block.started",
               target,
@@ -304,38 +280,15 @@ export class Blocks extends Context.Service<
           )
         }).pipe(one.withPermit),
 
-        log: (input) =>
-          Effect.gen(function* () {
-            const target = yield* workable(input.task, "logging")
-            const now = yield* DateTime.now
-            const end = yield* Time.toInstant(input.end)
-            const start = DateTime.subtract(end, { minutes: input.minutes })
-            if (DateTime.isGreaterThan(end, now))
-              return yield* refuse("future", `${input.end} has not come yet.`, "Plan future work with plan_work.")
-            yield* free(start, end, now, Option.none())
-            return yield* create("work.block.logged", target, start, Option.some(end), Option.some(end))
-          }).pipe(one.withPermit),
-
         move: (input) =>
           Effect.gen(function* () {
             const row = yield* block(input.block)
             const now = yield* DateTime.now
-            const state = stateOf(row, now)
-            if (state === "running")
+            if (stateOf(row, now) === "running")
               return yield* refuse("running", `${row.title} is running.`, "Stop it with stop_work before moving it.")
             const start = yield* Time.toInstant(input.start)
             const end = yield* Time.toInstant(input.end)
-            const ended = state === "done" || (state === "draft" && DateTime.isLessThanOrEqualTo(end, now))
-            if (ended) {
-              if (DateTime.isGreaterThan(end, now))
-                return yield* refuse("future", "Work that has ended stays in the past.", "Choose an end before now.")
-              yield* length(1, start, end, "A logged block")
-            } else {
-              if (millis(start) < millis(now) - grace)
-                return yield* refuse("past", `${input.start} has passed.`, "Choose a start from now on.")
-              yield* length(5, start, end, "A planned block")
-            }
-            yield* free(start, end, now, Option.some(row.id))
+            yield* length(start, end)
             if (Option.isSome(row.event))
               yield* events.moveBlock(row.event.value, { id: row.id, title: row.title, span: span(start, end) })
             const moved: BlockRepository.StoredBlock = { ...row, start, end: Option.some(end) }

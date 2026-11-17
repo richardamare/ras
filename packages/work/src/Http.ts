@@ -121,7 +121,7 @@ export const group = HttpApiGroup.make("work")
     })
   )
   .add(HttpApiEndpoint.get("running", "/blocks/running", { success: Schema.NullOr(Block.Block) }))
-  .add(HttpApiEndpoint.post("plan", "/blocks", { payload: Block.PlanWork, success: Block.Block, error: failures }))
+  .add(HttpApiEndpoint.post("add", "/blocks", { payload: Block.AddWork, success: Block.Block, error: failures }))
   .add(
     HttpApiEndpoint.post("start", "/blocks/start", {
       payload: Schema.Struct({ task: Task.TaskId }),
@@ -130,7 +130,6 @@ export const group = HttpApiGroup.make("work")
     })
   )
   .add(HttpApiEndpoint.post("stop", "/blocks/stop", { success: Block.Block, error: failures }))
-  .add(HttpApiEndpoint.post("log", "/blocks/log", { payload: Block.LogWork, success: Block.Block, error: failures }))
   .add(
     HttpApiEndpoint.patch("move", "/blocks/:id", {
       params: { id: Block.BlockId },
@@ -174,10 +173,9 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoin
       .handle("unlink", ({ params, query }) => board.unlink(params.id, query.url))
       .handle("blocks", ({ query }) => blocks.blocks(query))
       .handle("running", () => Effect.map(blocks.running, Option.getOrNull))
-      .handle("plan", ({ payload }) => blocks.plan(payload))
+      .handle("add", ({ payload }) => blocks.add(payload))
       .handle("start", ({ payload }) => blocks.start(payload.task))
       .handle("stop", () => blocks.stop)
-      .handle("log", ({ payload }) => blocks.log(payload))
       .handle("move", ({ params, payload }) => blocks.move({ block: params.id, ...payload }))
       .handle("remove", ({ params }) => blocks.remove(params.id))
       .handle("confirmDrafts", ({ payload }) => drafts.confirm(payload))

@@ -24,27 +24,15 @@ export class Block extends Schema.Class<Block>("Block")({
   state: BlockState
 }) {}
 
-const Minutes = (minimum: number) =>
-  Schema.Int.check(Schema.isBetween({ minimum, maximum: 720 })).annotate({
-    description: `Minutes, from ${minimum} to 720.`
-  })
-
-export const PlanWork = Schema.Struct({
+export const AddWork = Schema.Struct({
   task: Task.TaskId,
   start: Time.PragueLocal,
-  minutes: Minutes(5),
+  end: Time.PragueLocal,
   draft: Schema.optionalKey(Schema.Boolean).annotate({
     description: "Keeps the block in ras, taking its time, until confirm_drafts writes its event."
   })
 })
-export type PlanWork = typeof PlanWork.Type
-
-export const LogWork = Schema.Struct({
-  task: Task.TaskId,
-  end: Time.PragueLocal.annotate({ description: "When the work ended; not in the future." }),
-  minutes: Minutes(1)
-})
-export type LogWork = typeof LogWork.Type
+export type AddWork = typeof AddWork.Type
 
 export const MoveWork = Schema.Struct({
   block: BlockId,

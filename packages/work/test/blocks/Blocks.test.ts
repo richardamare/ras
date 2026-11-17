@@ -34,11 +34,11 @@ const setUp = Effect.gen(function* () {
 })
 
 layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sample))("work blocks", (test) => {
-  test.effect("plans a block into its space's calendar, titled with the project and the task", () =>
+  test.effect("adds a block into its space's calendar, titled with the project and the task", () =>
     Effect.gen(function* () {
       const { task } = yield* setUp
       const blocks = yield* Blocks.Blocks
-      const block = yield* blocks.plan({ task: task.id, start: yield* inHours(2), minutes: 90 })
+      const block = yield* blocks.add({ task: task.id, start: yield* inHours(2), end: yield* inHours(3.5) })
       assert.deepStrictEqual(
         [block.title, block.state, block.calendar],
         ["ras: Plan the week", "planned", CalendarTesting.personal]
@@ -49,14 +49,6 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       assert.deepStrictEqual(
         [create.calendar, create.write.subject, create.write.body?.content],
         ["sample-personal", "ras: Plan the week", `ras-block:${block.id}`]
-      )
-      assert.strictEqual(
-        yield* KernelTesting.code(blocks.plan({ task: task.id, start: yield* inHours(2.5), minutes: 30 })),
-        "work.block.overlap"
-      )
-      assert.strictEqual(
-        yield* KernelTesting.code(blocks.plan({ task: task.id, start: yield* inHours(-1), minutes: 30 })),
-        "work.block.past"
       )
       yield* blocks.remove(block.id)
       assert.deepStrictEqual(
@@ -89,17 +81,36 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
     })
   )
 
-  test.effect("logs work that already happened, and refuses an end still to come", () =>
+  test.effect("adds a block in the past, one across now and one overlapping both, and counts each once it ends", () =>
+    Effect.gen(function* () {
+      const { board } = yield* setUp
+      const blocks = yield* Blocks.Blocks
+      yield* TestClock.adjust("3 hours")
+      const task = yield* board.addTask({ title: "Log the hours" })
+      const past = yield* blocks.add({ task: task.id, start: yield* inHours(-1.25), end: yield* inHours(-0.5) })
+      const across = yield* blocks.add({ task: task.id, start: yield* inHours(-0.25), end: yield* inHours(0.25) })
+      const overlapping = yield* blocks.add({ task: task.id, start: yield* inHours(-1), end: yield* inHours(0.5) })
+      assert.deepStrictEqual([past.state, across.state, overlapping.state], ["done", "planned", "planned"])
+      assert.strictEqual((yield* board.task(task.id)).spent, 45)
+      yield* TestClock.adjust("15 minutes")
+      assert.strictEqual((yield* board.task(task.id)).spent, 75)
+      assert.strictEqual(
+        yield* KernelTesting.code(blocks.add({ task: task.id, start: yield* inHours(1), end: yield* inHours(1) })),
+        "Invalid"
+      )
+    })
+  )
+
+  test.effect("moves a block that has ended into the future and one still to come into the past", () =>
     Effect.gen(function* () {
       const { task } = yield* setUp
       const blocks = yield* Blocks.Blocks
       yield* TestClock.adjust("3 hours")
-      const logged = yield* blocks.log({ task: task.id, end: yield* inHours(-0.5), minutes: 45 })
-      assert.strictEqual(logged.state, "done")
-      assert.strictEqual(
-        yield* KernelTesting.code(blocks.log({ task: task.id, end: yield* inHours(1), minutes: 30 })),
-        "work.block.future"
-      )
+      const ended = yield* blocks.add({ task: task.id, start: yield* inHours(-2), end: yield* inHours(-1) })
+      const coming = yield* blocks.add({ task: task.id, start: yield* inHours(1), end: yield* inHours(2) })
+      const later = yield* blocks.move({ block: ended.id, start: yield* inHours(3), end: yield* inHours(4) })
+      const earlier = yield* blocks.move({ block: coming.id, start: yield* inHours(-2), end: yield* inHours(-1) })
+      assert.deepStrictEqual([later.state, earlier.state], ["planned", "done"])
     })
   )
 
@@ -108,7 +119,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       const { task } = yield* setUp
       const blocks = yield* Blocks.Blocks
       const start = yield* inHours(5)
-      const draft = yield* blocks.plan({ task: task.id, start, minutes: 60, draft: true })
+      const draft = yield* blocks.add({ task: task.id, start, end: yield* inHours(6), draft: true })
       assert.strictEqual(draft.state, "draft")
       assert.deepStrictEqual(yield* calls, [])
       const calendar = yield* Calendar.Calendar
@@ -131,7 +142,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
     })
   )
 
-  test.effect("plans no block on an agent's task, on a done one, or in a space without a calendar", () =>
+  test.effect("adds no block on an agent's task, on a done one, or in a space without a calendar", () =>
     Effect.gen(function* () {
       const { board, space } = yield* setUp
       const blocks = yield* Blocks.Blocks
@@ -139,7 +150,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       yield* (yield* Global.Agents).add(scheduler, "Scheduler")
       const theirs = yield* board.addTask({ title: "Book the dentist", assignee: scheduler })
       assert.strictEqual(
-        yield* KernelTesting.code(blocks.plan({ task: theirs.id, start: yield* inHours(9), minutes: 30 })),
+        yield* KernelTesting.code(blocks.add({ task: theirs.id, start: yield* inHours(9), end: yield* inHours(9.5) })),
         "work.block.agent"
       )
       const done = yield* board.addTask({ title: "Done already", status: "done" })
@@ -155,9 +166,9 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
     Effect.gen(function* () {
       const { board, task, project } = yield* setUp
       const blocks = yield* Blocks.Blocks
-      yield* blocks.log({ task: task.id, end: yield* inHours(-30), minutes: 45 })
-      yield* blocks.plan({ task: task.id, start: yield* inHours(40), minutes: 30 })
-      yield* blocks.plan({ task: task.id, start: yield* inHours(42), minutes: 30, draft: true })
+      yield* blocks.add({ task: task.id, start: yield* inHours(-30.75), end: yield* inHours(-30) })
+      yield* blocks.add({ task: task.id, start: yield* inHours(40), end: yield* inHours(40.5) })
+      yield* blocks.add({ task: task.id, start: yield* inHours(42), end: yield* inHours(42.5), draft: true })
       yield* Ref.set(CalendarTesting.sampleCalls, [])
       const closed = yield* board.changeTask(task.id, { status: "done" })
       assert.deepStrictEqual([closed.status, closed.spent], ["done", 45])
@@ -178,7 +189,7 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
     Effect.gen(function* () {
       const { board, task } = yield* setUp
       const blocks = yield* Blocks.Blocks
-      yield* blocks.plan({ task: task.id, start: yield* inHours(44), minutes: 30 })
+      yield* blocks.add({ task: task.id, start: yield* inHours(44), end: yield* inHours(44.5) })
       yield* Ref.set(CalendarTesting.sampleCalls, [])
       assert.isTrue(Option.isNone(yield* board.deleteTask(task.id)))
       assert.strictEqual(yield* KernelTesting.code(board.task(task.id)), "NotFound")
@@ -188,32 +199,11 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
       )
 
       const worked = yield* board.addTask({ title: "Read the contract" })
-      yield* blocks.log({ task: worked.id, end: yield* inHours(-34), minutes: 20 })
+      yield* blocks.add({ task: worked.id, start: yield* inHours(-34 - 1 / 3), end: yield* inHours(-34) })
       const kept = yield* board.deleteTask(worked.id)
       assert.deepStrictEqual(
         Option.map(kept, (found) => [found.status, found.spent]),
         Option.some(["done", 20])
-      )
-    })
-  )
-
-  test.effect("refuses the second of two parallel plans for the same time", () =>
-    Effect.gen(function* () {
-      const { task } = yield* setUp
-      const blocks = yield* Blocks.Blocks
-      const start = yield* inHours(60)
-      const outcomes = yield* Effect.all(
-        [
-          Effect.result(blocks.plan({ task: task.id, start, minutes: 60 })),
-          Effect.result(blocks.plan({ task: task.id, start, minutes: 60 }))
-        ],
-        { concurrency: "unbounded" }
-      )
-      assert.strictEqual(outcomes.filter(Result.isSuccess).length, 1)
-      const [refused] = outcomes.filter(Result.isFailure)
-      assert.strictEqual(
-        "code" in refused!.failure ? refused!.failure.code : refused!.failure._tag,
-        "work.block.overlap"
       )
     })
   )

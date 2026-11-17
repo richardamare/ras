@@ -23,7 +23,7 @@ const setUp = Effect.gen(function* () {
   const task = yield* board.addTask({ title: "Write the report" })
   const events = yield* Calendar.Events
   const start = yield* inHours(26)
-  const block = yield* (yield* Blocks.Blocks).plan({ task: task.id, start, minutes: 60, draft: true })
+  const block = yield* (yield* Blocks.Blocks).add({ task: task.id, start, end: yield* inHours(27), draft: true })
   const call = yield* events.create({
     title: "Call",
     calendar: CalendarTesting.personal,

@@ -1948,14 +1948,11 @@ export type WorkBlocksResponses = {
 
 export type WorkBlocksResponse = WorkBlocksResponses[keyof WorkBlocksResponses];
 
-export type WorkPlanData = {
+export type WorkAddData = {
     body: {
         task: string;
         start: string;
-        /**
-         * Minutes, from 5 to 720.
-         */
-        minutes: number;
+        end: string;
         /**
          * Keeps the block in ras, taking its time, until confirm_drafts writes its event.
          */
@@ -1966,7 +1963,7 @@ export type WorkPlanData = {
     url: '/work/blocks';
 };
 
-export type WorkPlanErrors = {
+export type WorkAddErrors = {
     /**
      * Invalid
      */
@@ -1989,16 +1986,16 @@ export type WorkPlanErrors = {
     502: SourceFailedEncoded;
 };
 
-export type WorkPlanError = WorkPlanErrors[keyof WorkPlanErrors];
+export type WorkAddError = WorkAddErrors[keyof WorkAddErrors];
 
-export type WorkPlanResponses = {
+export type WorkAddResponses = {
     /**
      * Block
      */
     200: BlockEncoded;
 };
 
-export type WorkPlanResponse = WorkPlanResponses[keyof WorkPlanResponses];
+export type WorkAddResponse = WorkAddResponses[keyof WorkAddResponses];
 
 export type WorkRunningData = {
     body?: never;
@@ -2108,57 +2105,6 @@ export type WorkStopResponses = {
 };
 
 export type WorkStopResponse = WorkStopResponses[keyof WorkStopResponses];
-
-export type WorkLogData = {
-    body: {
-        task: string;
-        /**
-         * When the work ended; not in the future.
-         */
-        end: string;
-        /**
-         * Minutes, from 1 to 720.
-         */
-        minutes: number;
-    };
-    path?: never;
-    query?: never;
-    url: '/work/blocks/log';
-};
-
-export type WorkLogErrors = {
-    /**
-     * Invalid
-     */
-    400: InvalidEncoded;
-    /**
-     * Unauthorized
-     */
-    401: EffectHttpApiErrorUnauthorizedEncoded;
-    /**
-     * NotFound
-     */
-    404: NotFoundEncoded;
-    /**
-     * Refused
-     */
-    409: RefusedEncoded;
-    /**
-     * SourceFailed
-     */
-    502: SourceFailedEncoded;
-};
-
-export type WorkLogError = WorkLogErrors[keyof WorkLogErrors];
-
-export type WorkLogResponses = {
-    /**
-     * Block
-     */
-    200: BlockEncoded;
-};
-
-export type WorkLogResponse = WorkLogResponses[keyof WorkLogResponses];
 
 export type WorkRemoveData = {
     body?: never;
