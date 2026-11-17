@@ -1,6 +1,7 @@
 import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
 
 /** Reclaim's id for a calendar. */
@@ -102,7 +103,15 @@ export interface Entry {
   readonly attendees: ReadonlyArray<Attendee>
   /** For a copy Calendar Sync wrote, the event it copies. */
   readonly copyOf: Option.Option<EventRef>
+  /** For an event drafted in ras and not confirmed yet: the draft, and why the calendar refused it, if it did. */
+  readonly draft?: { readonly id: DraftId; readonly refusal: Option.Option<string> }
 }
+
+export const DraftId = Id.Uuid.pipe(Schema.brand("DraftId"))
+export type DraftId = typeof DraftId.Type
+
+/** The id a draft's event carries in its calendar, which no calendar's own id can be. */
+export const draftEventId = (id: DraftId) => `draft-${id}`
 
 /** Whether the event takes its time: neither cancelled, declined nor shown as free. */
 export const blocks = (entry: Entry): boolean =>
@@ -124,7 +133,10 @@ export class Event extends Schema.Class<Event>("Event")({
   category: Schema.NullOr(Schema.String),
   notes: Schema.NullOr(Schema.String),
   attendees: Schema.Array(Attendee),
-  copyOf: Schema.NullOr(EventId).annotate({ description: "The original a copy was written from." })
+  copyOf: Schema.NullOr(EventId).annotate({ description: "The original a copy was written from." }),
+  draft: Schema.NullOr(Schema.Struct({ refusal: Schema.NullOr(Schema.String) })).annotate({
+    description: "Set while the event is a draft in ras, with why its calendar refused it when it was confirmed."
+  })
 }) {}
 
 export const eventOf = (entry: Entry): Event =>
@@ -144,7 +156,8 @@ export const eventOf = (entry: Entry): Event =>
     category: Option.getOrNull(entry.category),
     notes: Option.getOrNull(entry.notes),
     attendees: entry.attendees,
-    copyOf: Option.getOrNull(Option.map(entry.copyOf, eventId))
+    copyOf: Option.getOrNull(Option.map(entry.copyOf, eventId)),
+    draft: entry.draft === undefined ? null : { refusal: Option.getOrNull(entry.draft.refusal) }
   })
 
 export class Slot extends Schema.Class<Slot>("Slot")({
@@ -226,7 +239,10 @@ export const NewEvent = Schema.Struct({
   location: Schema.optionalKey(Schema.String),
   notes: Schema.optionalKey(Schema.String),
   showAs: Schema.optionalKey(ShowAs),
-  repeat: Schema.optionalKey(Repeat)
+  repeat: Schema.optionalKey(Repeat),
+  draft: Schema.optionalKey(Schema.Boolean).annotate({
+    description: "Keeps the event in ras, where the owner confirms or discards it; a draft cannot repeat."
+  })
 })
 export type NewEvent = typeof NewEvent.Type
 
@@ -250,5 +266,6 @@ export class Created extends Schema.Class<Created>("Created")({
   end: Time.PragueLocal,
   allDay: Schema.Boolean,
   recurring: Schema.Boolean,
-  link: Schema.NullOr(Schema.String)
+  link: Schema.NullOr(Schema.String),
+  draft: Schema.NullOr(EventId).annotate({ description: "The draft's id while the event is a draft in ras." })
 }) {}

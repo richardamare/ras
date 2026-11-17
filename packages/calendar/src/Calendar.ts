@@ -55,6 +55,28 @@ export const originals = (
   )
 }
 
+/** A draft as the calendar shows it: a plain event of its calendar, marked as a draft. */
+export const entryOfDraft = (draft: Store.Draft): Domain.Entry => ({
+  ref: { calendar: draft.calendar, date: Time.pragueDateOf(draft.span.start), id: Domain.draftEventId(draft.id) },
+  title: draft.title,
+  span: draft.span,
+  allDay: draft.allDay,
+  kind: "plain",
+  showAs: Option.getOrElse(draft.showAs, () => "busy" as const),
+  rsvp: "none",
+  cancelled: false,
+  recurring: false,
+  location: draft.location,
+  category: Option.none(),
+  notes: draft.notes,
+  attendees: [],
+  copyOf: Option.none(),
+  draft: { id: draft.id, refusal: draft.refusal }
+})
+
+const draftOf = (id: string) =>
+  id.startsWith("draft-") ? Option.some(Domain.DraftId.make(id.slice(6))) : Option.none()
+
 export class Calendar extends Context.Service<
   Calendar,
   {
@@ -64,7 +86,7 @@ export class Calendar extends Context.Service<
       id: Domain.CalendarId,
       change: Domain.CalendarChange
     ) => Effect.Effect<Domain.Calendar, Errors.NotFound | Errors.SourceFailed, Global.CurrentActor>
-    /** The events of the enabled calendars that overlap the span, each once, in start order. */
+    /** The events and drafts of the enabled calendars that overlap the span, each once, in start order. */
     readonly entries: (span: Domain.Span) => Read<ReadonlyArray<Domain.Entry>>
     readonly events: (
       window: Domain.Window
@@ -155,7 +177,8 @@ export class Calendar extends Context.Service<
     const entries = (span: Domain.Span) =>
       Effect.gen(function* () {
         const found = yield* read(span)
-        return originals(found, yield* shown).toSorted(byStart)
+        const drafts = Arr.map(yield* db(Store.drafts(span)), entryOfDraft)
+        return originals([...found, ...drafts], yield* shown).toSorted(byStart)
       })
 
     const quietly = sync.pipe(
@@ -230,10 +253,20 @@ export class Calendar extends Context.Service<
           const ref = Domain.eventRef(id)
           const day = { start: Time.pragueMidnight(ref.date), end: Time.pragueMidnight(Time.addDays(ref.date, 1)) }
           const all = yield* connected
-          const entry = Arr.findFirst(
-            yield* read(day),
-            (found) => found.ref.calendar === ref.calendar && found.ref.id === ref.id && found.ref.date === ref.date
-          )
+          const entry = yield* Option.match(draftOf(ref.id), {
+            onNone: () =>
+              Effect.map(read(day), (found) =>
+                Arr.findFirst(
+                  found,
+                  (entry) =>
+                    entry.ref.calendar === ref.calendar && entry.ref.id === ref.id && entry.ref.date === ref.date
+                )
+              ),
+            onSome: (draft) =>
+              Effect.map(db(Store.draftById(draft)), (found) =>
+                Option.filter(Option.map(found, entryOfDraft), (entry) => entry.ref.calendar === ref.calendar)
+              )
+          })
           const calendar = Arr.findFirst(all, (found) => found.calendar.id === ref.calendar)
           if (Option.isNone(entry) || Option.isNone(calendar))
             return yield* new Errors.NotFound({ subject: "event", id })

@@ -58,7 +58,7 @@ export const toolkit = Toolkit.make(
   }),
   Global.writeTool("create_event", {
     description:
-      "Creates a plain event in a personal calendar: timed with start and end (an hour when end is omitted), or all-day with firstDay and lastDay. `repeat` makes a series that keeps its Prague clock across daylight-saving changes. Times are Prague local.",
+      "Creates a plain event in a personal calendar: timed with start and end (an hour when end is omitted), or all-day with firstDay and lastDay. `repeat` makes a series that keeps its Prague clock across daylight-saving changes. With `draft` the event stays in ras, taking its time, until the owner confirms it; change_event and cancel_event change or discard a draft. Times are Prague local.",
     parameters: Domain.NewEvent.fields,
     success: Domain.Created,
     destructive: false
