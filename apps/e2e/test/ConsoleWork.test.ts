@@ -316,8 +316,14 @@ describe("the console's work pages", () => {
         const project = yield* client.work.addProject({ payload: { name: Suite.unique("Bin"), space: space.id } })
         const idle = yield* client.work.addTask({ payload: { title: Suite.unique("Idle"), project: project.id } })
         const worked = yield* client.work.addTask({ payload: { title: Suite.unique("Worked"), project: project.id } })
-        const end = Time.toPragueLocal(DateTime.subtract(yield* DateTime.now, { days: 1 }))
-        yield* client.work.log({ payload: { task: worked.id, end, minutes: 30 } })
+        const day = Time.addDays(yield* today, -22)
+        yield* client.work.add({
+          payload: {
+            task: worked.id,
+            start: Time.PragueLocal.make(`${day}T06:00`),
+            end: Time.PragueLocal.make(`${day}T06:30`)
+          }
+        })
         const page = yield* Suite.signedInPage
 
         const remove = (task: typeof idle) =>
