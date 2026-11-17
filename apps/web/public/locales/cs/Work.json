@@ -101,7 +101,7 @@
   "links": {
     "title": "Odkazy",
     "url": "GitHub issue nebo pull request",
-    "placeholder": "https://github.com/owner/repo/issues/1",
+    "placeholder": "Vložte odkaz na GitHub issue nebo pull request",
     "add": "Připojit",
     "remove": "Odpojit {{url}}"
   },
