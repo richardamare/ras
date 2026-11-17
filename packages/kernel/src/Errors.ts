@@ -1,3 +1,5 @@
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 /** A module refuses with its own `code`; the caller reads `reason` and, when there is one, `instead`. */
@@ -45,3 +47,9 @@ export class SourceFailed extends Schema.TaggedError<SourceFailed>()(
 
 export const Failure = Schema.Union([Refused, NotFound, Invalid, SourceFailed])
 export type Failure = typeof Failure.Type
+
+/** The value of `found`, or `NotFound` for `subject` and `id` when there is none. */
+export const orNotFound =
+  (subject: string, id: string) =>
+  <A>(found: Option.Option<A>): Effect.Effect<A, NotFound> =>
+    Option.match(found, { onNone: () => Effect.fail(new NotFound({ subject, id })), onSome: Effect.succeed })

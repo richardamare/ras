@@ -204,18 +204,16 @@ export const make = (username: string, password: Redacted.Redacted) => {
     id: Domain.MessageId,
     use: (client: Imap.ImapFlow, message: Imap.FetchMessageObject, parts: ReadonlyArray<Part>) => Promise<A>
   ) =>
-    Option.match(Domain.messageRef(id), {
-      onNone: () => Effect.fail(new Errors.NotFound({ subject: "mail message", id })),
-      onSome: (ref) =>
-        inFolder(ref.folder, async (client, box) => {
-          const message =
-            Number(box.uidValidity) === ref.uidValidity
-              ? await client.fetchOne(String(ref.uid), fetched, { uid: true })
-              : false
-          if (message === false) throw new Errors.NotFound({ subject: "mail message", id })
-          return use(client, message, partsOf(message.bodyStructure))
-        })
-    })
+    Effect.flatMap(Errors.orNotFound("mail message", id)(Domain.messageRef(id)), (ref) =>
+      inFolder(ref.folder, async (client, box) => {
+        const message =
+          Number(box.uidValidity) === ref.uidValidity
+            ? await client.fetchOne(String(ref.uid), fetched, { uid: true })
+            : false
+        if (message === false) throw new Errors.NotFound({ subject: "mail message", id })
+        return use(client, message, partsOf(message.bodyStructure))
+      })
+    )
 
   return Mailbox.of({
     search: (search) =>
@@ -378,10 +376,10 @@ export const sample = Layer.effect(
         ? Effect.succeed(sampleMessages.filter((message) => message.folder === folder))
         : Effect.fail(new Errors.NotFound({ subject: "mail folder", id: folder }))
     const found = (messageId: Domain.MessageId) =>
-      Option.match(Option.fromUndefinedOr(sampleMessages.find((message) => id(message) === messageId)), {
-        onNone: () => Effect.fail(new Errors.NotFound({ subject: "mail message", id: messageId })),
-        onSome: Effect.succeed
-      })
+      Errors.orNotFound(
+        "mail message",
+        messageId
+      )(Option.fromUndefinedOr(sampleMessages.find((message) => id(message) === messageId)))
     const newest = (messages: ReadonlyArray<SampleMessage>, limit: number | undefined) =>
       messages
         .map(summary)

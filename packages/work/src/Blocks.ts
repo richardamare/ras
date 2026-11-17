@@ -99,13 +99,7 @@ export class Blocks extends Context.Service<
       const one = yield* Semaphore.make(1)
       const db = Effect.provideService(SqlClient.SqlClient, sql)
 
-      const block = (id: string) =>
-        Effect.flatMap(db(Store.blockById(id)), (found) =>
-          Option.match(found, {
-            onNone: () => Effect.fail(new Errors.NotFound({ subject: "work block", id })),
-            onSome: Effect.succeed
-          })
-        )
+      const block = (id: string) => Effect.flatMap(db(Store.blockById(id)), Errors.orNotFound("work block", id))
 
       /** An open task of the owner's, in a space whose calendar takes its blocks. */
       const workable = (id: Domain.TaskId, verb: string) =>

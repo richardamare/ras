@@ -306,10 +306,7 @@ export class Events extends Context.Service<
           const all = yield* calendar.connected
           if (named !== undefined) {
             const found = Arr.findFirst(all, (entry) => entry.calendar.id === named)
-            return yield* Option.match(found, {
-              onNone: () => Effect.fail(new Errors.NotFound({ subject: "calendar", id: String(named) })),
-              onSome: Effect.succeed
-            })
+            return yield* Errors.orNotFound("calendar", String(named))(found)
           }
           const writable = all.filter((entry) => entry.calendar.enabled && entry.calendar.writable)
           if (writable.length === 1) return writable[0]!
@@ -377,12 +374,7 @@ export class Events extends Context.Service<
         })
 
       const storedDraft = (id: Domain.DraftId) =>
-        Effect.flatMap(db(Store.draftById(id)), (found) =>
-          Option.match(found, {
-            onNone: () => Effect.fail(new Errors.NotFound({ subject: "draft", id })),
-            onSome: Effect.succeed
-          })
-        )
+        Effect.flatMap(db(Store.draftById(id)), Errors.orNotFound("draft", id))
 
       return Events.of({
         create: (input) =>

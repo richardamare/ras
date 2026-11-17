@@ -263,10 +263,7 @@ export class Calendar extends Context.Service<
             yield* entries(day),
             (entry) => entry.ref.calendar === ref.calendar && entry.ref.id === ref.id
           )
-          return yield* Option.match(found, {
-            onNone: () => Effect.fail(new Errors.NotFound({ subject: "event", id })),
-            onSome: (entry) => Effect.succeed(Domain.eventOf(entry))
-          })
+          return Domain.eventOf(yield* Errors.orNotFound("event", id)(found))
         }),
 
       freeTime: (window, minimum) =>

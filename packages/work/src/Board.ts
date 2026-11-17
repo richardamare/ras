@@ -25,14 +25,6 @@ const now = Effect.map(DateTime.now, DateTime.formatIso)
 const refuse = (code: string, reason: string, instead?: string) =>
   Effect.fail(new Errors.Refused({ code, reason, ...(instead === undefined ? {} : { instead }) }))
 
-const orNotFound = <A>(subject: string, id: string) =>
-  Effect.flatMap((option: Option.Option<A>) =>
-    Option.match(option, {
-      onNone: () => Effect.fail(new Errors.NotFound({ subject, id })),
-      onSome: Effect.succeed
-    })
-  )
-
 /** Who the current call speaks for: the agent it named, or the owner. */
 const speaker = Effect.map(Effect.service(Global.CurrentActor), (actor): Domain.Person =>
   Option.getOrElse(actor.agent, () => "owner" as const)
@@ -82,12 +74,9 @@ export class Board extends Context.Service<
       const blocks = yield* Blocks.Blocks
       const db = Effect.provideService(SqlClient.SqlClient, sql)
 
-      const space = (id: string) => db(Store.spaceById(id)).pipe(orNotFound<Domain.Space>("space", id))
-      const project = (id: string) => db(Store.projectById(id)).pipe(orNotFound<Domain.Project>("project", id))
-      const stored = (id: string) =>
-        db(Store.taskById(id)).pipe(
-          orNotFound<{ readonly summary: Domain.TaskSummary; readonly body: string }>("task", id)
-        )
+      const space = (id: string) => db(Store.spaceById(id)).pipe(Effect.flatMap(Errors.orNotFound("space", id)))
+      const project = (id: string) => db(Store.projectById(id)).pipe(Effect.flatMap(Errors.orNotFound("project", id)))
+      const stored = (id: string) => db(Store.taskById(id)).pipe(Effect.flatMap(Errors.orNotFound("task", id)))
 
       const task = (id: Domain.TaskId) =>
         Effect.gen(function* () {
