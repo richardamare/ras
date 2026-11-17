@@ -6,7 +6,7 @@ import * as Base64 from "effect/encoding/Base64"
 import * as Result from "effect/Result"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../../src/Domain.ts"
+import * as Message from "../../src/mailbox/Message.ts"
 import * as Mailbox from "../../src/mailbox/Mailbox.ts"
 import * as Module from "../../src/Module.ts"
 import * as Text from "../../src/mailbox/Text.ts"
@@ -19,9 +19,9 @@ const today = Effect.map(DateTime.now, (now) => Time.pragueDateOf(now))
 describe("a message id", () => {
   it("carries its folder, the folder's UIDVALIDITY and the UID, whatever the folder is named", () => {
     const ref = { folder: "Archiv/Účty 2026", uidValidity: 1700000000, uid: 42 }
-    const id = Domain.messageId(ref)
+    const id = Message.messageId(ref)
     assert.match(id, /^[A-Za-z0-9_-]+\.1700000000\.42$/)
-    assert.deepStrictEqual(Domain.messageRef(id), Option.some(ref))
+    assert.deepStrictEqual(Message.messageRef(id), Option.some(ref))
   })
 })
 
@@ -98,7 +98,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("the mailbox", (te
       const { files, skipped } = yield* mailbox.attachments(invoice!.id)
       assert.deepStrictEqual(skipped, [])
       assert.deepStrictEqual(Result.getSuccess(Base64.decode(files[0]!.content)), Option.some(Mailbox.samplePdf))
-      const elsewhere = Domain.messageId({ folder: "Archive", uidValidity: 1, uid: 104 })
+      const elsewhere = Message.messageId({ folder: "Archive", uidValidity: 1, uid: 104 })
       assert.strictEqual(yield* failure(mailbox.message(elsewhere)), "NotFound")
     })
   )

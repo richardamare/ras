@@ -9,7 +9,8 @@ import * as Base64 from "effect/encoding/Base64"
 import * as Imap from "imapflow"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Message from "./Message.ts"
+import * as Search from "./Search.ts"
 import * as Text from "./Text.ts"
 
 type Read<A> = Effect.Effect<A, Errors.NotFound | Errors.Invalid | Errors.SourceFailed>
@@ -19,12 +20,12 @@ export class Mailbox extends Context.Service<
   Mailbox,
   {
     /** The newest messages whose subject, sender or body contains the query, newest first. */
-    readonly search: (search: Domain.Search) => Read<ReadonlyArray<Domain.Summary>>
+    readonly search: (search: Search.Search) => Read<ReadonlyArray<Message.Summary>>
     /** The newest messages of a folder, newest first. */
-    readonly recent: (recent: Domain.Recent) => Read<ReadonlyArray<Domain.Summary>>
-    readonly message: (id: Domain.MessageId) => Read<Domain.Message>
+    readonly recent: (recent: Search.Recent) => Read<ReadonlyArray<Message.Summary>>
+    readonly message: (id: Message.MessageId) => Read<Message.Message>
     /** The message's PDF attachments, up to 10 MB in one answer. */
-    readonly attachments: (id: Domain.MessageId) => Read<Domain.Files>
+    readonly attachments: (id: Message.MessageId) => Read<Message.Files>
   }
 >()("@ras/mail/Mailbox") {}
 
@@ -52,7 +53,7 @@ const isPdf = (part: Part) =>
   (part.type === "application/octet-stream" && Option.exists(part.name, (name) => name.toLowerCase().endsWith(".pdf")))
 
 const attachmentOf = (part: Part) =>
-  new Domain.Attachment({
+  new Message.Attachment({
     name: Option.getOrElse(part.name, () => "attachment"),
     mimeType: part.type,
     size: part.size,
@@ -69,7 +70,7 @@ const textPart = (parts: ReadonlyArray<Part>) => {
 
 const textOf = (part: Part, content: string) => (part.type === "text/html" ? Text.fromHtml(content) : content.trim())
 
-const checkDays = (search: Domain.Search) =>
+const checkDays = (search: Search.Search) =>
   search.since !== undefined && search.until !== undefined && search.until < search.since
     ? Effect.fail(new Errors.Invalid({ reason: "`until` is before `since`. Give `until` on or after `since`." }))
     : Effect.void
@@ -181,12 +182,12 @@ export const make = (username: string, password: Redacted.Redacted) => {
     folder: string,
     range: Imap.MessageRange
   ) => {
-    const found: Array<Domain.Summary> = []
+    const found: Array<Message.Summary> = []
     for (const message of await client.fetchAll(range, fetched, { uid: true })) {
       const parts = partsOf(message.bodyStructure)
       found.push(
-        new Domain.Summary({
-          id: Domain.messageId({ folder, uidValidity: Number(box.uidValidity), uid: message.uid }),
+        new Message.Summary({
+          id: Message.messageId({ folder, uidValidity: Number(box.uidValidity), uid: message.uid }),
           sent: sentOf(message),
           from: addresses(message.envelope?.from),
           to: addresses(message.envelope?.to),
@@ -201,10 +202,10 @@ export const make = (username: string, password: Redacted.Redacted) => {
 
   /** The message at `id`, or not found when its folder's UIDVALIDITY moved on or the UID is gone. */
   const inMessage = <A>(
-    id: Domain.MessageId,
+    id: Message.MessageId,
     use: (client: Imap.ImapFlow, message: Imap.FetchMessageObject, parts: ReadonlyArray<Part>) => Promise<A>
   ) =>
-    Effect.flatMap(Errors.orNotFound("mail message", id)(Domain.messageRef(id)), (ref) =>
+    Effect.flatMap(Errors.orNotFound("mail message", id)(Message.messageRef(id)), (ref) =>
       inFolder(ref.folder, async (client, box) => {
         const message =
           Number(box.uidValidity) === ref.uidValidity
@@ -218,7 +219,7 @@ export const make = (username: string, password: Redacted.Redacted) => {
   return Mailbox.of({
     search: (search) =>
       Effect.andThen(checkDays(search), () => {
-        const folder = search.folder ?? Domain.inbox
+        const folder = search.folder ?? Search.inbox
         return inFolder(folder, async (client, box) => {
           const query = search.query
           const uids =
@@ -236,7 +237,7 @@ export const make = (username: string, password: Redacted.Redacted) => {
       }),
 
     recent: (recent) => {
-      const folder = recent.folder ?? Domain.inbox
+      const folder = recent.folder ?? Search.inbox
       return inFolder(folder, async (client, box) => {
         if (box.exists === 0) return []
         const first = Math.max(1, box.exists - (recent.limit ?? defaultLimit) + 1)
@@ -249,7 +250,7 @@ export const make = (username: string, password: Redacted.Redacted) => {
       inMessage(
         id,
         async (client, message, parts) =>
-          new Domain.Message({
+          new Message.Message({
             id,
             sent: sentOf(message),
             from: addresses(message.envelope?.from),
@@ -263,7 +264,7 @@ export const make = (username: string, password: Redacted.Redacted) => {
 
     attachments: (id) =>
       inMessage(id, async (client, message, parts) => {
-        const files: Array<Domain.File> = []
+        const files: Array<Message.File> = []
         const skipped: Array<string> = []
         let total = 0
         for (const part of parts.filter(isPdf)) {
@@ -274,9 +275,9 @@ export const make = (username: string, password: Redacted.Redacted) => {
           }
           const bytes = await bytesOf(await client.download(String(message.uid), part.id, { uid: true }))
           total += bytes.length
-          files.push(new Domain.File({ name, mimeType: Pdf, content: Base64.encode(bytes) }))
+          files.push(new Message.File({ name, mimeType: Pdf, content: Base64.encode(bytes) }))
         }
-        return new Domain.Files({ files, skipped })
+        return new Message.Files({ files, skipped })
       })
   })
 }
@@ -313,7 +314,7 @@ interface SampleMessage {
 /** An invented mailbox: an invoice with its PDF, a note from a friend, a shipping notice and an archived receipt. */
 const sampleMessages: ReadonlyArray<SampleMessage> = [
   {
-    folder: Domain.inbox,
+    folder: Search.inbox,
     uid: 104,
     hoursAgo: 1,
     from: "Billing <billing@example.com>",
@@ -322,7 +323,7 @@ const sampleMessages: ReadonlyArray<SampleMessage> = [
     pdf: Option.some("invoice-2026-118.pdf")
   },
   {
-    folder: Domain.inbox,
+    folder: Search.inbox,
     uid: 103,
     hoursAgo: 3,
     from: "Ada <ada@example.com>",
@@ -331,7 +332,7 @@ const sampleMessages: ReadonlyArray<SampleMessage> = [
     pdf: Option.none()
   },
   {
-    folder: Domain.inbox,
+    folder: Search.inbox,
     uid: 102,
     hoursAgo: 30,
     from: "Shop <orders@example.com>",
@@ -358,11 +359,11 @@ export const sample = Layer.effect(
   Effect.map(DateTime.now, (now) => {
     const sent = (message: SampleMessage) => Time.toPragueLocal(DateTime.subtract(now, { hours: message.hoursAgo }))
     const id = (message: SampleMessage) =>
-      Domain.messageId({ folder: message.folder, uidValidity: 1, uid: message.uid })
+      Message.messageId({ folder: message.folder, uidValidity: 1, uid: message.uid })
     const html = (message: SampleMessage) => message.body.startsWith("<")
     const body = (message: SampleMessage) => (html(message) ? Text.fromHtml(message.body) : message.body)
     const summary = (message: SampleMessage) =>
-      new Domain.Summary({
+      new Message.Summary({
         id: id(message),
         sent: sent(message),
         from: message.from,
@@ -375,7 +376,7 @@ export const sample = Layer.effect(
       sampleMessages.some((message) => message.folder === folder)
         ? Effect.succeed(sampleMessages.filter((message) => message.folder === folder))
         : Effect.fail(new Errors.NotFound({ subject: "mail folder", id: folder }))
-    const found = (messageId: Domain.MessageId) =>
+    const found = (messageId: Message.MessageId) =>
       Errors.orNotFound(
         "mail message",
         messageId
@@ -389,7 +390,7 @@ export const sample = Layer.effect(
     return Mailbox.of({
       search: (search) =>
         Effect.andThen(checkDays(search), () =>
-          Effect.map(inFolder(search.folder ?? Domain.inbox), (messages) => {
+          Effect.map(inFolder(search.folder ?? Search.inbox), (messages) => {
             const query = search.query.toLowerCase()
             const day = (message: SampleMessage) => sent(message).slice(0, 10)
             return newest(
@@ -404,18 +405,18 @@ export const sample = Layer.effect(
           })
         ),
       recent: (recent) =>
-        Effect.map(inFolder(recent.folder ?? Domain.inbox), (messages) => newest(messages, recent.limit)),
+        Effect.map(inFolder(recent.folder ?? Search.inbox), (messages) => newest(messages, recent.limit)),
       message: (messageId) =>
         Effect.map(
           found(messageId),
           (message) =>
-            new Domain.Message({
+            new Message.Message({
               ...summary(message),
               cc: "",
               body: body(message),
               attachments: Option.match(message.pdf, {
                 onNone: () => [],
-                onSome: (name) => [new Domain.Attachment({ name, mimeType: Pdf, size: samplePdf.length, pdf: true })]
+                onSome: (name) => [new Message.Attachment({ name, mimeType: Pdf, size: samplePdf.length, pdf: true })]
               })
             })
         ),
@@ -423,10 +424,10 @@ export const sample = Layer.effect(
         Effect.map(
           found(messageId),
           (message) =>
-            new Domain.Files({
+            new Message.Files({
               files: Option.match(message.pdf, {
                 onNone: () => [],
-                onSome: (name) => [new Domain.File({ name, mimeType: Pdf, content: Base64.encode(samplePdf) })]
+                onSome: (name) => [new Message.File({ name, mimeType: Pdf, content: Base64.encode(samplePdf) })]
               }),
               skipped: []
             })
