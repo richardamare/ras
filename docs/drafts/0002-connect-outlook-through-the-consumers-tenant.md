@@ -18,7 +18,7 @@ ras uses the Entra app registration the owner already has for personal accounts,
 
 ## Consequences
 
-- The owner adds `https://ras.richardamare.fyi/graph/callback`, and `http://localhost:<port>/graph/callback` for development, to the registration's web redirect URIs before the first connection.
+- The owner adds `<RAS_URL>/graph/callback`, and `http://localhost:<port>/graph/callback` for development, to the registration's web redirect URIs before the first connection.
 - A backup of the database carries the tokens sealed; restoring it on another host needs the same auth secret, or the owner connects again.
 - Changing `RAS_AUTH_SECRET` drops the connection, and the owner connects again.
 - The client secret expires on 2028-10-22, after which every refresh fails until a new secret is set.
