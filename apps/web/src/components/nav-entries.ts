@@ -30,7 +30,8 @@ export const useNavSections = (): NavSection[] => {
       entries: [
         { to: "/", label: t("home"), icon: LucideReact.HouseIcon },
         { to: "/board", label: t("board"), icon: LucideReact.KanbanIcon },
-        { to: "/tasks", label: t("tasks"), icon: LucideReact.ListTodoIcon }
+        { to: "/tasks", label: t("tasks"), icon: LucideReact.ListTodoIcon },
+        { to: "/projects", label: t("projects"), icon: LucideReact.FolderKanbanIcon }
       ]
     }
   ]

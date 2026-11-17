@@ -15,7 +15,8 @@
     "space": "Prostor",
     "project": "Projekt",
     "title": "Úkol",
-    "next": "Další blok"
+    "next": "Další blok",
+    "progress": "Postup"
   },
   "status": {
     "inbox": "Inbox",
@@ -42,5 +43,22 @@
   "tasks": {
     "title": "Úkoly",
     "none": "Zatím žádné úkoly."
+  },
+  "projectStatus": {
+    "active": "Aktivní",
+    "paused": "Pozastavený",
+    "done": "Hotový"
+  },
+  "projects": {
+    "title": "Projekty",
+    "none": "Zatím žádné projekty.",
+    "notFound": "Projekt už neexistuje.",
+    "progress": "{{done}} z {{total}}",
+    "due": "Termín {{deadline}}",
+    "spent": "Stráveno {{spent}}",
+    "tasks": "Úkoly",
+    "upcoming": "Nadcházející bloky",
+    "noBlocks": "Žádné naplánované bloky.",
+    "draft": "návrh"
   }
 }

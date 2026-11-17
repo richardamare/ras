@@ -13,6 +13,8 @@ import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellBoardRouteImport } from './routes/_shell/board'
 import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
+import { Route as ShellProjectsIndexRouteImport } from './routes/_shell/projects/index'
+import { Route as ShellProjectsIdRouteImport } from './routes/_shell/projects/$id'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
@@ -33,16 +35,30 @@ const ShellTasksRoute = ShellTasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellProjectsIndexRoute = ShellProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellProjectsIdRoute = ShellProjectsIdRouteImport.update({
+  id: '/projects/$id',
+  path: '/projects/$id',
+  getParentRoute: () => ShellRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
   '/board': typeof ShellBoardRoute
   '/tasks': typeof ShellTasksRoute
+  '/projects/$id': typeof ShellProjectsIdRoute
+  '/projects/': typeof ShellProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/board': typeof ShellBoardRoute
   '/tasks': typeof ShellTasksRoute
   '/': typeof ShellIndexRoute
+  '/projects/$id': typeof ShellProjectsIdRoute
+  '/projects': typeof ShellProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +66,22 @@ export interface FileRoutesById {
   '/_shell/board': typeof ShellBoardRoute
   '/_shell/tasks': typeof ShellTasksRoute
   '/_shell/': typeof ShellIndexRoute
+  '/_shell/projects/$id': typeof ShellProjectsIdRoute
+  '/_shell/projects/': typeof ShellProjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/board' | '/tasks'
+  fullPaths: '/' | '/board' | '/tasks' | '/projects/$id' | '/projects/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/board' | '/tasks' | '/'
-  id: '__root__' | '/_shell' | '/_shell/board' | '/_shell/tasks' | '/_shell/'
+  to: '/board' | '/tasks' | '/' | '/projects/$id' | '/projects'
+  id:
+    | '__root__'
+    | '/_shell'
+    | '/_shell/board'
+    | '/_shell/tasks'
+    | '/_shell/'
+    | '/_shell/projects/$id'
+    | '/_shell/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,6 +118,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellTasksRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/projects/': {
+      id: '/_shell/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ShellProjectsIndexRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/projects/$id': {
+      id: '/_shell/projects/$id'
+      path: '/projects/$id'
+      fullPath: '/projects/$id'
+      preLoaderRoute: typeof ShellProjectsIdRouteImport
+      parentRoute: typeof ShellRoute
+    }
   }
 }
 
@@ -100,12 +139,16 @@ interface ShellRouteChildren {
   ShellBoardRoute: typeof ShellBoardRoute
   ShellTasksRoute: typeof ShellTasksRoute
   ShellIndexRoute: typeof ShellIndexRoute
+  ShellProjectsIdRoute: typeof ShellProjectsIdRoute
+  ShellProjectsIndexRoute: typeof ShellProjectsIndexRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
   ShellBoardRoute: ShellBoardRoute,
   ShellTasksRoute: ShellTasksRoute,
   ShellIndexRoute: ShellIndexRoute,
+  ShellProjectsIdRoute: ShellProjectsIdRoute,
+  ShellProjectsIndexRoute: ShellProjectsIndexRoute,
 }
 
 const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
