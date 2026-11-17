@@ -1,0 +1,176 @@
+import { assert, describe, it, layer } from "@effect/vitest"
+import * as DateTime from "effect/DateTime"
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import * as SqlClient from "effect/sql/SqlClient"
+import * as Testing from "@ras/global/testing"
+import * as Time from "@ras/kernel/Time"
+import * as Calendar from "../src/Calendar.ts"
+import * as Domain from "../src/Domain.ts"
+import * as Module from "../src/Module.ts"
+import * as Reclaim from "../src/Reclaim.ts"
+import * as Sample from "../src/Sample.ts"
+
+const today = Effect.map(DateTime.now, Time.pragueDateOf)
+
+const days = (from: Time.PragueDate, count: number): Domain.Window => ({
+  from: Time.PragueLocal.make(`${from}T00:00`),
+  to: Time.PragueLocal.make(`${Time.addDays(from, count)}T00:00`)
+})
+
+const titles = (events: ReadonlyArray<Domain.Event>) =>
+  events.map((event) => `${event.calendar} ${event.start} ${event.title}`)
+
+layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("the calendar", (test) => {
+  test.effect("lists every connected calendar, unmarked until the owner gives it a role, and audits the role", () =>
+    Effect.gen(function* () {
+      const calendar = yield* Calendar.Calendar
+      const listed = yield* calendar.calendars(false)
+      assert.deepStrictEqual(
+        listed.map((found) => [found.name, found.role, found.enabled]),
+        [
+          ["Personal", "unmarked", true],
+          ["Work (copy)", "unmarked", true],
+          ["Work", "unmarked", true]
+        ]
+      )
+      const changed = yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
+      assert.strictEqual(changed.role, "personal")
+      const sql = yield* SqlClient.SqlClient
+      const audit = yield* sql<{ action: string; before: string; after: string }>`
+        SELECT action, before, after FROM global_audit_entries WHERE subject = ${`calendar/${Sample.personal}`}`
+      assert.deepStrictEqual(audit, [
+        { action: "calendar.calendar.changed", before: '{"role":"unmarked"}', after: '{"role":"personal"}' }
+      ])
+    })
+  )
+
+  test.effect("shows each event once, folding Calendar Sync's copy onto its original", () =>
+    Effect.gen(function* () {
+      const calendar = yield* Calendar.Calendar
+      const first = yield* today
+      const events = yield* calendar.events(days(Time.addDays(first, 2), 1))
+      assert.deepStrictEqual(titles(events), [
+        `201 ${Time.addDays(first, 2)}T09:00 Standup`,
+        `101 ${Time.addDays(first, 2)}T12:00 Lunch`,
+        `101 ${Time.addDays(first, 2)}T14:00 Dentist`,
+        `201 ${Time.addDays(first, 2)}T14:30 Quarterly review`
+      ])
+      const review = events[3]!
+      assert.strictEqual(review.kind, "invitation")
+      assert.strictEqual(review.rsvp, "needsAction")
+      assert.deepStrictEqual(yield* calendar.event(review.id), review)
+    })
+  )
+
+  test.effect("shows the copy when the original's calendar is turned off, and hides the calendar", () =>
+    Effect.gen(function* () {
+      const calendar = yield* Calendar.Calendar
+      const first = yield* today
+      yield* calendar.changeCalendar(Sample.work, { enabled: false })
+      const events = yield* calendar.events(days(first, 1))
+      assert.deepStrictEqual(
+        events.map((event) => [event.calendar, event.title, event.kind]),
+        [
+          [Sample.workCopy, "Standup", "copy"],
+          [Sample.personal, "Lunch", "reclaim"]
+        ]
+      )
+      assert.deepStrictEqual(
+        (yield* calendar.calendars(false)).map((found) => found.name),
+        ["Personal", "Work (copy)"]
+      )
+      assert.strictEqual((yield* calendar.calendars(true)).length, 3)
+      yield* calendar.changeCalendar(Sample.work, { enabled: true })
+    })
+  )
+
+  test.effect("spans an all-day event from Prague midnight to the next", () =>
+    Effect.gen(function* () {
+      const calendar = yield* Calendar.Calendar
+      const day = Time.addDays(yield* today, 5)
+      const holiday = (yield* calendar.events(days(day, 1))).find((event) => event.title === "Holiday")!
+      assert.deepStrictEqual(
+        [holiday.start, holiday.end, holiday.allDay, holiday.showAs],
+        [`${day}T00:00`, `${Time.addDays(day, 1)}T00:00`, true, "free"]
+      )
+    })
+  )
+
+  test.effect("refuses a window that ends before it starts, and an event that is not there", () =>
+    Effect.gen(function* () {
+      const calendar = yield* Calendar.Calendar
+      const day = yield* today
+      const backwards = yield* Effect.flip(
+        calendar.events({ from: Time.PragueLocal.make(`${day}T10:00`), to: Time.PragueLocal.make(`${day}T09:00`) })
+      )
+      assert.strictEqual(backwards._tag, "Invalid")
+      const missing = yield* Effect.flip(calendar.event(Domain.EventId.make(`101.${day.replaceAll("-", "")}.nothing`)))
+      assert.strictEqual(missing._tag, "NotFound")
+    })
+  )
+})
+
+describe("Reclaim", () => {
+  const wire = {
+    key: "7/abc",
+    calendarId: 7,
+    title: "Planning",
+    description: "",
+    eventDate: { type: "FixedDateTimeRange", start: "2027-03-27T23:30:00Z", end: "2027-03-28T01:30:00Z" },
+    status: "CONFIRMED",
+    freeBusy: "BUSY",
+    rsvpStatus: "NEEDS_ACTION",
+    selfOrganized: false,
+    canRsvp: true,
+    reclaimData: { reclaimEventType: "USER", eventCategory: "WORK" },
+    attendeesAndResources: [
+      {
+        type: "EventAttendeeParticipant",
+        email: "a@example.com",
+        displayName: "A",
+        organizer: true,
+        responseStatus: "ACCEPTED"
+      },
+      { type: "EventResourceParticipant", email: "room@example.com" }
+    ]
+  }
+
+  it("reads an invitation on the Prague day it starts, with its attendees but not its rooms", () => {
+    const entry = Reclaim.entryOf(wire)
+    assert.deepStrictEqual(entry.ref, { calendar: 7, date: "2027-03-28", id: "abc" })
+    assert.strictEqual(entry.kind, "invitation")
+    assert.strictEqual(entry.rsvp, "needsAction")
+    assert.isTrue(Option.isNone(entry.notes))
+    assert.deepStrictEqual(
+      entry.attendees.map((attendee) => attendee.email),
+      ["a@example.com"]
+    )
+  })
+
+  it("reads an all-day range as Prague days, its end the day after the last", () => {
+    const entry = Reclaim.entryOf({
+      ...wire,
+      eventDate: { type: "AllDayDateRange", start: "2027-03-28", end: "2027-03-29" }
+    })
+    assert.isTrue(entry.allDay)
+    assert.strictEqual(DateTime.formatIso(entry.span.start), "2027-03-27T23:00:00.000Z")
+    assert.strictEqual(DateTime.formatIso(entry.span.end), "2027-03-28T22:00:00.000Z")
+  })
+
+  it("ties a copy Calendar Sync wrote to its original, and reads a habit as Reclaim's own", () => {
+    const copy = Reclaim.entryOf({
+      ...wire,
+      reclaimData: {
+        reclaimEventType: "SYNC",
+        mergeableEvent: { calendarId: 9, eventId: "orig", referenceType: "SYNC_EVENT" }
+      }
+    })
+    assert.strictEqual(copy.kind, "copy")
+    assert.deepStrictEqual(Option.getOrNull(copy.copyOf), { calendar: 9, date: "2027-03-28", id: "orig" })
+    assert.strictEqual(
+      Reclaim.entryOf({ ...wire, reclaimData: { reclaimEventType: "HABIT_ASSIGNMENT" } }).kind,
+      "reclaim"
+    )
+  })
+})

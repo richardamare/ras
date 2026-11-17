@@ -34,4 +34,16 @@ describe("Time", () => {
       assert.strictEqual(Time.toPragueLocal(instant), "2027-07-15T09:00")
     })
   )
+  it("starts a Prague day at local midnight on either side of a daylight-saving change", () => {
+    assert.strictEqual(
+      DateTime.formatIso(Time.pragueMidnight(Time.PragueDate.make("2027-03-28"))),
+      "2027-03-27T23:00:00.000Z"
+    )
+    assert.strictEqual(
+      DateTime.formatIso(Time.pragueMidnight(Time.PragueDate.make("2027-03-29"))),
+      "2027-03-28T22:00:00.000Z"
+    )
+    assert.strictEqual(Time.pragueDateOf(DateTime.makeUnsafe("2027-03-28T22:30:00Z")), "2027-03-29")
+    assert.strictEqual(Time.addDays(Time.PragueDate.make("2027-02-28"), 1), "2027-03-01")
+  })
 })
