@@ -3628,6 +3628,150 @@
           }
         }
       }
+    },
+    "/work/drafts/confirm": {
+      "post": {
+        "tags": ["work"],
+        "operationId": "work.confirmDrafts",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "DraftsConfirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftsConfirmedEncoded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "drafts": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "string"
+                      }
+                    ],
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The drafts to confirm, by the ids search_calendar shows: an event draft's `id`, or a block draft's `block`."
+                  },
+                  "day": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/work/drafts": {
+      "delete": {
+        "tags": ["work"],
+        "operationId": "work.discardDrafts",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "discarded": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["Infinity", "-Infinity", "NaN"]
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["discarded"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3709,6 +3853,52 @@
           }
         },
         "required": ["_tag", "code", "reason"],
+        "additionalProperties": false
+      },
+      "DraftsConfirmedEncoded": {
+        "type": "object",
+        "properties": {
+          "confirmed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DraftOutcomeEncoded"
+            }
+          },
+          "refused": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DraftOutcomeEncoded"
+            }
+          }
+        },
+        "required": ["confirmed", "refused"],
+        "additionalProperties": false
+      },
+      "DraftOutcomeEncoded": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why its calendar refused it; it stays a draft."
+          }
+        },
+        "required": ["id", "title", "start", "refusal"],
         "additionalProperties": false
       },
       "BlockEncoded": {
