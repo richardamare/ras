@@ -88,6 +88,46 @@ describe("the console's calendar", () => {
       })
     )
 
+    it.effect("wraps an event's long unbroken title and notes inside its popover", () =>
+      Effect.gen(function* () {
+        const date = yield* day(3)
+        const gym = yield* sampleEvent("Gym", personal, date)
+        const page = yield* Suite.signedInPage
+        yield* Effect.promise(() =>
+          page.raw.route("**/calendar/events?*", async (route) => {
+            const response = await route.fetch()
+            const events: ReadonlyArray<{ id: string }> = await response.json()
+            await route.fulfill({
+              response,
+              json: events.map((event) =>
+                event.id === gym.id
+                  ? {
+                      ...event,
+                      title: `Sync-${"x".repeat(80)}`,
+                      notes: `${"\\_".repeat(60)}\n\nJoin: https://teams.microsoft.com/meet/${"7".repeat(40)}?p=${"Q".repeat(40)}`
+                    }
+                  : event
+              )
+            })
+          })
+        )
+        yield* page.goto(`/calendar?view=day&date=${date}&item=${gym.id}`)
+        const popover = page.locator('[data-slot="popover-content"]')
+        yield* popover.getByText("Join:", { exact: false }).waitFor()
+
+        const overflow = yield* Effect.promise(() =>
+          popover.raw.evaluate((content) => {
+            const edge = content.getBoundingClientRect().right
+            return Math.max(
+              0,
+              ...[...content.querySelectorAll("*")].map((each) => each.getBoundingClientRect().right - edge)
+            )
+          })
+        )
+        assert.strictEqual(overflow, 0)
+      })
+    )
+
     it.effect("answers an invitation from its popover", () =>
       Effect.gen(function* () {
         const date = yield* day(2)
