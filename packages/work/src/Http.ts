@@ -10,6 +10,7 @@ import * as Time from "@ras/kernel/Time"
 import * as Blocks from "./Blocks.ts"
 import * as Board from "./Board.ts"
 import * as Domain from "./Domain.ts"
+import * as Drafts from "./Drafts.ts"
 
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 
@@ -132,12 +133,21 @@ export const group = HttpApiGroup.make("work")
     })
   )
   .add(HttpApiEndpoint.delete("remove", "/blocks/:id", { params: { id: Domain.BlockId }, error: failures }))
+  .add(
+    HttpApiEndpoint.post("confirmDrafts", "/drafts/confirm", {
+      payload: Domain.ConfirmDrafts,
+      success: Domain.DraftsConfirmed,
+      error: failures
+    })
+  )
+  .add(HttpApiEndpoint.delete("discardDrafts", "/drafts", { success: Schema.Struct({ discarded: Schema.Number }) }))
   .prefix("/work")
 
 export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoints) =>
   Effect.gen(function* () {
     const board = yield* Board.Board
     const blocks = yield* Blocks.Blocks
+    const drafts = yield* Drafts.Drafts
     return endpoints
       .handle("spaces", () => board.spaces)
       .handle("addSpace", ({ payload }) => board.addSpace(payload))
@@ -163,5 +173,7 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "work", (endpoin
       .handle("log", ({ payload }) => blocks.log(payload))
       .handle("move", ({ params, payload }) => blocks.move({ block: params.id, ...payload }))
       .handle("remove", ({ params }) => blocks.remove(params.id))
+      .handle("confirmDrafts", ({ payload }) => drafts.confirm(payload))
+      .handle("discardDrafts", () => Effect.map(drafts.discard, (discarded) => ({ discarded })))
   })
 )

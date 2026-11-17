@@ -256,6 +256,10 @@ export class Events extends Context.Service<
     readonly reply: (id: Domain.EventId, reply: Domain.Reply) => Write<void>
     /** Writes a draft into its calendar as a new event; a draft the calendar refuses stays, with the reason. */
     readonly confirm: (id: Domain.EventId) => Write<Domain.Created>
+    /** Every event draft, in start order. */
+    readonly drafts: Effect.Effect<ReadonlyArray<Domain.Event>>
+    /** Deletes every event draft; none of them is in a calendar. */
+    readonly discardDrafts: Effect.Effect<number, never, Global.CurrentActor>
     /** Writes a work block's event into a writable calendar, busy, its notes carrying the block's marker. */
     readonly placeBlock: (
       calendar: Domain.CalendarId,
@@ -527,6 +531,24 @@ export class Events extends Context.Service<
               })
             )
           }),
+
+        drafts: Effect.map(db(Store.allDrafts), (found) =>
+          found.map((draft) => Domain.eventOf(Calendar.entryOfDraft(draft)))
+        ),
+
+        discardDrafts: Effect.gen(function* () {
+          const found = yield* db(Store.allDrafts)
+          if (found.length === 0) return 0
+          return yield* writes.run(
+            "calendar.draft.discarded",
+            Effect.as(db(Store.deleteAllDrafts), {
+              result: found.length,
+              subject: "drafts",
+              before: Option.some({ drafts: found.map((draft) => draft.title) }),
+              after: Option.none()
+            })
+          )
+        }),
 
         placeBlock: (id, block) =>
           Effect.gen(function* () {
