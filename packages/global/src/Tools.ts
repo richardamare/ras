@@ -24,7 +24,7 @@ export const read = <
     .annotate(Tool.OpenWorld, false)
 
 const agent = Schema.optionalKey(Actor.AgentSlug).annotate({
-  description: "The agent this call acts as, such as `kalendarnik`. Omit it when acting as the owner."
+  description: "The agent this call acts as, such as `scheduler`. Omit it when acting as the owner."
 })
 
 /** A tool that writes. Its parameters carry the optional `agent`; the handler passes it to `actingAs`. */

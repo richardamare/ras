@@ -56,7 +56,7 @@ const atCli = (file: string) =>
 
 const slug = Argument.String("slug").pipe(
   Argument.withSchema(Global.AgentSlug),
-  Argument.withDescription("The agent's slug, such as `kalendarnik`.")
+  Argument.withDescription("The agent's slug, such as `scheduler`.")
 )
 
 const show = (agent: Global.Agent) => Console.log(`${agent.slug}\t${agent.name}${agent.archived ? "\t(archived)" : ""}`)

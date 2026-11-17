@@ -8,7 +8,7 @@ import * as Time from "@ras/kernel/Time"
 import * as Board from "../src/Board.ts"
 import * as Module from "../src/Module.ts"
 
-const kalendarnik = Global.AgentSlug.make("kalendarnik")
+const scheduler = Global.AgentSlug.make("scheduler")
 const ghost = Global.AgentSlug.make("ghost")
 
 const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
@@ -16,20 +16,20 @@ const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A
 
 /** Runs `effect` as the agent, as a writing tool that names it does. */
 const asAgent = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.flatMap(Global.actingAs, (actingAs) => actingAs(kalendarnik)(effect))
+  Effect.flatMap(Global.actingAs, (actingAs) => actingAs(scheduler)(effect))
 
 layer(Testing.layer([Module.module]))("the board", (test) => {
   test.effect("hands a task to an agent's poll, and back to the owner in review with the agent's comment", () =>
     Effect.gen(function* () {
       const board = yield* Board.Board
-      yield* (yield* Global.Agents).add(kalendarnik, "Kalendářník")
-      yield* board.addTask({ title: "Seen in an earlier poll", assignee: kalendarnik })
+      yield* (yield* Global.Agents).add(scheduler, "Kalendářník")
+      yield* board.addTask({ title: "Seen in an earlier poll", assignee: scheduler })
       yield* TestClock.adjust("1 hour")
       const since = Time.toPragueLocal(yield* DateTime.now)
-      const task = yield* board.addTask({ title: "Book the dentist", assignee: kalendarnik, body: "Any morning." })
+      const task = yield* board.addTask({ title: "Book the dentist", assignee: scheduler, body: "Any morning." })
       assert.strictEqual(task.status, "todo")
 
-      const polled = yield* board.tasks({ assignee: kalendarnik, status: "todo", updatedSince: since })
+      const polled = yield* board.tasks({ assignee: scheduler, status: "todo", updatedSince: since })
       assert.deepStrictEqual(
         polled.map((found) => found.id),
         [task.id]
@@ -42,7 +42,7 @@ layer(Testing.layer([Module.module]))("the board", (test) => {
       assert.strictEqual(reviewed.status, "review")
       assert.deepStrictEqual(
         reviewed.comments.map((comment) => [comment.author, comment.text]),
-        [["kalendarnik", "Booked Tuesday 9:00. Check it fits."]]
+        [["scheduler", "Booked Tuesday 9:00. Check it fits."]]
       )
       const waiting = yield* board.tasks({ status: "review" })
       assert.deepStrictEqual(

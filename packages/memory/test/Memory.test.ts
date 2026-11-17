@@ -53,7 +53,7 @@ const ownerPushes = (file: string, content: string) =>
     yield* run(owner, "push", "--quiet")
   })
 
-const kalendarnik = Global.AgentSlug.make("kalendarnik")
+const scheduler = Global.AgentSlug.make("scheduler")
 
 const refusal = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.map(Effect.flip(effect), (error) => ("code" in error ? String(error.code) : error._tag))
@@ -94,14 +94,14 @@ layer(App)("Memory", (test) => {
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
       const { remote } = yield* Repositories
-      yield* (yield* Global.Agents).add(kalendarnik, "Kalendářník")
+      yield* (yield* Global.Agents).add(scheduler, "Kalendářník")
       const actingAs = yield* Global.actingAs
       const written = yield* memory
         .write(draft("coffee-order", "Flat white, oat milk."), Option.none())
-        .pipe(actingAs(kalendarnik))
+        .pipe(actingAs(scheduler))
       assert.strictEqual(
         yield* git(remote, "log", "-1", "--format=%an <%ae>|%s", "master"),
-        "kalendarnik <kalendarnik@agents.ras.invalid>|memory(kalendarnik): coffee-order"
+        "scheduler <scheduler@agents.ras.invalid>|memory(scheduler): coffee-order"
       )
       const read = yield* memory.read(["coffee-order", "nothing"])
       assert.strictEqual(read.facts[0]?.version, written.version)
@@ -120,7 +120,7 @@ layer(App)("Memory", (test) => {
         audit.map((row) => [row.action, row.agent]),
         [
           ["global.agent.added", null],
-          ["memory.fact.written", "kalendarnik"]
+          ["memory.fact.written", "scheduler"]
         ]
       )
     })
