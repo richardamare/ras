@@ -216,5 +216,10 @@
       "count_one": "once",
       "count_other": "{{count}} times"
     }
+  },
+  "filter": {
+    "label": "Calendars",
+    "title": "Shown calendars",
+    "hint": "A hidden calendar still takes writes; this browser remembers what is hidden."
   }
 }

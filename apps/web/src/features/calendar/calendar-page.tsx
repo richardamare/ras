@@ -8,9 +8,11 @@ import * as Sonner from "sonner"
 import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Skeleton from "@/components/ui/skeleton"
+import * as CalendarFilter from "@/features/calendar/calendar-filter"
 import * as DraftControls from "@/features/calendar/draft-controls"
 import * as EventDialog from "@/features/calendar/event-dialog"
 import * as Grid from "@/features/calendar/grid"
+import * as HiddenCalendars from "@/features/calendar/hidden-calendars"
 import * as ItemPopover from "@/features/calendar/item-popover"
 import * as MonthGrid from "@/features/calendar/month-grid"
 import * as Pointer from "@/features/calendar/pointer"
@@ -50,12 +52,14 @@ export function CalendarPage() {
   const blocks = ReactQuery.useQuery(Queries.workBlocksOptions({ query: span }))
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   const allCalendars = calendars.data ?? []
-  const enabled = new Set(allCalendars.filter((calendar) => calendar.enabled).map((calendar) => calendar.id))
+  const enabledCalendars = allCalendars.filter((calendar) => calendar.enabled)
+  const { hidden, toggle } = HiddenCalendars.useHiddenCalendars()
+  const shown = new Set(enabledCalendars.filter((calendar) => !hidden.has(calendar.id)).map((calendar) => calendar.id))
   const colors = new Map(allCalendars.map((calendar) => [calendar.id, calendar.color]))
   const colorOf = (calendar: number) => colors.get(calendar) ?? "var(--primary)"
 
-  const shownEvents = Grid.shownEvents(events.data ?? []).filter((event) => enabled.has(event.calendar))
-  const shownBlocks = (blocks.data ?? []).filter((block) => enabled.has(block.calendar))
+  const shownEvents = Grid.shownEvents(events.data ?? []).filter((event) => shown.has(event.calendar))
+  const shownBlocks = (blocks.data ?? []).filter((block) => shown.has(block.calendar))
   const draftsInView =
     shownEvents.filter((event) => event.draft !== null).length +
     shownBlocks.filter((block) => block.state === "draft").length
@@ -190,6 +194,9 @@ export function CalendarPage() {
             </Button.Button>
           ))}
         </div>
+        {enabledCalendars.length > 1 && (
+          <CalendarFilter.CalendarFilter calendars={enabledCalendars} hidden={hidden} onToggle={toggle} />
+        )}
         <DraftControls.DraftControls drafting={drafting} inView={draftsInView} onDrafting={setDrafting} />
         {view !== "month" && (
           <Button.Button
