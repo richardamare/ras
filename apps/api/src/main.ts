@@ -26,7 +26,7 @@ const port = Flag.Int("port").pipe(
 )
 
 const serve = Command.make("serve", { database, port }, (flags) => Layer.launch(Server.serve(flags))).pipe(
-  Command.withDescription("Migrates the database and serves the HTTP API, the connector and sign-in.")
+  Command.withDescription("Migrates the database and serves the HTTP API, the connector, sign-in and the console.")
 )
 
 const migrate = Command.make("migrate", { database }, (flags) =>

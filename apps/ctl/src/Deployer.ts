@@ -70,7 +70,10 @@ export const make = (layout: Layout.Layout) =>
       yield* Shell.run("git", ["fetch", "--quiet", "--prune", "--tags", "--force", "origin"], layout.source)
     })
 
-    /** Unpacks the tag into a staging folder and installs its dependencies; renamed into place once complete. */
+    /**
+     * Unpacks the tag into a staging folder, installs its dependencies and builds the console the API serves; renamed
+     * into place once complete. The build needs the console's dev dependencies, so the install keeps them.
+     */
     const install = (tag: string, release: string) =>
       Effect.gen(function* () {
         const staging = `${release}.staging`
@@ -78,10 +81,16 @@ export const make = (layout: Layout.Layout) =>
         yield* fs.remove(staging, { recursive: true, force: true })
         yield* fs.remove(release, { recursive: true, force: true })
         yield* fs.makeDirectory(staging, { recursive: true })
-        yield* Shell.run("git", ["archive", "--format=tar", `--output=${archive}`, `${tag}^{commit}`], layout.source)
+        const commit = yield* Shell.run("git", ["rev-parse", `${tag}^{commit}`], layout.source)
+        yield* Shell.run("git", ["archive", "--format=tar", `--output=${archive}`, commit], layout.source)
         yield* Shell.run("tar", ["-xf", archive, "-C", staging])
         yield* fs.remove(archive)
-        yield* Shell.run("bun", ["install", "--frozen-lockfile", "--production", "--ignore-scripts"], staging)
+        yield* Shell.run("bun", ["install", "--frozen-lockfile", "--ignore-scripts"], staging)
+        yield* Shell.run(
+          "env",
+          ["VITE_ENVIRONMENT=production", `APP_COMMIT=${commit}`, "bun", "run", "build"],
+          path.join(staging, "apps", "web")
+        )
         yield* fs.writeFileString(path.join(staging, Releases.marker), tag)
         yield* fs.rename(staging, release)
       }).pipe(filesystem(`${tag} could not be installed`))
