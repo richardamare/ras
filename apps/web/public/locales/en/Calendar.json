@@ -91,6 +91,7 @@
   "item": {
     "edit": "Edit",
     "openTask": "Open task",
+    "moveBlock": "Move",
     "removeBlock": "Remove block",
     "close": "Close",
     "state": {
@@ -99,6 +100,11 @@
       "running": "Work block running now",
       "done": "Finished work block"
     }
+  },
+  "blockMove": {
+    "title": "Move work block",
+    "submit": "Move",
+    "endBeforeStart": "The end has to come after the start."
   },
   "repeat": {
     "label": "Repeat",
