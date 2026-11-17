@@ -3,6 +3,7 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Ref from "effect/Ref"
+import * as Result from "effect/Result"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
@@ -106,6 +107,33 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
         assert.deepStrictEqual(yield* calendar.events(morning), [])
         assert.deepStrictEqual(yield* calls, [])
         assert.strictEqual(yield* code(events.confirm(Domain.EventId.make(kept!.id))), "NotFound")
+      })
+    )
+
+    test.effect("writes a draft once when it is confirmed twice at the same time", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const events = yield* Events.Events
+        const evening = { from: local("2027-01-16T17:00"), to: local("2027-01-16T20:00") }
+        yield* events.create({
+          title: "Call",
+          calendar: Sample.personal,
+          start: local("2027-01-16T18:00"),
+          draft: true
+        })
+        const [draft] = yield* calendar.events(evening)
+        yield* Ref.set(Outlook.sampleCalls, [])
+        const outcomes = yield* Effect.all(
+          [Effect.result(events.confirm(draft!.id)), Effect.result(events.confirm(draft!.id))],
+          { concurrency: "unbounded" }
+        )
+        assert.strictEqual(outcomes.filter(Result.isSuccess).length, 1)
+        const [refused] = outcomes.filter(Result.isFailure)
+        assert.strictEqual(refused!.failure._tag, "NotFound")
+        assert.deepStrictEqual(
+          (yield* calls).map((one) => one._tag),
+          ["Create"]
+        )
       })
     )
   }

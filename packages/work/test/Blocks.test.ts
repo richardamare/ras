@@ -3,6 +3,7 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Ref from "effect/Ref"
+import * as Result from "effect/Result"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
 import * as Calendar from "@ras/calendar"
@@ -195,6 +196,50 @@ layer(Testing.layer([CalendarTesting.module, Module.module], CalendarTesting.sam
         Option.map(kept, (found) => [found.status, found.spent]),
         Option.some(["done", 20])
       )
+    })
+  )
+
+  test.effect("refuses the second of two parallel plans for the same time", () =>
+    Effect.gen(function* () {
+      const { task } = yield* setUp
+      const blocks = yield* Blocks.Blocks
+      const start = yield* inHours(60)
+      const outcomes = yield* Effect.all(
+        [
+          Effect.result(blocks.plan({ task: task.id, start, minutes: 60 })),
+          Effect.result(blocks.plan({ task: task.id, start, minutes: 60 }))
+        ],
+        { concurrency: "unbounded" }
+      )
+      assert.strictEqual(outcomes.filter(Result.isSuccess).length, 1)
+      const [refused] = outcomes.filter(Result.isFailure)
+      assert.strictEqual(
+        "code" in refused!.failure ? refused!.failure.code : refused!.failure._tag,
+        "work.block.overlap"
+      )
+    })
+  )
+
+  test.effect("starts only one of two parallel starts", () =>
+    Effect.gen(function* () {
+      const { task } = yield* setUp
+      const blocks = yield* Blocks.Blocks
+      yield* Effect.ignore(blocks.stop)
+      yield* calls
+      const outcomes = yield* Effect.all([Effect.result(blocks.start(task.id)), Effect.result(blocks.start(task.id))], {
+        concurrency: "unbounded"
+      })
+      assert.strictEqual(outcomes.filter(Result.isSuccess).length, 1)
+      const [refused] = outcomes.filter(Result.isFailure)
+      assert.strictEqual(
+        "code" in refused!.failure ? refused!.failure.code : refused!.failure._tag,
+        "work.block.running"
+      )
+      assert.deepStrictEqual(
+        (yield* calls).map((one) => one._tag),
+        ["Create"]
+      )
+      yield* blocks.stop
     })
   )
 })

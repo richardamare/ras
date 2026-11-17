@@ -193,10 +193,13 @@ export const sample = Layer.succeed(
   Outlook,
   Outlook.of({
     create: (calendar, write) =>
-      Effect.as(record({ _tag: "Create", calendar, write }), {
-        id: `sample-${write.transactionId ?? "event"}`,
-        link: null
-      }),
+      Effect.andThen(
+        Effect.yieldNow,
+        Effect.as(record({ _tag: "Create", calendar, write }), {
+          id: `sample-${write.transactionId ?? "event"}`,
+          link: null
+        })
+      ),
     change: (event, write) => record({ _tag: "Change", event, write }),
     cancel: (event) => record({ _tag: "Cancel", event }),
     occurrence: (series, start) => Effect.as(record({ _tag: "Occurrence", series, start }), `${series}@${start}`),

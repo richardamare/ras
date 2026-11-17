@@ -4,6 +4,7 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
+import * as Semaphore from "effect/Semaphore"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
@@ -276,6 +277,7 @@ export class Events extends Context.Service<
       const calendar = yield* Calendar.Calendar
       const reclaim = yield* Reclaim.Reclaim
       const outlook = yield* Outlook.Outlook
+      const one = yield* Semaphore.make(1)
       const writes = yield* Global.Writes
       const sql = yield* SqlClient.SqlClient
       const db = Effect.provideService(SqlClient.SqlClient, sql)
@@ -337,14 +339,15 @@ export class Events extends Context.Service<
         chosen: Store.Connected,
         fields: Parameters<typeof fieldsOf>[0] & { readonly title: string },
         when: When,
-        recurrence: Outlook.Recurrence | undefined
+        recurrence: Outlook.Recurrence | undefined,
+        transactionId: string
       ) =>
         Effect.gen(function* () {
           const created = yield* outlook.create(yield* graphCalendar(chosen), {
             ...fieldsOf(fields),
             ...schedule(when),
             ...(recurrence === undefined ? {} : { recurrence }),
-            transactionId: crypto.randomUUID()
+            transactionId
           })
           const result = createdOf(chosen.calendar.id, fields.title, when, recurrence !== undefined, created.link, null)
           yield* calendar.refresh
@@ -391,7 +394,7 @@ export class Events extends Context.Service<
               input.repeat === undefined ? undefined : yield* recurrenceOf(firstDayOf(when), input.repeat)
             const chosen = yield* target(input.calendar)
             yield* refusedBy({ _tag: "Create", calendar: chosen.calendar })
-            if (input.draft !== true) return yield* write(chosen, input, when, recurrence)
+            if (input.draft !== true) return yield* write(chosen, input, when, recurrence, crypto.randomUUID())
             const draft = yield* saveDraft(
               "calendar.draft.created",
               {
@@ -510,7 +513,7 @@ export class Events extends Context.Service<
               showAs: Option.getOrUndefined(stored.showAs)
             }
             const written = yield* refusedBy({ _tag: "Create", calendar: found.calendar.calendar }).pipe(
-              Effect.andThen(write(found.calendar, fields, whenOfEntry(found.entry), undefined)),
+              Effect.andThen(write(found.calendar, fields, whenOfEntry(found.entry), undefined, stored.id)),
               Effect.tapError((error) =>
                 error._tag === "Refused" || error._tag === "SourceFailed"
                   ? saveDraft(
@@ -530,7 +533,7 @@ export class Events extends Context.Service<
                 after: Option.none()
               })
             )
-          }),
+          }).pipe(one.withPermit),
 
         drafts: Effect.map(db(Store.allDrafts), (found) =>
           found.map((draft) => Domain.eventOf(Calendar.entryOfDraft(draft)))
