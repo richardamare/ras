@@ -7,9 +7,9 @@ import * as Option from "effect/Option"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as KernelModule from "@ras/kernel/Module"
-import * as Domain from "../src/Domain.ts"
-import * as DraftRepository from "../src/DraftRepository.ts"
-import * as Migrations from "../src/Migrations.ts"
+import * as Domain from "../../src/Domain.ts"
+import * as DraftRepository from "../../src/events/DraftRepository.ts"
+import * as Migrations from "../../src/Migrations.ts"
 
 const tables = KernelModule.make({ name: "calendar", migrations: Migrations.migrations })
 

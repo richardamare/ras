@@ -2,8 +2,8 @@ import { assert, describe, it } from "@effect/vitest"
 import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../src/Domain.ts"
-import * as Rules from "../src/Rules.ts"
+import * as Domain from "../../src/Domain.ts"
+import * as Rules from "../../src/events/Rules.ts"
 
 const calendar = (writable: boolean, enabled = true) =>
   new Domain.Calendar({ id: Domain.CalendarId.make(1), name: "Calendar", color: "#000000", writable, enabled })

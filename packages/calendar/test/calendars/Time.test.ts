@@ -2,9 +2,9 @@ import { assert, describe, it } from "@effect/vitest"
 import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
-import * as Busy from "../src/Busy.ts"
-import * as Domain from "../src/Domain.ts"
-import * as WorkHours from "../src/WorkHours.ts"
+import * as Busy from "../../src/calendars/Busy.ts"
+import * as Domain from "../../src/Domain.ts"
+import * as WorkHours from "../../src/calendars/WorkHours.ts"
 
 const at = (iso: string) => DateTime.makeUnsafe(iso)
 

@@ -3,8 +3,8 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
-import * as Rules from "./Rules.ts"
+import * as Domain from "../Domain.ts"
+import * as Rules from "../events/Rules.ts"
 
 const millis = DateTime.toEpochMillis
 

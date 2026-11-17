@@ -7,8 +7,8 @@ import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
-import * as Domain from "./Domain.ts"
-import type * as Reclaim from "./Reclaim.ts"
+import * as Domain from "../Domain.ts"
+import type * as Reclaim from "../reclaim/Reclaim.ts"
 
 /** A connected calendar with its settings and the handles a write to its provider needs. */
 export interface Connected {

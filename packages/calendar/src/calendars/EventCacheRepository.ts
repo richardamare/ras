@@ -8,8 +8,8 @@ import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
-import type * as Reclaim from "./Reclaim.ts"
+import * as Domain from "../Domain.ts"
+import type * as Reclaim from "../reclaim/Reclaim.ts"
 
 /** When the cache was last filled, and the span of time it holds. */
 export interface SyncState {

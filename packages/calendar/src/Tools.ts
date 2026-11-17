@@ -2,9 +2,9 @@ import * as Schema from "effect/Schema"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Effect from "effect/Effect"
 import * as Global from "@ras/global"
-import * as Calendar from "./Calendar.ts"
+import * as Calendar from "./calendars/Calendar.ts"
 import * as Domain from "./Domain.ts"
-import * as Events from "./Events.ts"
+import * as Events from "./events/Events.ts"
 
 const WindowParameters = Schema.Struct({
   from: Domain.Window.fields.from.annotate({

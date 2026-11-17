@@ -13,7 +13,7 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 /** A calendar as Reclaim lists it, with the handles a write to its provider needs. */
 export interface SourceCalendar {

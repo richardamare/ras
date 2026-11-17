@@ -9,7 +9,7 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 /** A plain event drafted in ras; it reaches its calendar only once the owner confirms it. */
 export interface Draft {

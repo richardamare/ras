@@ -8,7 +8,7 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Global from "@ras/global"
 import * as Time from "@ras/kernel/Time"
-import * as Outlook from "../src/Outlook.ts"
+import * as Outlook from "../../src/outlook/Outlook.ts"
 
 /** Graph as the test scripts it: the requests it saw, and one answer for every request. */
 const graph = (status: number, body: unknown) => {

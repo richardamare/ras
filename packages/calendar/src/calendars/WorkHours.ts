@@ -3,7 +3,7 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 export const uncategorised = "No category"
 

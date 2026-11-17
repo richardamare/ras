@@ -1,5 +1,5 @@
-export { Calendar } from "./Calendar.ts"
+export { Calendar } from "./calendars/Calendar.ts"
 export { CalendarId } from "./Domain.ts"
-export { Events, type BlockEvent } from "./Events.ts"
+export { Events, type BlockEvent } from "./events/Events.ts"
 export type { Span } from "./Domain.ts"
-export { BusyTime, type BlockDraft } from "./BusyTime.ts"
+export { BusyTime, type BlockDraft } from "./calendars/BusyTime.ts"

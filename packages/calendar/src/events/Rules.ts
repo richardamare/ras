@@ -1,6 +1,6 @@
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
-import * as Domain from "./Domain.ts"
+import * as Domain from "../Domain.ts"
 
 /** One write to a calendar, as the rules judge it. */
 export type Write =

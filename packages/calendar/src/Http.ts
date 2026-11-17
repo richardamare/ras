@@ -5,9 +5,9 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
-import * as Calendar from "./Calendar.ts"
+import * as Calendar from "./calendars/Calendar.ts"
 import * as Domain from "./Domain.ts"
-import * as Events from "./Events.ts"
+import * as Events from "./events/Events.ts"
 
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 

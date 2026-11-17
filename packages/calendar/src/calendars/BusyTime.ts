@@ -1,7 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import type * as Domain from "./Domain.ts"
+import type * as Domain from "../Domain.ts"
 
 /** A work block planned as a draft: it has no event yet, but its time is taken. */
 export interface BlockDraft {
