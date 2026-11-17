@@ -22,7 +22,7 @@ const api = process.env.DEV_API_TARGET ?? "http://localhost:4200"
  * production. `origin` is rewritten to the API's, which is the only origin it trusts.
  */
 const proxy = Object.fromEntries(
-  ["/auth", "/global", "/openapi.json"].map((path) => [
+  ["/auth", "/global", "/calendar", "/work", "/openapi.json"].map((path) => [
     path,
     { target: api, changeOrigin: true, headers: { origin: api } }
   ])
