@@ -2,74 +2,107 @@ import * as Arr from "effect/Array"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
+import * as Registry from "../registry/Registry.ts"
 
-export const Name = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/)).pipe(Schema.brand("FactName"))
-export type Name = typeof Name.Type
-
-export const Type = Schema.Literals(["fact", "preference", "rule", "person", "project"])
-export type Type = typeof Type.Type
+export const Path = Schema.String.check(
+  Schema.isPattern(/^([A-Za-z0-9][A-Za-z0-9._-]*\/)*[A-Za-z0-9][A-Za-z0-9._-]*\.md$/)
+)
+  .annotate({
+    description: "The fact's path from the memory repository's root, such as `people/colleagues/jan-novak.md`."
+  })
+  .pipe(Schema.brand("FactPath"))
+export type Path = typeof Path.Type
 
 /** The git blob hash of the fact's file, so a version matches what `git hash-object` prints for it. */
 export const Version = Schema.String.check(Schema.isPattern(/^[0-9a-f]{40}$/))
 
-const Description = Schema.String.check(Schema.isNonEmpty(), Schema.isPattern(/^[^\n]+$/))
-
-const Frontmatter = Schema.Struct({ name: Name, description: Description, type: Type })
+export const Properties = Schema.Record(Schema.String, Schema.Unknown).annotate({
+  description:
+    "The frontmatter, as the fact's kind in the registry requires it; `description` is the line the index shows."
+})
+export type Properties = typeof Properties.Type
 
 /** What `memory_index` lists of a fact. */
-export const Entry = Schema.Struct({ name: Name, description: Schema.String, type: Type })
+export const Entry = Schema.Struct({ path: Path, kind: Schema.String, description: Schema.String })
 export type Entry = typeof Entry.Type
 
 export class Fact extends Schema.Class<Fact>("Fact")({
-  name: Name,
+  path: Path,
+  kind: Schema.String,
   description: Schema.String,
-  type: Type,
+  properties: Properties,
   text: Schema.String,
   version: Version
 }) {}
 
-/** A file in the clone that is not a valid fact, and why. */
-export const Invalid = Schema.Struct({ file: Schema.String, reason: Schema.String })
+/** A file in the clone that is not a fact, and why. */
+export const Invalid = Schema.Struct({ path: Schema.String, reason: Schema.String })
 export type Invalid = typeof Invalid.Type
 
-/** What a write takes: the fact without its version, with each field checked as a fact file checks it. */
-export const Draft = Schema.Struct({ name: Name, description: Description, type: Type, text: Schema.String })
-export type Draft = typeof Draft.Type
-
-export const fileName = (name: Name) => `${name}.md`
+/** What a write takes: the fact without its kind, which its path decides, and without its version. */
+export interface Draft {
+  readonly path: Path
+  readonly properties: Properties
+  readonly text: string
+}
 
 export const version = (content: string): string => {
   const bytes = new TextEncoder().encode(content)
   return new Bun.CryptoHasher("sha1").update(`blob ${bytes.byteLength}\0`).update(bytes).digest("hex")
 }
 
-const decodeFrontmatter = Schema.decodeUnknownResult(Frontmatter)
-
-/** Reads the fact in `file`; the frontmatter must be valid and its `name` must equal the file name. */
-export const parse = (file: string, content: string): Result.Result<Fact, Invalid> => {
-  const refuse = (reason: string) => Result.fail({ file, reason })
+/** The frontmatter and the text of a Markdown file, or why it has no frontmatter to read. */
+export const split = (content: string): Result.Result<{ properties: Properties; text: string }, string> => {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(content)
-  if (match === null) return refuse("The file does not open with a `---` frontmatter block.")
+  if (match === null) return Result.fail("The file does not open with a `---` frontmatter block.")
   const [, yaml = "", body = ""] = match
   let raw: unknown
   try {
     raw = Bun.YAML.parse(yaml)
   } catch {
-    return refuse("The frontmatter is not valid YAML.")
+    return Result.fail("The frontmatter is not valid YAML.")
   }
-  return Result.match(decodeFrontmatter(raw), {
-    onFailure: (issue) => refuse(`The frontmatter needs name, description and type: ${issue.message}`),
-    onSuccess: (frontmatter) =>
-      fileName(frontmatter.name) === file
-        ? Result.succeed(new Fact({ ...frontmatter, text: body.trim(), version: version(content) }))
-        : refuse(
-            `The frontmatter names \`${frontmatter.name}\`, so the file must be \`${fileName(frontmatter.name)}\`.`
-          )
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw))
+    return Result.fail("The frontmatter is not a set of properties.")
+  return Result.succeed({ properties: raw as Properties, text: body.trim() })
+}
+
+const noKind = `No kind in ${Registry.file} matches this path.`
+
+/** Reads the file at `path` as a fact of the kind the registry gives its path. */
+export const parse = (registry: Registry.Registry, path: string, content: string): Result.Result<Fact, Invalid> => {
+  const refuse = (reason: string) => Result.fail({ path, reason })
+  return Option.match(Registry.placeOf(registry, path), {
+    onNone: () => refuse(noKind),
+    onSome: (place) =>
+      Result.match(split(content), {
+        onFailure: refuse,
+        onSuccess: ({ properties, text }) => {
+          const problems = Registry.problemsOf(place, properties)
+          return problems.length > 0
+            ? refuse(problems.join(" "))
+            : Result.succeed(
+                new Fact({
+                  path: path as Path,
+                  kind: place.kind.name,
+                  description: String(properties["description"]),
+                  properties,
+                  text,
+                  version: version(content)
+                })
+              )
+        }
+      })
   })
 }
 
-export const render = (draft: Draft): string =>
-  `---\nname: ${draft.name}\ndescription: ${JSON.stringify(draft.description)}\ntype: ${draft.type}\n---\n\n${draft.text.trim()}\n`
+/** The file of a fact: its properties in the order its kind lists them, each as YAML, then the text. */
+export const render = (place: Registry.Place, draft: Draft): string => {
+  const order = [...Object.keys(place.kind.required), ...Object.keys(place.kind.optional)]
+  const keys = Arr.filter(order, (key) => draft.properties[key] !== undefined && draft.properties[key] !== null)
+  const lines = Arr.map(keys, (key) => `${key}: ${JSON.stringify(draft.properties[key])}`)
+  return `---\n${lines.join("\n")}\n---\n\n${draft.text.trim()}\n`
+}
 
 const secrets: ReadonlyArray<readonly [string, RegExp]> = [
   ["a private key", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
@@ -90,9 +123,9 @@ export const secretIn = (text: string): Option.Option<string> =>
 
 /** A fact that matches a search, with the matching words of its text marked. */
 export const Hit = Schema.Struct({
-  name: Name,
+  path: Path,
+  kind: Schema.String,
   description: Schema.String,
-  type: Type,
   excerpt: Schema.String
 })
 export type Hit = typeof Hit.Type

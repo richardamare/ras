@@ -51,6 +51,26 @@ export interface Kind {
   readonly optional: Readonly<Record<string, Value>>
 }
 
+/** A kind as `memory_index` shows it, so an agent knows what a write must hold. */
+export const Summary = Schema.Struct({
+  kind: Schema.String,
+  path: Schema.String,
+  name: Schema.NullOr(Schema.Literals(["kebab", "date", "dated"])),
+  write: Write,
+  required: Properties,
+  optional: Properties
+})
+export type Summary = typeof Summary.Type
+
+export const summaryOf = (kind: Kind): Summary => ({
+  kind: kind.name,
+  path: kind.path,
+  name: Option.getOrNull(kind.fileName),
+  write: kind.write,
+  required: kind.required,
+  optional: kind.optional
+})
+
 /** The kinds in the order `registry.yaml` lists them; the first whose pattern matches a path is that path's kind. */
 export interface Registry {
   readonly kinds: ReadonlyArray<Kind>

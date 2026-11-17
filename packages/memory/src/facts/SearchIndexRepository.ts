@@ -8,17 +8,17 @@ import * as Sql from "@ras/kernel/Sql"
 import * as Fact from "./Fact.ts"
 
 const HitRow = Schema.Struct({
-  name: Fact.Name,
+  path: Fact.Path,
+  kind: Schema.String,
   description: Schema.String,
-  type: Fact.Type,
   excerpt: Schema.String
 })
 type HitRow = typeof HitRow.Type
 
 const toHit = (row: HitRow): Fact.Hit => ({
-  name: row.name,
+  path: row.path,
+  kind: row.kind,
   description: row.description,
-  type: row.type,
   excerpt: row.excerpt
 })
 
@@ -55,7 +55,7 @@ export class SearchIndexRepository extends Context.Service<
                 yield* Effect.forEach(
                   facts,
                   (fact) =>
-                    sql`INSERT INTO memory_facts (name, description, type, text) VALUES (${fact.name}, ${fact.description}, ${fact.type}, ${fact.text})`,
+                    sql`INSERT INTO memory_facts (path, kind, description, text) VALUES (${fact.path}, ${fact.kind}, ${fact.description}, ${fact.text})`,
                   { discard: true }
                 )
               })
@@ -68,7 +68,7 @@ export class SearchIndexRepository extends Context.Service<
           return Sql.rows(
             HitRow,
             sql`
-              SELECT name, description, type, snippet(memory_facts, 3, '**', '**', '…', 16) AS excerpt
+              SELECT path, kind, description, snippet(memory_facts, 3, '**', '**', '…', 16) AS excerpt
               FROM memory_facts WHERE memory_facts MATCH ${terms} ORDER BY rank LIMIT ${limit}`
           ).pipe(Effect.map(Arr.map(toHit)))
         }
