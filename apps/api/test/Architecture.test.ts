@@ -17,13 +17,50 @@ const offending = (rule: RegExp, allowed: (path: string) => boolean) =>
   Arr.filter(sources, (file) => !allowed(file.path) && rule.test(file.text)).map((file) => file.path)
 
 describe("the architecture", () => {
-  it("writes SQL only in a module's Store.ts, its migrations and the audit", () => {
+  it("writes SQL only in a module's repositories, its migrations and the audit", () => {
     assert.deepStrictEqual(
       offending(/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|\w+\s+SET)\b/, (path) =>
-        /\/test\/|\/src\/(Store|Migrations|Writes)\.ts$/.test(path)
+        /\/test\/|\/[A-Z][A-Za-z]*Repository\.ts$|\/Migrations\.ts$|^packages\/global\/src\/(.+\/)?Writes\.ts$/.test(
+          path
+        )
       ),
       []
     )
+  })
+
+  it("lets only repositories reach the SQL client", () => {
+    assert.deepStrictEqual(
+      offending(
+        /from "effect\/sql\//,
+        (path) =>
+          !/^packages\/[a-z]+\/src\//.test(path) ||
+          path.startsWith("packages/kernel/src/") ||
+          /\/([A-Z][A-Za-z]*Repository|Migrations|Writes|AuthDatabase|Testing)\.ts$/.test(path)
+      ),
+      []
+    )
+  })
+
+  it("maps every repository row through one local to-function", () => {
+    const repositories = Arr.filter(sources, (file) =>
+      /^packages\/[a-z]+\/src\/(.+\/)?[A-Z]\w*Repository\.ts$/.test(file.path)
+    )
+    const offences = Arr.flatMap(repositories, (file) =>
+      Arr.dedupe(
+        Arr.filterMap(Arr.fromIterable(file.text.matchAll(/\(row(\)|:)/g)), (found) => {
+          const before = file.text.slice(0, found.index)
+          const statement = before.slice(
+            Math.max(0, ...Arr.map(Arr.fromIterable(before.matchAll(/\n(?=\S)/g)), (line) => line.index + 1))
+          )
+          return /^const to[A-Z]\w* =\s*(\([^()]*\)\s*=>\s*)?\(row: \w+Row\)/.test(
+            statement + file.text.slice(found.index)
+          )
+            ? Result.failVoid
+            : Result.succeed(`${file.path}:${before.split("\n").length}`)
+        })
+      )
+    )
+    assert.deepStrictEqual(offences, [])
   })
 
   it("lets only apps/api import a module's descriptor", () => {

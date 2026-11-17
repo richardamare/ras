@@ -8,16 +8,17 @@ import * as Queue from "effect/Queue"
 import * as Order from "effect/Order"
 import * as Schedule from "effect/Schedule"
 import * as Semaphore from "effect/Semaphore"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
 import * as BusyTime from "./BusyTime.ts"
+import * as CalendarRepository from "./CalendarRepository.ts"
 import * as Domain from "./Domain.ts"
+import * as DraftRepository from "./DraftRepository.ts"
+import * as EventCacheRepository from "./EventCacheRepository.ts"
 import * as Outlook from "./Outlook.ts"
 import * as Reclaim from "./Reclaim.ts"
-import * as Store from "./Store.ts"
 import * as WorkHours from "./WorkHours.ts"
 
 type Read<A> = Effect.Effect<A, Errors.SourceFailed>
@@ -59,7 +60,7 @@ export const originals = (
 }
 
 /** A draft as the calendar shows it: a plain event of its calendar, marked as a draft. */
-export const entryOfDraft = (draft: Store.Draft): Domain.Entry => ({
+export const entryOfDraft = (draft: DraftRepository.Draft): Domain.Entry => ({
   ref: { calendar: draft.calendar, date: Time.pragueDateOf(draft.span.start), id: Domain.draftEventId(draft.id) },
   title: draft.title,
   span: draft.span,
@@ -125,12 +126,12 @@ export class Calendar extends Context.Service<
     /** The month's work hours; with `categories`, only those categories count. */
     readonly workHours: (month: Domain.Month, categories: ReadonlyArray<string>) => Read<Domain.WorkHours>
     /** Every connected calendar, turned-off ones too, with the handles a write to its provider needs. */
-    readonly connected: Read<ReadonlyArray<Store.Connected>>
+    readonly connected: Read<ReadonlyArray<CalendarRepository.Connected>>
     /** An event in any connected calendar, a turned-off one too, so the rules can say why it takes no write. */
     readonly find: (
       id: Domain.EventId
     ) => Effect.Effect<
-      { readonly calendar: Store.Connected; readonly entry: Domain.Entry },
+      { readonly calendar: CalendarRepository.Connected; readonly entry: Domain.Entry },
       Errors.NotFound | Errors.SourceFailed
     >
     /** Reads the calendars and the cached span's events from Reclaim and replaces the cache with them. */
@@ -143,12 +144,13 @@ export class Calendar extends Context.Service<
   }
 >()("@ras/calendar/Calendar") {
   static readonly make = Effect.gen(function* () {
-    const sql = yield* SqlClient.SqlClient
     const reclaim = yield* Reclaim.Reclaim
     const outlook = yield* Outlook.Outlook
     const busy = yield* BusyTime.BusyTime
     const writes = yield* Global.Writes
-    const db = Effect.provideService(SqlClient.SqlClient, sql)
+    const calendars = yield* CalendarRepository.CalendarRepository
+    const cache = yield* EventCacheRepository.EventCacheRepository
+    const drafts = yield* DraftRepository.DraftRepository
     const one = yield* Semaphore.make(1)
     const scope = yield* Effect.scope
 
@@ -158,28 +160,23 @@ export class Calendar extends Context.Service<
       const starts = Arr.map(Arr.range(0, ahead / chunk + behind / chunk - 1), (index) =>
         Time.addDays(first, index * chunk)
       )
-      const calendars = yield* reclaim.calendars
+      const listed = yield* reclaim.calendars
       const entries = yield* Effect.forEach(starts, (start) => reclaim.events(start, Time.addDays(start, chunk)))
       const span = { start: Time.pragueMidnight(first), end: Time.pragueMidnight(Time.addDays(today, ahead)) }
-      yield* db(
-        Store.replace(
-          calendars,
-          Arr.filter(Arr.flatten(entries), (entry) => overlaps(entry, span)),
-          span,
-          yield* DateTime.now
-        )
+      yield* cache.replace(
+        listed,
+        Arr.filter(Arr.flatten(entries), (entry) => overlaps(entry, span)),
+        span,
+        yield* DateTime.now
       )
     }).pipe(one.withPermit, Effect.withSpan("calendar.sync"))
 
     /** The cache, filled by a first sync when it is still empty. */
-    const filled = Effect.flatMap(db(Store.sync), (state) =>
-      Option.isSome(state) ? Effect.succeed(state) : Effect.andThen(sync, db(Store.sync))
+    const filled = Effect.flatMap(cache.state, (state) =>
+      Option.isSome(state) ? Effect.succeed(state) : Effect.andThen(sync, cache.state)
     )
 
-    const connected = Effect.andThen(
-      filled,
-      Effect.flatMap(outlook.account, (account) => db(Store.connected(account)))
-    )
+    const connected = Effect.andThen(filled, Effect.flatMap(outlook.account, calendars.connected))
 
     const shown = Effect.map(connected, (all) =>
       Arr.map(
@@ -197,7 +194,7 @@ export class Calendar extends Context.Service<
             DateTime.isLessThanOrEqualTo(cached.from, span.start) &&
             DateTime.isGreaterThanOrEqualTo(cached.to, span.end)
         )
-          ? db(Store.events(span))
+          ? cache.events(span)
           : Effect.map(
               reclaim.events(Time.pragueDateOf(span.start), Time.addDays(Time.pragueDateOf(span.end), 1)),
               Arr.filter((entry) => overlaps(entry, span))
@@ -207,9 +204,9 @@ export class Calendar extends Context.Service<
     const entries = (span: Domain.Span) =>
       Effect.gen(function* () {
         const found = yield* read(span)
-        const drafts = Arr.map(yield* db(Store.drafts(span)), entryOfDraft)
+        const drafted = Arr.map(yield* drafts.inSpan(span), entryOfDraft)
         const blocks = Arr.map(yield* busy.drafts(span), entryOfBlockDraft)
-        return originals([...found, ...drafts, ...blocks], yield* shown).toSorted(byStart)
+        return originals([...found, ...drafted, ...blocks], yield* shown).toSorted(byStart)
       })
 
     const quietly = sync.pipe(
@@ -242,7 +239,7 @@ export class Calendar extends Context.Service<
           const diff = Global.changed(Global.snapshot(Domain.Calendar, before), Global.snapshot(Domain.Calendar, after))
           return yield* writes.run(
             "calendar.calendar.changed",
-            Effect.as(db(Store.changeCalendar(after)), {
+            Effect.as(calendars.change(after), {
               result: after,
               subject: `calendar/${id}`,
               before: Option.some(diff.before),
@@ -301,7 +298,7 @@ export class Calendar extends Context.Service<
                     )
                   ),
                 onSome: (draft) =>
-                  Effect.map(db(Store.draftById(draft)), (found) =>
+                  Effect.map(drafts.byId(draft), (found) =>
                     Option.filter(Option.map(found, entryOfDraft), (entry) => entry.ref.calendar === ref.calendar)
                   )
               })

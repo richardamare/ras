@@ -7,7 +7,7 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Actor from "./Actor.ts"
 import * as Agents from "./Agents.ts"
 import * as Http from "./Http.ts"
-import * as Store from "./Store.ts"
+import * as Agent from "./Agent.ts"
 
 /** A tool that only reads. It fails only with the kernel's `Failure`. */
 export const read = <
@@ -80,7 +80,7 @@ export const toolkit = Toolkit.make(
   read("agents", {
     description:
       "The agents a writing tool may name in `agent`: each one's slug and name. Archived agents are left out.",
-    success: Schema.Array(Store.Agent)
+    success: Schema.Array(Agent.Agent)
   })
 )
 

@@ -1,14 +1,14 @@
 import * as BetterAuthMcp from "@better-auth/mcp"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as HttpRouter from "effect/http/HttpRouter"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Actor from "./Actor.ts"
 import * as Auth from "./Auth.ts"
-import * as Store from "./Store.ts"
+import * as OAuthClientRepository from "./OAuthClientRepository.ts"
 
 const Claims = Schema.Struct({ sub: Schema.String, azp: Schema.String })
 
@@ -17,10 +17,10 @@ const Claims = Schema.Struct({ sub: Schema.String, azp: Schema.String })
  * and runs it as the owner through that client. Otherwise it answers better-auth's 401 challenge, which points the
  * client at the sign-in.
  */
-export const middleware = HttpRouter.middleware<{ provides: Actor.CurrentActor }>()(
+const middleware = HttpRouter.middleware<{ provides: Actor.CurrentActor }>()(
   Effect.gen(function* () {
     const auth = yield* Auth.Auth
-    const sql = yield* SqlClient.SqlClient
+    const clients = yield* OAuthClientRepository.OAuthClientRepository
     const settings = yield* Auth.settings
     const resource = new URL(Auth.mcpPath, settings.url).href
 
@@ -50,17 +50,22 @@ export const middleware = HttpRouter.middleware<{ provides: Actor.CurrentActor }
         const verified = yield* verify(new Headers(request.headers), request.method)
         if ("refused" in verified) return HttpServerResponse.fromWeb(verified.refused)
         const claims = yield* Schema.decodeUnknownEffect(Claims)(verified.claims).pipe(Effect.orDie)
-        const client = yield* Effect.provideService(
-          Store.consentedClient(claims.azp, claims.sub),
-          SqlClient.SqlClient,
-          sql
-        )
-        if (Option.isNone(client)) return HttpServerResponse.fromWeb(yield* challenge(request.method))
+        const consent = yield* clients.consent(claims.azp, claims.sub)
+        if (Option.isNone(consent)) return HttpServerResponse.fromWeb(yield* challenge(request.method))
         const actor = new Actor.Actor({
-          channel: { _tag: "Mcp", clientId: claims.azp, clientName: client.value },
+          channel: {
+            _tag: "Mcp",
+            clientId: claims.azp,
+            clientName: Option.getOrElse(consent.value.name, () => claims.azp)
+          },
           agent: Option.none()
         })
         return yield* Effect.provideService(httpEffect, Actor.CurrentActor, actor)
       })
   })
 )
+
+/** The connector, with the consents it checks read through global's own repository. */
+export const connector = {
+  layer: middleware.layer.pipe(Layer.provide(OAuthClientRepository.OAuthClientRepository.layer))
+}

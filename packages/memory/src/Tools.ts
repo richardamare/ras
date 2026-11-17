@@ -5,7 +5,6 @@ import * as Toolkit from "effect/ai/Toolkit"
 import * as Global from "@ras/global"
 import * as Fact from "./Fact.ts"
 import * as Memory from "./Memory.ts"
-import * as Store from "./Store.ts"
 
 export const toolkit = Toolkit.make(
   Global.read("memory_index", {
@@ -25,7 +24,7 @@ export const toolkit = Toolkit.make(
       query: Schema.String,
       limit: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 })))
     }),
-    success: Schema.Array(Store.Hit)
+    success: Schema.Array(Fact.Hit)
   }),
   Global.writeTool("memory_write", {
     description:

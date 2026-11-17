@@ -8,12 +8,11 @@ import * as Option from "effect/Option"
 import * as Ref from "effect/Ref"
 import * as Schema from "effect/Schema"
 import * as Semaphore from "effect/Semaphore"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Clone from "./Clone.ts"
 import * as Fact from "./Fact.ts"
-import * as Store from "./Store.ts"
+import * as SearchIndexRepository from "./SearchIndexRepository.ts"
 
 export const Index = Schema.Struct({ facts: Schema.Array(Fact.Entry), invalid: Schema.Array(Fact.Invalid) })
 export type Index = typeof Index.Type
@@ -72,7 +71,7 @@ export class Memory extends Context.Service<
   {
     readonly index: Effect.Effect<Index, Errors.SourceFailed>
     readonly read: (names: ReadonlyArray<string>) => Effect.Effect<Read, Errors.SourceFailed>
-    readonly search: (query: string, limit: number) => Effect.Effect<ReadonlyArray<Store.Hit>, Errors.SourceFailed>
+    readonly search: (query: string, limit: number) => Effect.Effect<ReadonlyArray<Fact.Hit>, Errors.SourceFailed>
     /** Creates the fact, or changes it when `version` is the version on disk. */
     readonly write: (
       draft: Fact.Draft,
@@ -91,13 +90,13 @@ export class Memory extends Context.Service<
     Effect.gen(function* () {
       const clone = yield* Clone.Clone
       const writes = yield* Global.Writes
-      const services = yield* Effect.context<SqlClient.SqlClient>()
+      const index = yield* SearchIndexRepository.SearchIndexRepository
       const queue = yield* Semaphore.make(1)
       const pulledAt = yield* Ref.make(Option.none<DateTime.Utc>())
 
       const reindex = Effect.gen(function* () {
         const { facts } = scan(yield* clone.files)
-        yield* Effect.provideContext(Store.replace(facts), services)
+        yield* index.replace(facts)
       })
 
       const sync = queue.withPermits(1)(
@@ -205,7 +204,7 @@ export class Memory extends Context.Service<
         search: (query, limit) =>
           Effect.gen(function* () {
             yield* fresh
-            return yield* Effect.provideContext(Store.search(query, limit), services)
+            return yield* index.search(query, limit)
           }),
         write: (draft, version) =>
           Effect.gen(function* () {

@@ -4,7 +4,7 @@ import * as Option from "effect/Option"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
-import * as Store from "../src/Store.ts"
+import * as OAuthClientRepository from "../src/OAuthClientRepository.ts"
 
 const connect = (clientId: string, name: string) =>
   Effect.gen(function* () {
@@ -18,6 +18,12 @@ const connect = (clientId: string, name: string) =>
                VALUES (${`refresh-${clientId}`}, ${`token-${clientId}`}, ${clientId}, 'owner', '["openid"]',
                        '2026-12-17T09:00:00.000Z', '2026-11-17T10:30:00.000Z')`
   })
+
+const consentName = (clientId: string) =>
+  Effect.gen(function* () {
+    const consent = yield* (yield* OAuthClientRepository.OAuthClientRepository).consent(clientId, "owner")
+    return Option.flatMap(consent, (found) => found.name)
+  }).pipe(Effect.provide(OAuthClientRepository.OAuthClientRepository.layer))
 
 const revoked = (clientId: string) =>
   Effect.gen(function* () {
@@ -50,8 +56,8 @@ layer(Testing.layer([]))("MCP clients", (test) => {
       )
       assert.deepStrictEqual(yield* revoked("cursor"), [true])
       assert.deepStrictEqual(yield* revoked("claude"), [false])
-      assert.isTrue(Option.isNone(yield* Store.consentedClient("cursor", "owner")))
-      assert.deepStrictEqual(yield* Store.consentedClient("claude", "owner"), Option.some("Claude"))
+      assert.isTrue(Option.isNone(yield* consentName("cursor")))
+      assert.deepStrictEqual(yield* consentName("claude"), Option.some("Claude"))
       const sql = yield* SqlClient.SqlClient
       const [entry] = yield* sql<{ action: string; subject: string }>`
         SELECT action, subject FROM global_audit_entries ORDER BY id DESC LIMIT 1`

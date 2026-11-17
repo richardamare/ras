@@ -2,14 +2,13 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
-import * as SqlClient from "effect/sql/SqlClient"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
 import * as Blocks from "./Blocks.ts"
 import * as Domain from "./Domain.ts"
-import * as Store from "./Store.ts"
+import * as BlockRepository from "./BlockRepository.ts"
 
 interface Pending {
   readonly id: string
@@ -37,8 +36,7 @@ export class Drafts extends Context.Service<
   static readonly layer = Layer.effect(
     Drafts,
     Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient
-      const db = Effect.provideService(SqlClient.SqlClient, sql)
+      const storedBlocks = yield* BlockRepository.BlockRepository
       const writes = yield* Global.Writes
       const events = yield* Calendar.Events
       const blocks = yield* Blocks.Blocks
@@ -50,7 +48,7 @@ export class Drafts extends Context.Service<
           start: event.start,
           confirm: events.confirm(event.id)
         }))
-        const blockDrafts = (yield* db(Store.allBlockDrafts)).map((row): Pending => ({
+        const blockDrafts = (yield* storedBlocks.allDrafts).map((row): Pending => ({
           id: row.id,
           title: row.title,
           start: Time.toPragueLocal(row.start),
@@ -101,11 +99,11 @@ export class Drafts extends Context.Service<
 
         discard: Effect.gen(function* () {
           const eventDrafts = yield* events.discardDrafts
-          const blockDrafts = yield* db(Store.allBlockDrafts)
+          const blockDrafts = yield* storedBlocks.allDrafts
           if (blockDrafts.length === 0) return eventDrafts
           return yield* writes.run(
             "work.block.discarded",
-            Effect.as(db(Store.deleteBlockDrafts), {
+            Effect.as(storedBlocks.deleteDrafts, {
               result: eventDrafts + blockDrafts.length,
               subject: "blocks",
               before: Option.some({
