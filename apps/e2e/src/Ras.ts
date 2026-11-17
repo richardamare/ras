@@ -12,6 +12,8 @@ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner"
 
 export const owner = { email: "owner@e2e.test", password: "e2e-owner-password" } as const
 
+export const webhookSecret = "ras-e2e-webhook-secret"
+
 const api = new URL("../../api", import.meta.url).pathname
 
 /** Runs a command to its end, failing with its output when it exits non-zero. */
@@ -56,6 +58,7 @@ export const serve = Effect.gen(function* () {
       RAS_DATABASE: path.join(scratch, "ras.db"),
       RAS_MEMORY_PATH: memory,
       RAS_AUTH_SECRET: "ras-e2e-auth-secret-not-for-production",
+      RAS_MEMORY_WEBHOOK_SECRET: webhookSecret,
       RAS_SAMPLE: "true"
     }
   }
