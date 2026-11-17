@@ -108,6 +108,22 @@ export type DraftId = typeof DraftId.Type
 /** The id a draft's event carries in its calendar, which no calendar's own id can be. */
 export const draftEventId = (id: DraftId) => `draft-${id}`
 
+/** The line a work block's event carries in its notes, which ties the event to its block. */
+export const blockMarker = (block: string) => `ras-block:${block}`
+
+const markerPattern = /ras-block:([0-9a-f-]{36})/
+
+/** The work block an event belongs to, read from the marker in its notes. */
+export const blockOf = (entry: Entry): Option.Option<string> =>
+  Option.flatMap(entry.notes, (notes) => Option.fromNullishOr(markerPattern.exec(notes)?.[1]))
+
+/** The notes as the owner wrote them, without a block's marker. */
+const shownNotes = (notes: Option.Option<string>) =>
+  Option.filter(
+    Option.map(notes, (text) => text.replace(markerPattern, "").trim()),
+    (text) => text.length > 0
+  )
+
 /** Whether the event takes its time: neither cancelled, declined nor shown as free. */
 export const blocks = (entry: Entry): boolean =>
   !entry.cancelled && entry.rsvp !== "declined" && entry.showAs !== "free"
@@ -129,6 +145,7 @@ export class Event extends Schema.Class<Event>("Event")({
   notes: Schema.NullOr(Schema.String),
   attendees: Schema.Array(Attendee),
   copyOf: Schema.NullOr(EventId).annotate({ description: "The original a copy was written from." }),
+  block: Schema.NullOr(Schema.String).annotate({ description: "The work block whose event this is." }),
   draft: Schema.NullOr(Schema.Struct({ refusal: Schema.NullOr(Schema.String) })).annotate({
     description: "Set while the event is a draft in ras, with why its calendar refused it when it was confirmed."
   })
@@ -149,9 +166,10 @@ export const eventOf = (entry: Entry): Event =>
     recurring: entry.recurring,
     location: Option.getOrNull(entry.location),
     category: Option.getOrNull(entry.category),
-    notes: Option.getOrNull(entry.notes),
+    notes: Option.getOrNull(shownNotes(entry.notes)),
     attendees: entry.attendees,
     copyOf: Option.getOrNull(Option.map(entry.copyOf, eventId)),
+    block: Option.getOrNull(blockOf(entry)),
     draft: entry.draft === undefined ? null : { refusal: Option.getOrNull(entry.draft.refusal) }
   })
 

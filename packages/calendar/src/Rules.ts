@@ -46,6 +46,12 @@ const edit = (calendar: Domain.Calendar, event: Domain.Entry, verb: string): Opt
       `"${event.title}" is a copy written by Calendar Sync, and the next sync would undo a change to it.`,
       "Change the original instead."
     )
+  if (Option.isSome(Domain.blockOf(event)))
+    return refused(
+      "event.block",
+      `"${event.title}" is a work block's event, which changes with its block.`,
+      "Move or remove the block with move_work or remove_work."
+    )
   if (event.kind === "reclaim")
     return refused(
       "event.reclaim",

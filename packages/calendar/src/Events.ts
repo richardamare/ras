@@ -228,6 +228,22 @@ const viewOf = (when: When) =>
         end: Time.PragueLocal.make(`${Time.addDays(when.last, 1)}T00:00`)
       }
 
+/** A work block's event: the block's id, its title (the project and the task), and the span it takes. */
+export interface BlockEvent {
+  readonly id: string
+  readonly title: string
+  readonly span: Domain.Span
+}
+
+const blockWrite = (block: BlockEvent): Outlook.Write => ({
+  subject: block.title,
+  body: { contentType: "text", content: Domain.blockMarker(block.id) },
+  start: clock(Time.toPragueLocal(block.span.start)),
+  end: clock(Time.toPragueLocal(block.span.end)),
+  isAllDay: false,
+  showAs: "busy"
+})
+
 export class Events extends Context.Service<
   Events,
   {
@@ -240,6 +256,14 @@ export class Events extends Context.Service<
     readonly reply: (id: Domain.EventId, reply: Domain.Reply) => Write<void>
     /** Writes a draft into its calendar as a new event; a draft the calendar refuses stays, with the reason. */
     readonly confirm: (id: Domain.EventId) => Write<Domain.Created>
+    /** Writes a work block's event into a writable calendar, busy, its notes carrying the block's marker. */
+    readonly placeBlock: (
+      calendar: Domain.CalendarId,
+      block: BlockEvent
+    ) => Effect.Effect<string, Errors.Refused | Errors.NotFound | Errors.SourceFailed>
+    /** Moves a block's event, by the Graph id `placeBlock` returned. */
+    readonly moveBlock: (event: string, block: BlockEvent) => Effect.Effect<void, Errors.SourceFailed>
+    readonly removeBlock: (event: string) => Effect.Effect<void, Errors.SourceFailed>
   }
 >()("@ras/calendar/Events") {
   static readonly layer = Layer.effect(
@@ -496,7 +520,24 @@ export class Events extends Context.Service<
                 after: Option.none()
               })
             )
-          })
+          }),
+
+        placeBlock: (id, block) =>
+          Effect.gen(function* () {
+            const chosen = Arr.findFirst(yield* calendar.connected, (entry) => entry.calendar.id === id)
+            if (Option.isNone(chosen)) return yield* new Errors.NotFound({ subject: "calendar", id: String(id) })
+            yield* refusedBy({ _tag: "Create", calendar: chosen.value.calendar })
+            const created = yield* outlook.create(yield* graphCalendar(chosen.value), {
+              ...blockWrite(block),
+              transactionId: block.id
+            })
+            yield* calendar.refresh
+            return created.id
+          }),
+
+        moveBlock: (event, block) => Effect.andThen(outlook.change(event, blockWrite(block)), calendar.refresh),
+
+        removeBlock: (event) => Effect.andThen(outlook.cancel(event), calendar.refresh)
       })
     })
   )
