@@ -4,6 +4,7 @@ import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
+import * as Queue from "effect/Queue"
 import * as Order from "effect/Order"
 import * as Schedule from "effect/Schedule"
 import * as Semaphore from "effect/Semaphore"
@@ -134,7 +135,10 @@ export class Calendar extends Context.Service<
     >
     /** Reads the calendars and the cached span's events from Reclaim and replaces the cache with them. */
     readonly sync: Read<void>
-    /** Syncs now and again shortly after, since Reclaim takes up to a minute to show a write. */
+    /**
+     * Syncs soon and again 45 seconds later, since Reclaim takes up to a minute to show a write; refreshes that arrive
+     * while a sync or a follow-up waits share it.
+     */
     readonly refresh: Effect.Effect<void>
   }
 >()("@ras/calendar/Calendar") {
@@ -210,6 +214,14 @@ export class Calendar extends Context.Service<
 
     const quietly = sync.pipe(
       Effect.catchCause((cause) => Effect.logWarning("The calendar sync failed; the cache keeps what it had.", cause))
+    )
+    const requested = yield* Queue.dropping<void>(1)
+    yield* Effect.forkIn(Effect.forever(Effect.andThen(Queue.take(requested), quietly)), scope)
+    const request = Effect.asVoid(Queue.offer(requested, undefined))
+    const followUps = yield* Queue.dropping<void>(1)
+    yield* Effect.forkIn(
+      Effect.forever(Effect.andThen(Queue.take(followUps), Effect.delay(request, "45 seconds"))),
+      scope
     )
 
     return Calendar.of({
@@ -304,7 +316,7 @@ export class Calendar extends Context.Service<
 
       sync,
 
-      refresh: Effect.asVoid(Effect.forkIn(Effect.andThen(quietly, Effect.delay(quietly, "45 seconds")), scope))
+      refresh: Effect.andThen(request, Effect.asVoid(Queue.offer(followUps, undefined)))
     })
   })
 

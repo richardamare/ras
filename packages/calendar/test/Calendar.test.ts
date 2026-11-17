@@ -1,15 +1,21 @@
 import { assert, describe, it, layer } from "@effect/vitest"
+import * as Arr from "effect/Array"
 import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
+import * as Ref from "effect/Ref"
 import * as SqlClient from "effect/sql/SqlClient"
+import * as TestClock from "effect/testing/TestClock"
 import * as Testing from "@ras/global/testing"
+import * as KernelModule from "@ras/kernel/Module"
 import * as Time from "@ras/kernel/Time"
 import * as BusyTime from "../src/BusyTime.ts"
 import * as Calendar from "../src/Calendar.ts"
 import * as Domain from "../src/Domain.ts"
+import * as Migrations from "../src/Migrations.ts"
 import * as Module from "../src/Module.ts"
+import * as Outlook from "../src/Outlook.ts"
 import * as Reclaim from "../src/Reclaim.ts"
 import * as Sample from "../src/Sample.ts"
 
@@ -207,4 +213,40 @@ describe("Reclaim", () => {
       "reclaim"
     )
   })
+})
+
+const tables = KernelModule.make({ name: "calendar", migrations: Migrations.migrations })
+
+describe("refreshes after writes", () => {
+  it.effect("shares one pending sync between the refreshes of a burst", () =>
+    Effect.gen(function* () {
+      const syncs = yield* Ref.make(0)
+      const sample = Sample.make(yield* today)
+      const counting = Layer.succeed(
+        Reclaim.Reclaim,
+        Reclaim.Reclaim.of({
+          ...sample,
+          calendars: Effect.andThen(
+            Ref.update(syncs, (n) => n + 1),
+            sample.calendars
+          )
+        })
+      )
+      const calendarLayer = Layer.effect(Calendar.Calendar, Calendar.Calendar.make).pipe(
+        Layer.provide(Layer.mergeAll(counting, Outlook.sample, BusyTime.BusyTime.none)),
+        Layer.provideMerge(Testing.layer([tables]))
+      )
+      const [soon, later] = yield* Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        yield* Effect.forEach(Arr.range(1, 10), () => calendar.refresh, { discard: true })
+        yield* TestClock.adjust("1 second")
+        const soon = yield* Ref.get(syncs)
+        yield* TestClock.adjust("1 minute")
+        return [soon, yield* Ref.get(syncs)] as const
+      }).pipe(Effect.provide(calendarLayer))
+      assert.isAtLeast(soon, 1)
+      assert.isAtMost(soon, 2)
+      assert.isAtMost(later, 4)
+    })
+  )
 })
