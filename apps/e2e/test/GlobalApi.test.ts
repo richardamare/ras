@@ -64,6 +64,31 @@ describe("the global API and ras's own routes", () => {
       })
     )
 
+    it.effect("reports each outside system as sample data, checks one on demand, and refuses an unknown one", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const connections = yield* client.global.connections()
+        assert.deepStrictEqual(
+          connections.map((connection) => [connection.kind, connection.state]),
+          [
+            ["outlook", "sample"],
+            ["reclaim", "sample"],
+            ["icloud", "sample"],
+            ["github", "sample"]
+          ]
+        )
+        const checked = yield* client.global.checkConnection({ params: { kind: "reclaim" } })
+        assert.deepInclude(checked, { kind: "reclaim", state: "sample" })
+
+        const { url } = yield* Suite.Server
+        const unknown = yield* HttpClientRequest.post(new URL("/global/connections/dropbox/check", url)).pipe(
+          HttpClientRequest.setHeader("cookie", yield* Suite.sessionCookie),
+          HttpClient.execute
+        )
+        assert.strictEqual(unknown.status, 400)
+      })
+    )
+
     it.effect("answers Microsoft's callback without a grant with a 400 page", () =>
       Effect.gen(function* () {
         const { url } = yield* Suite.Server
