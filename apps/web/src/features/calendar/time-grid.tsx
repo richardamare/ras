@@ -22,6 +22,14 @@ const offset = (minutes: number) => `${(minutes / 60) * hourRem}rem`
 
 const weekend = (day: string) => Prague.weekday(day) >= 5
 
+/** A weekend is muted, and a day an all-day event takes is filled with that event's colour instead. */
+const dayBackground = (column: Grid.DayColumn, colorOf: (calendar: number) => string) => {
+  const fill = Grid.dayFill(column)
+  return fill === undefined
+    ? { className: weekend(column.day) ? "bg-muted/50" : undefined, style: undefined }
+    : { className: "calendar-day-fill", style: { "--day-fill": colorOf(fill.calendar) } as React.CSSProperties }
+}
+
 export const dayLabel = (day: string, language: string, options: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat(language, { ...options, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))
 
@@ -73,7 +81,10 @@ export function TimeGrid({
   const body = React.useRef<HTMLDivElement>(null)
   const gestures = Gestures.useGridGestures({ body, onOpen, onCreate, onMove, onPlanTask })
 
-  const columns = Grid.dayColumns(events, blocks, days, now)
+  const columns = Grid.dayColumns(events, blocks, days, now).map((column) => ({
+    ...column,
+    background: dayBackground(column, colorOf)
+  }))
   const today = now.slice(0, 10)
   const showsToday = days.includes(today)
   const nowMinutes = Grid.minuteOf(now)
@@ -128,8 +139,9 @@ export function TimeGrid({
               key={column.day}
               className={Utils.cn(
                 "flex min-h-6 min-w-0 flex-1 flex-col gap-0.5 border-s p-0.5",
-                weekend(column.day) && "bg-muted/50"
+                column.background.className
               )}
+              style={column.background.style}
             >
               {column.allDay.map((event) => (
                 <Items.Chip
@@ -167,7 +179,8 @@ export function TimeGrid({
           <div
             key={column.day}
             data-day-column={column.day}
-            className={Utils.cn("relative min-w-0 flex-1 border-s", weekend(column.day) && "bg-muted/50")}
+            className={Utils.cn("relative min-w-0 flex-1 border-s", column.background.className)}
+            style={column.background.style}
             onPointerDown={(event) => gestures.startCreate(event, column.day)}
             onDragOver={(event) => gestures.hoverTask(event, column.day)}
             onDrop={(event) => gestures.dropTask(event, column.day)}

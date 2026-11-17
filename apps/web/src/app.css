@@ -227,6 +227,11 @@
   --event-fill-share: 15%;
 }
 
+/* A day taken by a busy or away all-day event, tinted in that event's colour behind the day's items. */
+.calendar-day-fill {
+  background-color: color-mix(in srgb, var(--day-fill) 12%, transparent);
+}
+
 /*
  * A task row while it is being closed (see use-task-completion.ts): crossed out while it can still be undone,
  * then faded and folded away. The fold runs on max-height, so it is sized above the tallest task row.
