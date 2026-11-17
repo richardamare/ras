@@ -9,6 +9,7 @@
     "./Module": "./src/Module.ts",
     "./Sample": "./src/Sample.ts",
     "./Sql": "./src/Sql.ts",
+    "./Testing": "./src/Testing.ts",
     "./Time": "./src/Time.ts"
   },
   "scripts": {

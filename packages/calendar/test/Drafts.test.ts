@@ -7,6 +7,7 @@ import * as Result from "effect/Result"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
+import * as KernelTesting from "@ras/kernel/Testing"
 import * as BusyTime from "../src/BusyTime.ts"
 import * as Calendar from "../src/Calendar.ts"
 import * as Domain from "../src/Domain.ts"
@@ -18,9 +19,6 @@ import * as Sample from "../src/Sample.ts"
 const local = (text: string) => Time.PragueLocal.make(text)
 const calls = Ref.getAndSet(Outlook.sampleCalls, [])
 const morning = { from: local("2027-01-15T08:00"), to: local("2027-01-15T12:00") }
-
-const code = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.map(Effect.flip(effect), (error) => ("code" in error ? String(error.code) : error._tag))
 
 layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(BusyTime.BusyTime.none)))(
   "event drafts",
@@ -51,7 +49,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
 
     test.effect("refuses a repeating draft", () =>
       Effect.gen(function* () {
-        const refused = yield* code(
+        const refused = yield* KernelTesting.code(
           (yield* Events.Events).create({
             title: "x",
             calendar: Sample.personal,
@@ -99,14 +97,14 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
           draft: true
         })
         yield* calendar.changeCalendar(Sample.personal, { enabled: false })
-        assert.strictEqual(yield* code(events.confirm(created.draft!)), "calendar.calendar.off")
+        assert.strictEqual(yield* KernelTesting.code(events.confirm(created.draft!)), "calendar.calendar.off")
         yield* calendar.changeCalendar(Sample.personal, { enabled: true })
         const [kept] = yield* calendar.events(morning)
         assert.include(kept!.draft!.refusal!, "is turned off in ras")
         yield* events.cancel(kept!.id)
         assert.deepStrictEqual(yield* calendar.events(morning), [])
         assert.deepStrictEqual(yield* calls, [])
-        assert.strictEqual(yield* code(events.confirm(Domain.EventId.make(kept!.id))), "NotFound")
+        assert.strictEqual(yield* KernelTesting.code(events.confirm(Domain.EventId.make(kept!.id))), "NotFound")
       })
     )
 
@@ -171,8 +169,8 @@ layer(
         ["2027-01-15T08:00", "2027-01-15T10:00"]
       )
       const events = yield* Events.Events
-      assert.strictEqual(yield* code(events.change(block!.id, { title: "x" })), "calendar.event.block")
-      assert.strictEqual(yield* code(events.confirm(block!.id)), "calendar.event.block")
+      assert.strictEqual(yield* KernelTesting.code(events.change(block!.id, { title: "x" })), "calendar.event.block")
+      assert.strictEqual(yield* KernelTesting.code(events.confirm(block!.id)), "calendar.event.block")
     })
   )
 })
