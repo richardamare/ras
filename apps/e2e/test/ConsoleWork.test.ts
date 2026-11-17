@@ -6,7 +6,7 @@ import * as Schedule from "effect/Schedule"
 import * as Calendar from "@ras/calendar"
 import * as Global from "@ras/global"
 import * as Time from "@ras/kernel/Time"
-import type * as Playwright from "playwright"
+import type * as Browser from "../src/Browser.ts"
 import * as Suite from "../src/Suite.ts"
 
 const today = Effect.map(DateTime.now, Time.pragueDateOf)
@@ -22,10 +22,10 @@ const workSpace = Effect.gen(function* () {
 })
 
 /** Picks `option` in the select labelled `label` within `scope`. */
-const choose = (page: Playwright.Page, scope: Playwright.Locator, label: string, option: string) =>
+const choose = (page: Browser.Page, scope: Browser.Locator, label: string, option: string) =>
   Effect.andThen(
-    Suite.use(() => scope.getByRole("combobox", { name: label }).click()),
-    Suite.use(() => page.getByRole("option", { name: option, exact: true }).click())
+    scope.getByRole("combobox", { name: label }).click(),
+    page.getByRole("option", { name: option, exact: true }).click()
   )
 
 /** Polls `read` until what it answers holds what `done` looks for. */
@@ -39,18 +39,18 @@ describe("the console's work pages", () => {
         const client = yield* Suite.owner
         const task = yield* client.work.addTask({ payload: { title: Suite.unique("Dragged") } })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/board"))
+        yield* page.goto("/board")
 
         const card = page.getByRole("button", { name: task.title })
-        yield* Suite.use(() => card.dragTo(page.getByRole("region", { name: "In progress" })))
+        yield* card.dragTo(page.getByRole("region", { name: "In progress" }))
         yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.status === "in_progress")
-        yield* Suite.use(() => page.getByRole("region", { name: "In progress" }).getByText(task.title).waitFor())
+        yield* page.getByRole("region", { name: "In progress" }).getByText(task.title).waitFor()
 
-        yield* Suite.use(() => card.dragTo(page.getByRole("region", { name: "Blocked" })))
+        yield* card.dragTo(page.getByRole("region", { name: "Blocked" }))
         const dialog = page.getByRole("dialog", { name: `Move “${task.title}” to Blocked` })
-        yield* Suite.use(() => dialog.getByText("Say what is needed.").waitFor())
-        yield* Suite.use(() => dialog.getByLabel("Comment").fill("Waiting for the client."))
-        yield* Suite.use(() => dialog.getByRole("button", { name: "Move" }).click())
+        yield* dialog.getByText("Say what is needed.").waitFor()
+        yield* dialog.getByLabel("Comment").fill("Waiting for the client.")
+        yield* dialog.getByRole("button", { name: "Move" }).click()
 
         const blocked = yield* becomes(
           client.work.task({ params: { id: task.id } }),
@@ -76,17 +76,17 @@ describe("the console's work pages", () => {
           payload: { title: Suite.unique("Theirs"), space: space.id, assignee: agent.slug }
         })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/board"))
+        yield* page.goto("/board")
         const main = page.getByRole("main")
 
         yield* choose(page, main, "Project", project.name)
-        yield* Suite.use(() => main.getByText(inProject.title).waitFor())
-        yield* Suite.use(() => main.getByText(theirs.title).waitFor({ state: "detached" }))
+        yield* main.getByText(inProject.title).waitFor()
+        yield* main.getByText(theirs.title).waitFor({ state: "detached" })
 
         yield* choose(page, main, "Project", "Project: all")
         yield* choose(page, main, "Assignee", "Board agent")
-        yield* Suite.use(() => main.getByText(theirs.title).waitFor())
-        yield* Suite.use(() => main.getByText(inProject.title).waitFor({ state: "detached" }))
+        yield* main.getByText(theirs.title).waitFor()
+        yield* main.getByText(inProject.title).waitFor({ state: "detached" })
       })
     )
 
@@ -98,16 +98,16 @@ describe("the console's work pages", () => {
           payload: { slug: Global.AgentSlug.make(`dialog-${crypto.randomUUID().slice(0, 8)}`), name: "Dialog agent" }
         })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/board"))
-        yield* Suite.use(() => page.getByRole("button", { name: task.title }).click())
+        yield* page.goto("/board")
+        yield* page.getByRole("button", { name: task.title }).click()
 
         const dialog = page.getByRole("dialog", { name: task.title })
-        yield* Suite.use(() => dialog.getByText("The brief.").waitFor())
-        assert.strictEqual(new URL(page.url()).searchParams.get("task"), task.id)
+        yield* dialog.getByText("The brief.").waitFor()
+        assert.strictEqual((yield* page.url).searchParams.get("task"), task.id)
 
         yield* choose(page, dialog, "Status", "Review")
-        yield* Suite.use(() => page.getByText("Say what to check.").waitFor())
-        yield* Suite.use(() => dialog.getByLabel("Comment").fill("Check the totals."))
+        yield* page.getByText("Say what to check.").waitFor()
+        yield* dialog.getByLabel("Comment").fill("Check the totals.")
         yield* choose(page, dialog, "Status", "Review")
         const reviewed = yield* becomes(
           client.work.task({ params: { id: task.id } }),
@@ -122,11 +122,11 @@ describe("the console's work pages", () => {
         yield* becomes(client.work.task({ params: { id: task.id } }), (found) => found.assignee === agent.slug)
 
         // The dialog empties the comment box once a change saves, so the comment is typed after the dialog shows it.
-        yield* Suite.use(() => dialog.getByRole("combobox", { name: "Assignee" }).getByText("Dialog agent").waitFor())
-        yield* Suite.use(() => dialog.getByLabel("Comment").fill("Looks right."))
-        yield* Suite.use(() => dialog.getByRole("button", { name: "Add comment" }).click())
-        yield* Suite.use(() => dialog.getByText("Looks right.").waitFor())
-        yield* Suite.use(() => dialog.getByText("2 comments").waitFor())
+        yield* dialog.getByRole("combobox", { name: "Assignee" }).getByText("Dialog agent").waitFor()
+        yield* dialog.getByLabel("Comment").fill("Looks right.")
+        yield* dialog.getByRole("button", { name: "Add comment" }).click()
+        yield* dialog.getByText("Looks right.").waitFor()
+        yield* dialog.getByText("2 comments").waitFor()
       })
     )
 
@@ -137,21 +137,21 @@ describe("the console's work pages", () => {
         const done = yield* client.work.addTask({ payload: { title: Suite.unique("Finished") } })
         yield* client.work.changeTask({ params: { id: done.id }, payload: { status: "done" } })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/tasks"))
+        yield* page.goto("/tasks")
         const main = page.getByRole("main")
 
-        yield* Suite.use(() => main.getByLabel("Search tasks").fill(open.title))
-        yield* Suite.use(() => main.getByRole("row", { name: new RegExp(open.title) }).waitFor())
-        assert.strictEqual(yield* Suite.use(() => main.getByRole("row").count()), 2)
+        yield* main.getByLabel("Search tasks").fill(open.title)
+        yield* main.getByRole("row", { name: new RegExp(open.title) }).waitFor()
+        assert.strictEqual(yield* main.getByRole("row").count, 2)
 
-        yield* Suite.use(() => main.getByLabel("Search tasks").fill(done.title))
-        yield* Suite.use(() => main.getByText("No task matches.").waitFor())
+        yield* main.getByLabel("Search tasks").fill(done.title)
+        yield* main.getByText("No task matches.").waitFor()
         yield* choose(page, main, "Status", "All")
-        yield* Suite.use(() => main.getByRole("row", { name: new RegExp(done.title) }).click())
-        yield* Suite.use(() => page.getByRole("dialog", { name: done.title }).waitFor())
+        yield* main.getByRole("row", { name: new RegExp(done.title) }).click()
+        yield* page.getByRole("dialog", { name: done.title }).waitFor()
 
-        yield* Suite.use(() => page.goto(`/tasks?task=${open.id}`))
-        yield* Suite.use(() => page.getByRole("dialog", { name: open.title }).waitFor())
+        yield* page.goto(`/tasks?task=${open.id}`)
+        yield* page.getByRole("dialog", { name: open.title }).waitFor()
       })
     )
 
@@ -168,24 +168,22 @@ describe("the console's work pages", () => {
           payload: { task: first.id, start: Time.PragueLocal.make(`${date}T09:00`), minutes: 45 }
         })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/projects"))
+        yield* page.goto("/projects")
 
         const row = page.getByRole("row", { name: new RegExp(project.name) })
-        yield* Suite.use(() => row.getByText("1 of 2").waitFor())
-        yield* Suite.use(() => row.click())
-        yield* Suite.use(() => page.getByRole("heading", { name: project.name, level: 1 }).waitFor())
-        assert.strictEqual(new URL(page.url()).pathname, `/projects/${project.id}`)
-        yield* Suite.use(() => page.getByText(first.title).first().waitFor())
-        yield* Suite.use(() => page.getByText(second.title).first().waitFor())
-        yield* Suite.use(() => page.getByText("No blocks planned.").waitFor({ state: "detached" }))
+        yield* row.getByText("1 of 2").waitFor()
+        yield* row.click()
+        yield* page.getByRole("heading", { name: project.name, level: 1 }).waitFor()
+        assert.strictEqual((yield* page.url).pathname, `/projects/${project.id}`)
+        yield* page.getByText(first.title).first().waitFor()
+        yield* page.getByText(second.title).first().waitFor()
+        yield* page.getByText("No blocks planned.").waitFor({ state: "detached" })
 
-        yield* Suite.use(() =>
-          page
-            .getByRole("button", { name: new RegExp(first.title) })
-            .first()
-            .click()
-        )
-        yield* Suite.use(() => page.getByRole("dialog", { name: first.title }).waitFor())
+        yield* page
+          .getByRole("button", { name: new RegExp(first.title) })
+          .first()
+          .click()
+        yield* page.getByRole("dialog", { name: first.title }).waitFor()
       })
     )
 
@@ -196,11 +194,11 @@ describe("the console's work pages", () => {
         const task = yield* client.work.addTask({ payload: { title: Suite.unique("On the clock"), space: space.id } })
         yield* client.work.start({ payload: { task: task.id } })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/"))
+        yield* page.goto("/")
 
-        yield* Suite.use(() => page.getByText(task.title).first().waitFor())
-        yield* Suite.use(() => page.getByRole("button", { name: "Stop" }).click())
-        yield* Suite.use(() => page.getByText("No block is running.").waitFor())
+        yield* page.getByText(task.title).first().waitFor()
+        yield* page.getByRole("button", { name: "Stop" }).click()
+        yield* page.getByText("No block is running.").waitFor()
         assert.isNull(yield* client.work.running())
 
         const blocks = yield* client.work.blocks({
@@ -224,15 +222,15 @@ describe("the console's work pages", () => {
           payload: { title: Suite.unique("Due today"), deadline: yield* today }
         })
         const page = yield* Suite.signedInPage
-        yield* Suite.use(() => page.goto("/"))
+        yield* page.goto("/")
 
-        yield* Suite.use(() => page.getByText("Due today", { exact: true }).waitFor())
-        yield* Suite.use(() => page.getByText(due.title).first().waitFor())
-        yield* Suite.use(() => page.getByText("Today in the calendar").waitFor())
-        yield* Suite.use(() => page.getByText("Standup").first().waitFor())
+        yield* page.getByText("Due today", { exact: true }).waitFor()
+        yield* page.getByText(due.title).first().waitFor()
+        yield* page.getByText("Today in the calendar").waitFor()
+        yield* page.getByText("Standup").first().waitFor()
 
-        yield* Suite.use(() => page.getByText(due.title).first().click())
-        yield* Suite.use(() => page.getByRole("dialog", { name: due.title }).waitFor())
+        yield* page.getByText(due.title).first().click()
+        yield* page.getByRole("dialog", { name: due.title }).waitFor()
       })
     )
   })

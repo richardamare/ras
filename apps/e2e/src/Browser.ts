@@ -47,6 +47,13 @@ export class Locator {
   waitFor(options?: Parameters<Playwright.Locator["waitFor"]>[0]) {
     return Effect.promise(() => this.raw.waitFor(options))
   }
+  /** Drags this element onto `target` with the browser's own drag and drop. */
+  dragTo(target: Locator) {
+    return Effect.promise(() => this.raw.dragTo(target.raw))
+  }
+  get count() {
+    return Effect.promise(() => this.raw.count())
+  }
 }
 
 export class Page {
