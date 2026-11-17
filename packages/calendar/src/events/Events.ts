@@ -11,7 +11,10 @@ import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
 import * as Calendars from "../calendars/Calendars.ts"
 import type * as CalendarRepository from "../calendars/CalendarRepository.ts"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "../calendars/Calendar.ts"
+import * as Span from "../calendars/Span.ts"
+import * as Event from "./Event.ts"
+import * as EventWrites from "./EventWrites.ts"
 import * as DraftRepository from "./DraftRepository.ts"
 import * as Outlook from "../outlook/Outlook.ts"
 import * as Reclaim from "../reclaim/Reclaim.ts"
@@ -45,7 +48,7 @@ const checked = (when: When): Effect.Effect<When, Errors.Invalid> =>
       })
 
 /** The time a new event takes: a start, an hour long unless it has an end, or a first day and a last. */
-export const whenOf = (input: Domain.NewEvent): Effect.Effect<When, Errors.Invalid> => {
+export const whenOf = (input: EventWrites.NewEvent): Effect.Effect<When, Errors.Invalid> => {
   if (input.start !== undefined && input.firstDay === undefined && input.lastDay === undefined) {
     const start = input.start
     return Effect.flatMap(input.end === undefined ? plus(start, 3_600_000) : Effect.succeed(input.end), (end) =>
@@ -57,7 +60,7 @@ export const whenOf = (input: Domain.NewEvent): Effect.Effect<When, Errors.Inval
   return invalid("Give a timed event start and end, or an all-day event firstDay and lastDay, not both.")
 }
 
-const whenOfEntry = (entry: Domain.Entry): When =>
+const whenOfEntry = (entry: Event.Entry): When =>
   entry.allDay
     ? {
         _tag: "AllDay",
@@ -69,7 +72,7 @@ const whenOfEntry = (entry: Domain.Entry): When =>
 /** The time a change gives an event. A new start without an end keeps the event's length; so does a new first day. */
 export const changedWhen = (
   current: When,
-  change: Domain.EventChange
+  change: EventWrites.EventChange
 ): Effect.Effect<Option.Option<When>, Errors.Invalid> => {
   const timed = change.start !== undefined || change.end !== undefined
   const allDay = change.firstDay !== undefined || change.lastDay !== undefined
@@ -102,7 +105,7 @@ const schedule = (when: When): Outlook.Write =>
 
 const firstDayOf = (when: When) => (when._tag === "Timed" ? Time.PragueDate.make(when.start.slice(0, 10)) : when.first)
 
-const weekdays: ReadonlyArray<Domain.Weekday> = [
+const weekdays: ReadonlyArray<EventWrites.Weekday> = [
   "sunday",
   "monday",
   "tuesday",
@@ -117,7 +120,7 @@ const weekdayOf = (date: Time.PragueDate) => weekdays[new Date(`${date}T00:00:00
 /** Graph's patterned recurrence for a repeat, starting on the event's first day, its clock kept in Prague. */
 export const recurrenceOf = (
   start: Time.PragueDate,
-  repeat: Domain.Repeat
+  repeat: EventWrites.Repeat
 ): Effect.Effect<Outlook.Recurrence, Errors.Invalid> =>
   Effect.gen(function* () {
     if (repeat.until !== undefined && repeat.count !== undefined)
@@ -175,23 +178,27 @@ const graphCalendar = (target: CalendarRepository.Connected) =>
     onSome: Effect.succeed
   })
 
-const rsvpOf: Record<Domain.Reply, Domain.Rsvp> = { accept: "accepted", tentative: "tentative", decline: "declined" }
+const rsvpOf: Record<EventWrites.Reply, Event.Rsvp> = {
+  accept: "accepted",
+  tentative: "tentative",
+  decline: "declined"
+}
 
 /** The instants a time covers; an all-day event covers Prague midnight to the midnight after its last day. */
-const spanOfWhen = (when: When): Effect.Effect<Domain.Span, Errors.Invalid> =>
+const spanOfWhen = (when: When): Effect.Effect<Span.Span, Errors.Invalid> =>
   when._tag === "AllDay"
     ? Effect.succeed({ start: Time.pragueMidnight(when.first), end: Time.pragueMidnight(Time.addDays(when.last, 1)) })
     : Effect.all({ start: Time.toInstant(when.start), end: Time.toInstant(when.end) })
 
 const createdOf = (
-  calendar: Domain.CalendarId,
+  calendar: Calendar.CalendarId,
   title: string,
   when: When,
   recurring: boolean,
   link: string | null,
-  draft: Domain.EventId | null
+  draft: Event.EventId | null
 ) =>
-  new Domain.Created({
+  new EventWrites.Created({
     calendar,
     title,
     start: when._tag === "Timed" ? when.start : Time.PragueLocal.make(`${when.first}T00:00`),
@@ -207,7 +214,7 @@ const fieldsOf = (fields: {
   readonly title?: string | undefined
   readonly notes?: string | undefined
   readonly location?: string | undefined
-  readonly showAs?: Domain.ShowAs | undefined
+  readonly showAs?: Event.ShowAs | undefined
 }): Outlook.Write => ({
   ...(fields.title === undefined ? {} : { subject: fields.title }),
   ...(fields.notes === undefined ? {} : { body: { contentType: "text", content: fields.notes } }),
@@ -227,12 +234,12 @@ const viewOf = (when: When) =>
 export interface BlockEvent {
   readonly id: string
   readonly title: string
-  readonly span: Domain.Span
+  readonly span: Span.Span
 }
 
 const blockWrite = (block: BlockEvent): Outlook.Write => ({
   subject: block.title,
-  body: { contentType: "text", content: Domain.blockMarker(block.id) },
+  body: { contentType: "text", content: Event.blockMarker(block.id) },
   start: clock(Time.toPragueLocal(block.span.start)),
   end: clock(Time.toPragueLocal(block.span.end)),
   isAllDay: false,
@@ -243,21 +250,21 @@ export class Events extends Context.Service<
   Events,
   {
     /** Writes a plain event into a writable calendar, or keeps it in ras as a draft. */
-    readonly create: (event: Domain.NewEvent) => Global.Write<Domain.Created>
+    readonly create: (event: EventWrites.NewEvent) => Global.Write<EventWrites.Created>
     /** Changes a plain event in its calendar, or a draft in ras. */
-    readonly change: (id: Domain.EventId, change: Domain.EventChange) => Global.Write<Domain.Event>
+    readonly change: (id: Event.EventId, change: EventWrites.EventChange) => Global.Write<Event.Event>
     /** Cancels a plain event in its calendar, or discards a draft. */
-    readonly cancel: (id: Domain.EventId) => Global.Write<void>
-    readonly reply: (id: Domain.EventId, reply: Domain.Reply) => Global.Write<void>
+    readonly cancel: (id: Event.EventId) => Global.Write<void>
+    readonly reply: (id: Event.EventId, reply: EventWrites.Reply) => Global.Write<void>
     /** Writes a draft into its calendar as a new event; a draft the calendar refuses stays, with the reason. */
-    readonly confirm: (id: Domain.EventId) => Global.Write<Domain.Created>
+    readonly confirm: (id: Event.EventId) => Global.Write<EventWrites.Created>
     /** Every event draft, in start order. */
-    readonly drafts: Effect.Effect<ReadonlyArray<Domain.Event>>
+    readonly drafts: Effect.Effect<ReadonlyArray<Event.Event>>
     /** Deletes every event draft; none of them is in a calendar. */
     readonly discardDrafts: Effect.Effect<number, never, Global.CurrentActor>
     /** Writes a work block's event into a writable calendar, busy, its notes carrying the block's marker. */
     readonly placeBlock: (
-      calendar: Domain.CalendarId,
+      calendar: Calendar.CalendarId,
       block: BlockEvent
     ) => Effect.Effect<string, Errors.Refused | Errors.NotFound | Errors.SourceFailed>
     /** Moves a block's event, by the Graph id `placeBlock` returned. */
@@ -294,7 +301,7 @@ export class Events extends Context.Service<
         )
 
       /** The calendar a new event goes to: the one named, or the one writable calendar there is. */
-      const target = (named: Domain.CalendarId | undefined) =>
+      const target = (named: Calendar.CalendarId | undefined) =>
         Effect.gen(function* () {
           const all = yield* calendar.connected
           if (named !== undefined) {
@@ -317,7 +324,7 @@ export class Events extends Context.Service<
         })
 
       /** The Graph id a change to the event takes: its own, or its occurrence's when it is part of a series. */
-      const graphEvent = (found: { readonly calendar: CalendarRepository.Connected; readonly entry: Domain.Entry }) =>
+      const graphEvent = (found: { readonly calendar: CalendarRepository.Connected; readonly entry: Event.Entry }) =>
         Effect.flatMap(reclaim.providerId(found.calendar.source, found.entry.ref.id), (series) =>
           found.entry.recurring
             ? outlook.occurrence(series, Time.toPragueLocal(found.entry.span.start))
@@ -346,17 +353,17 @@ export class Events extends Context.Service<
             `calendar/${chosen.calendar.id}/event/${created.id}`,
             result,
             null,
-            Global.snapshot(Domain.Created, result)
+            Global.snapshot(EventWrites.Created, result)
           )
         })
 
-      const saveDraft = (action: Global.Action, draft: DraftRepository.Draft, before: Option.Option<Domain.Event>) =>
+      const saveDraft = (action: Global.Action, draft: DraftRepository.Draft, before: Option.Option<Event.Event>) =>
         Effect.gen(function* () {
-          const event = Domain.eventOf(Calendars.entryOfDraft(draft))
+          const event = Event.eventOf(Calendars.entryOfDraft(draft))
           const shown = Option.match(before, {
-            onNone: () => ({ before: Option.none(), after: Option.some(Global.snapshot(Domain.Event, event)) }),
+            onNone: () => ({ before: Option.none(), after: Option.some(Global.snapshot(Event.Event, event)) }),
             onSome: (previous) => {
-              const diff = Global.changed(Global.snapshot(Domain.Event, previous), Global.snapshot(Domain.Event, event))
+              const diff = Global.changed(Global.snapshot(Event.Event, previous), Global.snapshot(Event.Event, event))
               return { before: Option.some(diff.before), after: Option.some(diff.after) }
             }
           })
@@ -366,7 +373,7 @@ export class Events extends Context.Service<
           )
         })
 
-      const storedDraft = (id: Domain.DraftId) => Effect.flatMap(drafts.byId(id), Errors.orNotFound("draft", id))
+      const storedDraft = (id: Event.DraftId) => Effect.flatMap(drafts.byId(id), Errors.orNotFound("draft", id))
 
       return Events.of({
         create: (input) =>
@@ -382,7 +389,7 @@ export class Events extends Context.Service<
             const draft = yield* saveDraft(
               "calendar.draft.created",
               {
-                id: yield* Id.generate(Domain.DraftId),
+                id: yield* Id.generate(Event.DraftId),
                 calendar: chosen.calendar.id,
                 title: input.title,
                 span: yield* spanOfWhen(when),
@@ -404,7 +411,7 @@ export class Events extends Context.Service<
             const found = yield* calendar.find(id)
             yield* refusedBy({ _tag: "Change", calendar: found.calendar.calendar, event: found.entry })
             const when = yield* changedWhen(whenOfEntry(found.entry), change)
-            const before = Domain.eventOf(found.entry)
+            const before = Event.eventOf(found.entry)
             if (found.entry.draft !== undefined) {
               const stored = yield* storedDraft(found.entry.draft.id)
               return yield* saveDraft(
@@ -424,7 +431,7 @@ export class Events extends Context.Service<
               ...fieldsOf(change),
               ...Option.match(when, { onNone: () => ({}), onSome: schedule })
             })
-            const after = new Domain.Event({
+            const after = new Event.Event({
               ...before,
               ...Option.match(when, { onNone: () => ({}), onSome: viewOf }),
               title: change.title ?? before.title,
@@ -432,7 +439,7 @@ export class Events extends Context.Service<
               notes: change.notes ?? before.notes,
               showAs: change.showAs ?? before.showAs
             })
-            const diff = Global.changed(Global.snapshot(Domain.Event, before), Global.snapshot(Domain.Event, after))
+            const diff = Global.changed(Global.snapshot(Event.Event, before), Global.snapshot(Event.Event, after))
             yield* calendar.refresh
             return yield* audit("calendar.event.changed", `event/${id}`, after, diff.before, diff.after)
           }),
@@ -441,7 +448,7 @@ export class Events extends Context.Service<
           Effect.gen(function* () {
             const found = yield* calendar.find(id)
             yield* refusedBy({ _tag: "Cancel", calendar: found.calendar.calendar, event: found.entry })
-            const before = Global.snapshot(Domain.Event, Domain.eventOf(found.entry))
+            const before = Global.snapshot(Event.Event, Event.eventOf(found.entry))
             if (found.entry.draft !== undefined) {
               const draft = found.entry.draft.id
               return yield* writes.run(
@@ -477,7 +484,7 @@ export class Events extends Context.Service<
         confirm: (id) =>
           Effect.gen(function* () {
             const found = yield* calendar.find(id)
-            if (Option.isSome(Domain.blockOf(found.entry)))
+            if (Option.isSome(Event.blockOf(found.entry)))
               return yield* refuse(
                 "event.block",
                 `"${found.entry.title}" is a work block's draft, which is confirmed with its block.`,
@@ -503,7 +510,7 @@ export class Events extends Context.Service<
                   ? saveDraft(
                       "calendar.draft.refused",
                       { ...stored, refusal: Option.some(error.message) },
-                      Option.some(Domain.eventOf(found.entry))
+                      Option.some(Event.eventOf(found.entry))
                     )
                   : Effect.void
               )
@@ -513,13 +520,13 @@ export class Events extends Context.Service<
               Effect.as(drafts.delete(stored.id), {
                 result: written,
                 subject: `draft/${stored.id}`,
-                before: Option.some(Global.snapshot(Domain.Event, Domain.eventOf(found.entry))),
+                before: Option.some(Global.snapshot(Event.Event, Event.eventOf(found.entry))),
                 after: Option.none()
               })
             )
           }).pipe(one.withPermit),
 
-        drafts: Effect.map(drafts.all, (found) => found.map((draft) => Domain.eventOf(Calendars.entryOfDraft(draft)))),
+        drafts: Effect.map(drafts.all, (found) => found.map((draft) => Event.eventOf(Calendars.entryOfDraft(draft)))),
 
         discardDrafts: Effect.gen(function* () {
           const found = yield* drafts.all

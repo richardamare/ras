@@ -3,32 +3,37 @@ import * as Toolkit from "effect/ai/Toolkit"
 import * as Effect from "effect/Effect"
 import * as Global from "@ras/global"
 import * as Calendars from "./calendars/Calendars.ts"
-import * as Domain from "./Domain.ts"
+import * as Busy from "./calendars/Busy.ts"
+import * as Calendar from "./calendars/Calendar.ts"
+import * as Span from "./calendars/Span.ts"
+import * as WorkHours from "./calendars/WorkHours.ts"
+import * as Event from "./events/Event.ts"
+import * as EventWrites from "./events/EventWrites.ts"
 import * as Events from "./events/Events.ts"
 
 const WindowParameters = Schema.Struct({
-  from: Domain.Window.fields.from.annotate({
+  from: Span.Window.fields.from.annotate({
     description: "Prague local time the window starts, such as 2026-10-22T08:00."
   }),
-  to: Domain.Window.fields.to.annotate({ description: "Prague local time the window ends." })
+  to: Span.Window.fields.to.annotate({ description: "Prague local time the window ends." })
 })
 
 export const toolkit = Toolkit.make(
   Global.read("list_calendars", {
     description:
       "The calendars ras shows, with id, name and colour. A `writable` calendar is in the Outlook account connected to ras and takes plain events; any other only takes replies to invitations.",
-    success: Schema.Array(Domain.Calendar)
+    success: Schema.Array(Calendar.Calendar)
   }),
   Global.read("search_calendar", {
     description:
       "The events of every calendar ras shows that overlap a window, each once, in start order. Times are Prague local.",
     parameters: WindowParameters,
-    success: Schema.Array(Domain.Event)
+    success: Schema.Array(Event.Event)
   }),
   Global.read("calendar_event", {
     description: "One event in full: kind, show-as, reply, location, notes, attendees and the original a copy is of.",
-    parameters: Schema.Struct({ event: Domain.EventId.annotate({ description: "The id search_calendar gave." }) }),
-    success: Domain.Event
+    parameters: Schema.Struct({ event: Event.EventId.annotate({ description: "The id search_calendar gave." }) }),
+    success: Event.Event
   }),
   Global.read("find_free_time", {
     description:
@@ -37,48 +42,48 @@ export const toolkit = Toolkit.make(
       ...WindowParameters.fields,
       minimum: Schema.Int.check(Schema.isGreaterThanOrEqualTo(5)).annotate({ description: "Minutes; at least 5." })
     }),
-    success: Schema.Array(Domain.Slot)
+    success: Schema.Array(Busy.Slot)
   }),
   Global.read("find_conflicts", {
     description:
       "The pairs of events that take the same time in a window, each with the overlap and the fixes the calendar rules allow for either.",
     parameters: WindowParameters,
-    success: Schema.Array(Domain.Conflict)
+    success: Schema.Array(Busy.Conflict)
   }),
   Global.read("work_hours", {
     description:
       "The time a month's events take, in total, by category and per day. Overlapping events count once; all-day, free and declined events do not count.",
     parameters: Schema.Struct({
-      month: Domain.Month.annotate({ description: "The Prague month, such as 2026-10." }),
+      month: WorkHours.Month.annotate({ description: "The Prague month, such as 2026-10." }),
       categories: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
         description: "Only these categories, such as WORK; every category when omitted."
       })
     }),
-    success: Domain.WorkHours
+    success: WorkHours.WorkHours
   }),
   Global.writeTool("create_event", {
     description:
       "Creates a plain event in a writable calendar: timed with start and end (an hour when end is omitted), or all-day with firstDay and lastDay. `repeat` makes a series that keeps its Prague clock across daylight-saving changes. With `draft` the event stays in ras, taking its time, until the owner confirms it; change_event and cancel_event change or discard a draft. Times are Prague local.",
-    parameters: Domain.NewEvent.fields,
-    success: Domain.Created,
+    parameters: EventWrites.NewEvent.fields,
+    success: EventWrites.Created,
     destructive: false
   }),
   Global.writeTool("change_event", {
     description:
       "Changes a plain event of a writable calendar: title, time, location, notes or show-as. A new start without an end keeps the length; one occurrence of a series changes alone. An invitation, an event of another account, a copy or Reclaim's own event is refused with what to do instead.",
-    parameters: { event: Domain.EventId, ...Domain.EventChange.fields },
-    success: Domain.Event,
+    parameters: { event: Event.EventId, ...EventWrites.EventChange.fields },
+    success: Event.Event,
     destructive: false
   }),
   Global.writeTool("cancel_event", {
     description:
       "Cancels a plain event of a writable calendar, one occurrence of a series alone. Refuses what change_event refuses.",
-    parameters: { event: Domain.EventId },
+    parameters: { event: Event.EventId },
     destructive: true
   }),
   Global.writeTool("reply_to_event", {
     description: "Accepts, tentatively accepts or declines an invitation, and lets its organizer know.",
-    parameters: { event: Domain.EventId, reply: Domain.Reply },
+    parameters: { event: Event.EventId, reply: EventWrites.Reply },
     destructive: false
   })
 )

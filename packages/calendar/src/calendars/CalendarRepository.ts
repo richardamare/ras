@@ -7,17 +7,17 @@ import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "./Calendar.ts"
 import type * as Reclaim from "../reclaim/Reclaim.ts"
 
 /** A connected calendar with its settings and the handles a write to its provider needs. */
 export interface Connected {
-  readonly calendar: Domain.Calendar
+  readonly calendar: Calendar.Calendar
   readonly source: Reclaim.SourceCalendar
 }
 
 const CalendarRow = Schema.Struct({
-  id: Domain.CalendarId,
+  id: Calendar.CalendarId,
   name: Schema.String,
   color: Schema.String,
   account: Schema.Int,
@@ -31,7 +31,7 @@ type CalendarRow = typeof CalendarRow.Type
 const toConnected =
   (writable: Option.Option<string>) =>
   (row: CalendarRow): Connected => ({
-    calendar: new Domain.Calendar({
+    calendar: new Calendar.Calendar({
       id: row.id,
       name: row.name,
       color: row.color,
@@ -54,7 +54,7 @@ export class CalendarRepository extends Context.Service<
   {
     /** The calendars Reclaim listed in the last sync, in its order. */
     readonly connected: (writable: Option.Option<string>) => Effect.Effect<ReadonlyArray<Connected>>
-    readonly change: (calendar: Domain.Calendar) => Effect.Effect<void, never, Global.Transaction>
+    readonly change: (calendar: Calendar.Calendar) => Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/calendar/CalendarRepository") {
   static readonly layer = Layer.effect(

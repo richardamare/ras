@@ -8,7 +8,9 @@ import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "./Calendar.ts"
+import * as Span from "./Span.ts"
+import * as Event from "../events/Event.ts"
 import type * as Reclaim from "../reclaim/Reclaim.ts"
 
 /** When the cache was last filled, and the span of time it holds. */
@@ -24,27 +26,27 @@ type SyncRow = typeof SyncRow.Type
 const toSyncState = (row: SyncRow): SyncState => ({ syncedAt: row.syncedAt, from: row.from, to: row.to })
 
 const EventRow = Schema.Struct({
-  calendar: Domain.CalendarId,
+  calendar: Calendar.CalendarId,
   id: Schema.String,
   date: Time.PragueDate,
   title: Schema.String,
   start: Time.Instant,
   end: Time.Instant,
   allDay: Schema.BooleanFromBit,
-  kind: Domain.Kind,
-  showAs: Domain.ShowAs,
-  rsvp: Domain.Rsvp,
+  kind: Event.Kind,
+  showAs: Event.ShowAs,
+  rsvp: Event.Rsvp,
   cancelled: Schema.BooleanFromBit,
   recurring: Schema.BooleanFromBit,
   location: Schema.NullOr(Schema.String),
   category: Schema.NullOr(Schema.String),
   notes: Schema.NullOr(Schema.String),
-  attendees: Schema.fromJsonString(Schema.Array(Domain.Attendee)),
-  copyOf: Schema.NullOr(Domain.EventId)
+  attendees: Schema.fromJsonString(Schema.Array(Event.Attendee)),
+  copyOf: Schema.NullOr(Event.EventId)
 })
 type EventRow = typeof EventRow.Type
 
-const toEntry = (row: EventRow): Domain.Entry => ({
+const toEntry = (row: EventRow): Event.Entry => ({
   ref: { calendar: row.calendar, date: row.date, id: row.id },
   title: row.title,
   span: { start: row.start, end: row.end },
@@ -58,10 +60,10 @@ const toEntry = (row: EventRow): Domain.Entry => ({
   category: Option.fromNullOr(row.category),
   notes: Option.fromNullOr(row.notes),
   attendees: row.attendees,
-  copyOf: Option.map(Option.fromNullOr(row.copyOf), Domain.eventRef)
+  copyOf: Option.map(Option.fromNullOr(row.copyOf), Event.eventRef)
 })
 
-const encodeAttendees = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Domain.Attendee)))
+const encodeAttendees = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Event.Attendee)))
 
 /** The cache of what Reclaim holds: the events of a span and when they were read. */
 export class EventCacheRepository extends Context.Service<
@@ -69,7 +71,7 @@ export class EventCacheRepository extends Context.Service<
   {
     readonly state: Effect.Effect<Option.Option<SyncState>>
     /** The cached events that overlap the span. */
-    readonly events: (span: Domain.Span) => Effect.Effect<ReadonlyArray<Domain.Entry>>
+    readonly events: (span: Span.Span) => Effect.Effect<ReadonlyArray<Event.Entry>>
     /**
      * Replaces the cache with what Reclaim holds: every event of the span, and the calendars it listed. A calendar
      * Reclaim no longer lists keeps its row and its settings, marked not connected. It runs in its own transaction and
@@ -77,8 +79,8 @@ export class EventCacheRepository extends Context.Service<
      */
     readonly replace: (
       calendars: ReadonlyArray<Reclaim.SourceCalendar>,
-      entries: ReadonlyArray<Domain.Entry>,
-      span: Domain.Span,
+      entries: ReadonlyArray<Event.Entry>,
+      span: Span.Span,
       at: DateTime.Utc
     ) => Effect.Effect<void>
   }
@@ -131,7 +133,7 @@ export class EventCacheRepository extends Context.Service<
                         ${entry.allDay ? 1 : 0}, ${entry.kind}, ${entry.showAs}, ${entry.rsvp}, ${entry.cancelled ? 1 : 0},
                         ${entry.recurring ? 1 : 0}, ${Option.getOrNull(entry.location)}, ${Option.getOrNull(entry.category)},
                         ${Option.getOrNull(entry.notes)}, ${encodeAttendees(entry.attendees)},
-                        ${Option.getOrNull(Option.map(entry.copyOf, Domain.eventId))})`,
+                        ${Option.getOrNull(Option.map(entry.copyOf, Event.eventId))})`,
               { discard: true }
             )
             yield* sql`

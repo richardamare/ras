@@ -13,11 +13,14 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "../calendars/Calendar.ts"
+import * as Span from "../calendars/Span.ts"
+import * as Event from "../events/Event.ts"
+import * as EventWrites from "../events/EventWrites.ts"
 
 /** A calendar as Reclaim lists it, with the handles a write to its provider needs. */
 export interface SourceCalendar {
-  readonly id: Domain.CalendarId
+  readonly id: Calendar.CalendarId
   readonly name: string
   readonly color: string
   readonly account: number
@@ -35,14 +38,14 @@ export class Reclaim extends Context.Service<
     readonly events: (
       first: Time.PragueDate,
       end: Time.PragueDate
-    ) => Effect.Effect<ReadonlyArray<Domain.Entry>, Errors.SourceFailed>
+    ) => Effect.Effect<ReadonlyArray<Event.Entry>, Errors.SourceFailed>
     /** The id the calendar's provider gives the event; for an occurrence of a series, the series' id. */
     readonly providerId: (calendar: SourceCalendar, event: string) => Effect.Effect<string, Errors.SourceFailed>
     /** Answers an invitation and lets its organizer know. */
     readonly reply: (
-      calendar: Domain.CalendarId,
+      calendar: Calendar.CalendarId,
       event: string,
-      reply: Domain.Reply
+      reply: EventWrites.Reply
     ) => Effect.Effect<void, Errors.SourceFailed>
   }
 >()("@ras/calendar/Reclaim") {}
@@ -95,7 +98,7 @@ type WireEvent = typeof WireEvent.Type
 const text = (value: string | null | undefined) =>
   Option.filter(Option.fromNullishOr(value), (found) => found.length > 0)
 
-const rsvpOf = (status: string | null | undefined): Domain.Rsvp => {
+const rsvpOf = (status: string | null | undefined): Event.Rsvp => {
   switch (status) {
     case "ACCEPTED":
       return "accepted"
@@ -110,7 +113,7 @@ const rsvpOf = (status: string | null | undefined): Domain.Rsvp => {
   }
 }
 
-const kindOf = (event: WireEvent): Domain.Kind => {
+const kindOf = (event: WireEvent): Event.Kind => {
   switch (event.reclaimData.reclaimEventType) {
     case "SYNC":
       return "copy"
@@ -121,9 +124,9 @@ const kindOf = (event: WireEvent): Domain.Kind => {
   }
 }
 
-export const entryOf = (event: WireEvent): Domain.Entry => {
+export const entryOf = (event: WireEvent): Event.Entry => {
   const allDay = event.eventDate.type === "AllDayDateRange"
-  const span: Domain.Span = allDay
+  const span: Span.Span = allDay
     ? {
         start: Time.pragueMidnight(Time.PragueDate.make(event.eventDate.start)),
         end: Time.pragueMidnight(Time.PragueDate.make(event.eventDate.end))
@@ -133,7 +136,11 @@ export const entryOf = (event: WireEvent): Domain.Entry => {
   const kind = kindOf(event)
   const original = Option.fromNullishOr(event.reclaimData.mergeableEvent)
   return {
-    ref: { calendar: Domain.CalendarId.make(event.calendarId), date, id: event.key.slice(event.key.indexOf("/") + 1) },
+    ref: {
+      calendar: Calendar.CalendarId.make(event.calendarId),
+      date,
+      id: event.key.slice(event.key.indexOf("/") + 1)
+    },
     title: Option.getOrElse(text(event.title), () => "(no title)"),
     span,
     allDay,
@@ -148,7 +155,7 @@ export const entryOf = (event: WireEvent): Domain.Entry => {
     attendees: Arr.map(
       Arr.filter(event.attendeesAndResources ?? [], (participant) => participant.type === "EventAttendeeParticipant"),
       (participant) =>
-        new Domain.Attendee({
+        new Event.Attendee({
           name: participant.displayName ?? null,
           email: participant.email ?? null,
           rsvp: rsvpOf(participant.responseStatus),
@@ -160,7 +167,7 @@ export const entryOf = (event: WireEvent): Domain.Entry => {
       kind === "copy"
         ? Option.flatMap(original, (source) =>
             source.referenceType === "SYNC_EVENT"
-              ? Option.some({ calendar: Domain.CalendarId.make(source.calendarId), date, id: source.eventId })
+              ? Option.some({ calendar: Calendar.CalendarId.make(source.calendarId), date, id: source.eventId })
               : Option.none()
           )
         : Option.none()
@@ -168,7 +175,7 @@ export const entryOf = (event: WireEvent): Domain.Entry => {
 }
 
 /** The answers Reclaim's RSVP takes, spelled as it expects them. */
-const responses: Record<Domain.Reply, string> = {
+const responses: Record<EventWrites.Reply, string> = {
   accept: "Accepted",
   tentative: "TentativelyAccepted",
   decline: "Declined"
@@ -236,7 +243,7 @@ export const make = (apiKey: Redacted.Redacted) =>
         return Arr.map(
           Arr.filter(Arr.flatten(Object.values(accounts)), (calendar) => calendar.connected && calendar.id > 0),
           (calendar): SourceCalendar => ({
-            id: Domain.CalendarId.make(calendar.id),
+            id: Calendar.CalendarId.make(calendar.id),
             name: calendar.name,
             color: calendar.colorHex ?? "#888888",
             account: calendar.credentialId,

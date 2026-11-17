@@ -13,7 +13,8 @@ import * as Time from "@ras/kernel/Time"
 import * as BusyTime from "../../src/calendars/BusyTime.ts"
 import * as Calendars from "../../src/calendars/Calendars.ts"
 import * as CalendarRepository from "../../src/calendars/CalendarRepository.ts"
-import * as Domain from "../../src/Domain.ts"
+import * as Span from "../../src/calendars/Span.ts"
+import * as Event from "../../src/events/Event.ts"
 import * as DraftRepository from "../../src/events/DraftRepository.ts"
 import * as EventCacheRepository from "../../src/calendars/EventCacheRepository.ts"
 import * as Migrations from "../../src/Migrations.ts"
@@ -24,12 +25,12 @@ import * as Sample from "../../src/reclaim/Sample.ts"
 
 const today = Effect.map(DateTime.now, Time.pragueDateOf)
 
-const days = (from: Time.PragueDate, count: number): Domain.Window => ({
+const days = (from: Time.PragueDate, count: number): Span.Window => ({
   from: Time.PragueLocal.make(`${from}T00:00`),
   to: Time.PragueLocal.make(`${Time.addDays(from, count)}T00:00`)
 })
 
-const titles = (events: ReadonlyArray<Domain.Event>) =>
+const titles = (events: ReadonlyArray<Event.Event>) =>
   events.map((event) => `${event.calendar} ${event.start} ${event.title}`)
 
 layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(BusyTime.BusyTime.none)))(
@@ -145,9 +146,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
           calendar.events({ from: Time.PragueLocal.make(`${day}T10:00`), to: Time.PragueLocal.make(`${day}T09:00`) })
         )
         assert.strictEqual(backwards._tag, "Invalid")
-        const missing = yield* Effect.flip(
-          calendar.event(Domain.EventId.make(`101.${day.replaceAll("-", "")}.nothing`))
-        )
+        const missing = yield* Effect.flip(calendar.event(Event.EventId.make(`101.${day.replaceAll("-", "")}.nothing`)))
         assert.strictEqual(missing._tag, "NotFound")
       })
     )

@@ -1,25 +1,26 @@
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "../calendars/Calendar.ts"
+import * as Event from "./Event.ts"
 
 /** One write to a calendar, as the rules judge it. */
 export type Write =
-  | { readonly _tag: "Create"; readonly calendar: Domain.Calendar }
-  | { readonly _tag: "Change"; readonly calendar: Domain.Calendar; readonly event: Domain.Entry }
-  | { readonly _tag: "Cancel"; readonly calendar: Domain.Calendar; readonly event: Domain.Entry }
-  | { readonly _tag: "Reply"; readonly calendar: Domain.Calendar; readonly event: Domain.Entry }
+  | { readonly _tag: "Create"; readonly calendar: Calendar.Calendar }
+  | { readonly _tag: "Change"; readonly calendar: Calendar.Calendar; readonly event: Event.Entry }
+  | { readonly _tag: "Cancel"; readonly calendar: Calendar.Calendar; readonly event: Event.Entry }
+  | { readonly _tag: "Reply"; readonly calendar: Calendar.Calendar; readonly event: Event.Entry }
 
 const refused = (code: string, reason: string, instead: string) =>
   Option.some(new Errors.Refused({ code: `calendar.${code}`, reason, instead }))
 
-const turnedOff = (calendar: Domain.Calendar) =>
+const turnedOff = (calendar: Calendar.Calendar) =>
   refused(
     "calendar.off",
     `"${calendar.name}" is turned off in ras, so ras neither shows nor writes it.`,
     "Turn it on under Settings, Calendars."
   )
 
-const organizer = (event: Domain.Entry) =>
+const organizer = (event: Event.Entry) =>
   Option.getOrElse(
     Option.flatMap(Option.fromUndefinedOr(event.attendees.find((attendee) => attendee.organizer)), (attendee) =>
       Option.fromNullOr(attendee.name ?? attendee.email)
@@ -27,7 +28,7 @@ const organizer = (event: Domain.Entry) =>
     () => "someone else"
   )
 
-const create = (calendar: Domain.Calendar): Option.Option<Errors.Refused> => {
+const create = (calendar: Calendar.Calendar): Option.Option<Errors.Refused> => {
   if (!calendar.enabled) return turnedOff(calendar)
   return calendar.writable
     ? Option.none()
@@ -38,7 +39,7 @@ const create = (calendar: Domain.Calendar): Option.Option<Errors.Refused> => {
       )
 }
 
-const edit = (calendar: Domain.Calendar, event: Domain.Entry, verb: string): Option.Option<Errors.Refused> => {
+const edit = (calendar: Calendar.Calendar, event: Event.Entry, verb: string): Option.Option<Errors.Refused> => {
   if (!calendar.enabled) return turnedOff(calendar)
   if (event.kind === "copy")
     return refused(
@@ -46,7 +47,7 @@ const edit = (calendar: Domain.Calendar, event: Domain.Entry, verb: string): Opt
       `"${event.title}" is a copy written by Calendar Sync, and the next sync would undo a change to it.`,
       "Change the original instead."
     )
-  if (Option.isSome(Domain.blockOf(event)))
+  if (Option.isSome(Event.blockOf(event)))
     return refused(
       "event.block",
       `"${event.title}" is a work block's event, which changes with its block.`,
@@ -73,7 +74,7 @@ const edit = (calendar: Domain.Calendar, event: Domain.Entry, verb: string): Opt
   return Option.none()
 }
 
-const reply = (calendar: Domain.Calendar, event: Domain.Entry): Option.Option<Errors.Refused> => {
+const reply = (calendar: Calendar.Calendar, event: Event.Entry): Option.Option<Errors.Refused> => {
   if (!calendar.enabled) return turnedOff(calendar)
   return event.kind === "invitation"
     ? Option.none()

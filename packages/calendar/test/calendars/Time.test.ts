@@ -3,13 +3,14 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "../../src/calendars/Busy.ts"
-import * as Domain from "../../src/Domain.ts"
+import * as Calendar from "../../src/calendars/Calendar.ts"
+import * as Event from "../../src/events/Event.ts"
 import * as WorkHours from "../../src/calendars/WorkHours.ts"
 
 const at = (iso: string) => DateTime.makeUnsafe(iso)
 
-const entry = (title: string, start: string, end: string, more: Partial<Domain.Entry> = {}): Domain.Entry => ({
-  ref: { calendar: Domain.CalendarId.make(1), date: Time.pragueDateOf(at(start)), id: title },
+const entry = (title: string, start: string, end: string, more: Partial<Event.Entry> = {}): Event.Entry => ({
+  ref: { calendar: Calendar.CalendarId.make(1), date: Time.pragueDateOf(at(start)), id: title },
   title,
   span: { start: at(start), end: at(end) },
   allDay: false,
@@ -26,8 +27,8 @@ const entry = (title: string, start: string, end: string, more: Partial<Domain.E
   ...more
 })
 
-const personal = new Domain.Calendar({
-  id: Domain.CalendarId.make(1),
+const personal = new Calendar.Calendar({
+  id: Calendar.CalendarId.make(1),
   name: "Personal",
   color: "#000000",
   writable: true,
@@ -109,7 +110,7 @@ describe("work hours", () => {
         entry("all day", "2027-01-17T23:00:00Z", "2027-01-18T23:00:00Z", { allDay: true }),
         entry("free", "2027-01-18T08:00:00Z", "2027-01-18T09:00:00Z", { showAs: "free" })
       ],
-      Domain.Month.make("2027-01"),
+      WorkHours.Month.make("2027-01"),
       []
     )
     assert.strictEqual(report.minutes, 300)
@@ -132,7 +133,7 @@ describe("work hours", () => {
         entry("in March", "2027-03-31T20:00:00Z", "2027-03-31T23:00:00Z"),
         entry("school", "2027-03-30T08:00:00Z", "2027-03-30T09:00:00Z", { category: Option.some("SCHOOL") })
       ],
-      Domain.Month.make("2027-03"),
+      WorkHours.Month.make("2027-03"),
       ["work"]
     )
     assert.strictEqual(report.minutes, 120)

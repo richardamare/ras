@@ -9,7 +9,7 @@ import * as Time from "@ras/kernel/Time"
 import * as KernelTesting from "@ras/kernel/Testing"
 import * as BusyTime from "../../src/calendars/BusyTime.ts"
 import * as Calendars from "../../src/calendars/Calendars.ts"
-import * as Domain from "../../src/Domain.ts"
+import * as Event from "../../src/events/Event.ts"
 import * as Events from "../../src/events/Events.ts"
 import * as Module from "../../src/Module.ts"
 import * as Outlook from "../../src/outlook/Outlook.ts"
@@ -268,7 +268,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
             canRsvp: false,
             reclaimData: { reclaimEventType: "USER" }
           })
-          const shown = Domain.eventOf(entry)
+          const shown = Event.eventOf(entry)
           assert.deepStrictEqual([shown.block, shown.notes], [block, "Bring the list."])
         })
     )

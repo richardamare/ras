@@ -2,17 +2,18 @@ import { assert, describe, it } from "@effect/vitest"
 import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../../src/Domain.ts"
+import * as Calendar from "../../src/calendars/Calendar.ts"
+import * as Event from "../../src/events/Event.ts"
 import * as Rules from "../../src/events/Rules.ts"
 
 const calendar = (writable: boolean, enabled = true) =>
-  new Domain.Calendar({ id: Domain.CalendarId.make(1), name: "Calendar", color: "#000000", writable, enabled })
+  new Calendar.Calendar({ id: Calendar.CalendarId.make(1), name: "Calendar", color: "#000000", writable, enabled })
 
 const outlook = calendar(true)
 const other = calendar(false)
 
-const event = (kind: Domain.Kind): Domain.Entry => ({
-  ref: { calendar: Domain.CalendarId.make(1), date: Time.PragueDate.make("2027-01-15"), id: "e" },
+const event = (kind: Event.Kind): Event.Entry => ({
+  ref: { calendar: Calendar.CalendarId.make(1), date: Time.PragueDate.make("2027-01-15"), id: "e" },
   title: "Meeting",
   span: { start: DateTime.makeUnsafe("2027-01-15T08:00:00Z"), end: DateTime.makeUnsafe("2027-01-15T09:00:00Z") },
   allDay: false,
@@ -24,7 +25,7 @@ const event = (kind: Domain.Kind): Domain.Entry => ({
   location: Option.none(),
   category: Option.none(),
   notes: Option.none(),
-  attendees: [new Domain.Attendee({ name: "Ada", email: null, rsvp: "accepted", organizer: true, optional: false })],
+  attendees: [new Event.Attendee({ name: "Ada", email: null, rsvp: "accepted", organizer: true, optional: false })],
   copyOf: Option.none()
 })
 

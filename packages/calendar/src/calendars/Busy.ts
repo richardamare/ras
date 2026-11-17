@@ -3,23 +3,43 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "./Calendar.ts"
+import * as Span from "./Span.ts"
 import * as Rules from "../events/Rules.ts"
+import * as Schema from "effect/Schema"
+import * as Event from "../events/Event.ts"
+
+export class Slot extends Schema.Class<Slot>("Slot")({
+  start: Time.PragueLocal,
+  end: Time.PragueLocal,
+  minutes: Schema.Int
+}) {}
+
+export class Conflict extends Schema.Class<Conflict>("Conflict")({
+  first: Event.Event,
+  second: Event.Event,
+  from: Time.PragueLocal,
+  to: Time.PragueLocal,
+  firstFixes: Schema.Array(Schema.String).annotate({
+    description: "What the calendar rules allow doing about the first."
+  }),
+  secondFixes: Schema.Array(Schema.String)
+}) {}
 
 const millis = DateTime.toEpochMillis
 
 /** The part of `span` inside `window`, or none when they do not overlap. */
-export const clip = (span: Domain.Span, window: Domain.Span): Option.Option<Domain.Span> => {
+export const clip = (span: Span.Span, window: Span.Span): Option.Option<Span.Span> => {
   const start = DateTime.max(span.start, window.start)
   const end = DateTime.min(span.end, window.end)
   return DateTime.isGreaterThan(end, start) ? Option.some({ start, end }) : Option.none()
 }
 
 /** The time the spans take inside `window`, merged where they overlap or touch, in order. */
-export const merge = (spans: ReadonlyArray<Domain.Span>, window: Domain.Span): ReadonlyArray<Domain.Span> =>
+export const merge = (spans: ReadonlyArray<Span.Span>, window: Span.Span): ReadonlyArray<Span.Span> =>
   Arr.reduce(
     Arr.getSomes(Arr.map(spans, (span) => clip(span, window))).toSorted((a, b) => millis(a.start) - millis(b.start)),
-    [] as ReadonlyArray<Domain.Span>,
+    [] as ReadonlyArray<Span.Span>,
     (merged, span) => {
       const last = merged.at(-1)
       return last !== undefined && millis(span.start) <= millis(last.end)
@@ -28,16 +48,16 @@ export const merge = (spans: ReadonlyArray<Domain.Span>, window: Domain.Span): R
     }
   )
 
-const minutesOf = (span: Domain.Span) => Math.round((millis(span.end) - millis(span.start)) / 60_000)
+const minutesOf = (span: Span.Span) => Math.round((millis(span.end) - millis(span.start)) / 60_000)
 
 /** The gaps of at least `minimum` minutes in `window` that no blocking event takes. */
 export const freeTime = (
-  entries: ReadonlyArray<Domain.Entry>,
-  window: Domain.Span,
+  entries: ReadonlyArray<Event.Entry>,
+  window: Span.Span,
   minimum: number
-): ReadonlyArray<Domain.Slot> => {
+): ReadonlyArray<Slot> => {
   const busy = merge(
-    Arr.map(Arr.filter(entries, Domain.blocks), (entry) => entry.span),
+    Arr.map(Arr.filter(entries, Event.blocks), (entry) => entry.span),
     window
   )
   const edges = [window.start, ...Arr.flatMap(busy, (span) => [span.start, span.end]), window.end]
@@ -45,7 +65,7 @@ export const freeTime = (
     const gap = { start: edges[index * 2]!, end: edges[index * 2 + 1]! }
     return minutesOf(gap) >= minimum
       ? Result.succeed(
-          new Domain.Slot({
+          new Slot({
             start: Time.toPragueLocal(gap.start),
             end: Time.toPragueLocal(gap.end),
             minutes: minutesOf(gap)
@@ -55,14 +75,13 @@ export const freeTime = (
   })
 }
 
-const sameEvent = (ref: Domain.EventRef, other: Domain.EventRef) =>
-  ref.calendar === other.calendar && ref.id === other.id
+const sameEvent = (ref: Event.EventRef, other: Event.EventRef) => ref.calendar === other.calendar && ref.id === other.id
 
-const isCopyOf = (copy: Domain.Entry, original: Domain.Entry) =>
+const isCopyOf = (copy: Event.Entry, original: Event.Entry) =>
   Option.exists(copy.copyOf, (source) => sameEvent(source, original.ref))
 
 /** What the calendar rules allow doing about one event of a conflict. */
-const fixes = (entry: Domain.Entry, calendars: ReadonlyArray<Domain.Calendar>): ReadonlyArray<string> => {
+const fixes = (entry: Event.Entry, calendars: ReadonlyArray<Calendar.Calendar>): ReadonlyArray<string> => {
   const calendar = calendars.find((found) => found.id === entry.ref.calendar)
   if (calendar === undefined) return []
   const change = Rules.refusal({ _tag: "Change", calendar, event: entry })
@@ -82,11 +101,11 @@ const fixes = (entry: Domain.Entry, calendars: ReadonlyArray<Domain.Calendar>): 
  * fixes the calendar rules allow. A copy never conflicts with its original.
  */
 export const conflicts = (
-  entries: ReadonlyArray<Domain.Entry>,
-  calendars: ReadonlyArray<Domain.Calendar>,
-  window: Domain.Span
-): ReadonlyArray<Domain.Conflict> => {
-  const blocking = Arr.filter(entries, (entry) => Domain.blocks(entry) && Option.isSome(clip(entry.span, window)))
+  entries: ReadonlyArray<Event.Entry>,
+  calendars: ReadonlyArray<Calendar.Calendar>,
+  window: Span.Span
+): ReadonlyArray<Conflict> => {
+  const blocking = Arr.filter(entries, (entry) => Event.blocks(entry) && Option.isSome(clip(entry.span, window)))
   return Arr.flatMap(blocking, (first, index) =>
     Arr.filterMap(blocking.slice(index + 1), (second) => {
       if (first.allDay !== second.allDay || isCopyOf(first, second) || isCopyOf(second, first)) return Result.failVoid
@@ -96,9 +115,9 @@ export const conflicts = (
           onNone: () => Result.failVoid,
           onSome: (overlap) =>
             Result.succeed(
-              new Domain.Conflict({
-                first: Domain.eventOf(first),
-                second: Domain.eventOf(second),
+              new Conflict({
+                first: Event.eventOf(first),
+                second: Event.eventOf(second),
                 from: Time.toPragueLocal(overlap.start),
                 to: Time.toPragueLocal(overlap.end),
                 firstFixes: fixes(first, calendars),

@@ -14,7 +14,9 @@ import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
 import * as BusyTime from "./BusyTime.ts"
 import * as CalendarRepository from "./CalendarRepository.ts"
-import * as Domain from "../Domain.ts"
+import * as CalendarSchema from "./Calendar.ts"
+import * as Span from "./Span.ts"
+import * as Event from "../events/Event.ts"
 import * as DraftRepository from "../events/DraftRepository.ts"
 import * as EventCacheRepository from "./EventCacheRepository.ts"
 import * as Outlook from "../outlook/Outlook.ts"
@@ -29,7 +31,7 @@ const ahead = 84
 const chunk = 28
 
 /** The instants of a window of Prague local time; one that does not end after it starts is refused. */
-export const spanOf = (window: Domain.Window): Effect.Effect<Domain.Span, Errors.Invalid> =>
+export const spanOf = (window: Span.Window): Effect.Effect<Span.Span, Errors.Invalid> =>
   Effect.gen(function* () {
     const start = yield* Time.toInstant(window.from)
     const end = yield* Time.toInstant(window.to)
@@ -38,19 +40,19 @@ export const spanOf = (window: Domain.Window): Effect.Effect<Domain.Span, Errors
       : yield* Effect.fail(new Errors.Invalid({ reason: `The window ends at ${window.to}, before it starts.` }))
   })
 
-const overlaps = (entry: Domain.Entry, span: Domain.Span) =>
+const overlaps = (entry: Event.Entry, span: Span.Span) =>
   DateTime.isLessThan(entry.span.start, span.end) && DateTime.isGreaterThan(entry.span.end, span.start)
 
 const byStart = Order.combine(
-  Order.mapInput(Order.Number, (entry: Domain.Entry) => DateTime.toEpochMillis(entry.span.start)),
-  Order.mapInput(Order.String, (entry: Domain.Entry) => entry.title)
+  Order.mapInput(Order.Number, (entry: Event.Entry) => DateTime.toEpochMillis(entry.span.start)),
+  Order.mapInput(Order.String, (entry: Event.Entry) => entry.title)
 )
 
 /** Each event once: only the `shown` calendars' events, and a copy left out when its original is among them. */
 export const originals = (
-  entries: ReadonlyArray<Domain.Entry>,
-  shown: ReadonlyArray<Domain.CalendarId>
-): ReadonlyArray<Domain.Entry> => {
+  entries: ReadonlyArray<Event.Entry>,
+  shown: ReadonlyArray<CalendarSchema.CalendarId>
+): ReadonlyArray<Event.Entry> => {
   const visible = Arr.filter(entries, (entry) => shown.includes(entry.ref.calendar))
   const present = new Set(Arr.map(visible, (entry) => `${entry.ref.calendar}/${entry.ref.id}`))
   return Arr.filter(
@@ -60,8 +62,8 @@ export const originals = (
 }
 
 /** A draft as the calendar shows it: a plain event of its calendar, marked as a draft. */
-export const entryOfDraft = (draft: DraftRepository.Draft): Domain.Entry => ({
-  ref: { calendar: draft.calendar, date: Time.pragueDateOf(draft.span.start), id: Domain.draftEventId(draft.id) },
+export const entryOfDraft = (draft: DraftRepository.Draft): Event.Entry => ({
+  ref: { calendar: draft.calendar, date: Time.pragueDateOf(draft.span.start), id: Event.draftEventId(draft.id) },
   title: draft.title,
   span: draft.span,
   allDay: draft.allDay,
@@ -79,7 +81,7 @@ export const entryOfDraft = (draft: DraftRepository.Draft): Domain.Entry => ({
 })
 
 /** A block draft as the calendar shows it: a draft of its calendar, marked as the block's. */
-export const entryOfBlockDraft = (draft: BusyTime.BlockDraft): Domain.Entry => ({
+export const entryOfBlockDraft = (draft: BusyTime.BlockDraft): Event.Entry => ({
   ref: { calendar: draft.calendar, date: Time.pragueDateOf(draft.span.start), id: `block-draft-${draft.id}` },
   title: draft.title,
   span: draft.span,
@@ -91,47 +93,46 @@ export const entryOfBlockDraft = (draft: BusyTime.BlockDraft): Domain.Entry => (
   recurring: false,
   location: Option.none(),
   category: Option.none(),
-  notes: Option.some(Domain.blockMarker(draft.id)),
+  notes: Option.some(Event.blockMarker(draft.id)),
   attendees: [],
   copyOf: Option.none(),
-  draft: { id: Domain.DraftId.make(draft.id), refusal: Option.none() }
+  draft: { id: Event.DraftId.make(draft.id), refusal: Option.none() }
 })
 
-const draftOf = (id: string) =>
-  id.startsWith("draft-") ? Option.some(Domain.DraftId.make(id.slice(6))) : Option.none()
+const draftOf = (id: string) => (id.startsWith("draft-") ? Option.some(Event.DraftId.make(id.slice(6))) : Option.none())
 
 export class Calendar extends Context.Service<
   Calendar,
   {
     /** The connected calendars with their settings; turned-off ones only with `includeDisabled`. */
-    readonly calendars: (includeDisabled: boolean) => Read<ReadonlyArray<Domain.Calendar>>
+    readonly calendars: (includeDisabled: boolean) => Read<ReadonlyArray<CalendarSchema.Calendar>>
     readonly changeCalendar: (
-      id: Domain.CalendarId,
-      change: Domain.CalendarChange
-    ) => Effect.Effect<Domain.Calendar, Errors.NotFound | Errors.SourceFailed, Global.CurrentActor>
+      id: CalendarSchema.CalendarId,
+      change: CalendarSchema.CalendarChange
+    ) => Effect.Effect<CalendarSchema.Calendar, Errors.NotFound | Errors.SourceFailed, Global.CurrentActor>
     /** The events and drafts of the enabled calendars that overlap the span, each once, in start order. */
-    readonly entries: (span: Domain.Span) => Read<ReadonlyArray<Domain.Entry>>
+    readonly entries: (span: Span.Span) => Read<ReadonlyArray<Event.Entry>>
     readonly events: (
-      window: Domain.Window
-    ) => Effect.Effect<ReadonlyArray<Domain.Event>, Errors.Invalid | Errors.SourceFailed>
-    readonly event: (id: Domain.EventId) => Effect.Effect<Domain.Event, Errors.NotFound | Errors.SourceFailed>
+      window: Span.Window
+    ) => Effect.Effect<ReadonlyArray<Event.Event>, Errors.Invalid | Errors.SourceFailed>
+    readonly event: (id: Event.EventId) => Effect.Effect<Event.Event, Errors.NotFound | Errors.SourceFailed>
     /** The gaps of at least `minimum` minutes in the window that no event of an enabled calendar takes. */
     readonly freeTime: (
-      window: Domain.Window,
+      window: Span.Window,
       minimum: number
-    ) => Effect.Effect<ReadonlyArray<Domain.Slot>, Errors.Invalid | Errors.SourceFailed>
+    ) => Effect.Effect<ReadonlyArray<Busy.Slot>, Errors.Invalid | Errors.SourceFailed>
     readonly conflicts: (
-      window: Domain.Window
-    ) => Effect.Effect<ReadonlyArray<Domain.Conflict>, Errors.Invalid | Errors.SourceFailed>
+      window: Span.Window
+    ) => Effect.Effect<ReadonlyArray<Busy.Conflict>, Errors.Invalid | Errors.SourceFailed>
     /** The month's work hours; with `categories`, only those categories count. */
-    readonly workHours: (month: Domain.Month, categories: ReadonlyArray<string>) => Read<Domain.WorkHours>
+    readonly workHours: (month: WorkHours.Month, categories: ReadonlyArray<string>) => Read<WorkHours.WorkHours>
     /** Every connected calendar, turned-off ones too, with the handles a write to its provider needs. */
     readonly connected: Read<ReadonlyArray<CalendarRepository.Connected>>
     /** An event in any connected calendar, a turned-off one too, so the rules can say why it takes no write. */
     readonly find: (
-      id: Domain.EventId
+      id: Event.EventId
     ) => Effect.Effect<
-      { readonly calendar: CalendarRepository.Connected; readonly entry: Domain.Entry },
+      { readonly calendar: CalendarRepository.Connected; readonly entry: Event.Entry },
       Errors.NotFound | Errors.SourceFailed
     >
     /** Reads the calendars and the cached span's events from Reclaim and replaces the cache with them. */
@@ -186,7 +187,7 @@ export class Calendar extends Context.Service<
     )
 
     /** From the cache when it holds the span, otherwise from Reclaim. */
-    const read = (span: Domain.Span) =>
+    const read = (span: Span.Span) =>
       Effect.flatMap(filled, (state) =>
         Option.exists(
           state,
@@ -201,7 +202,7 @@ export class Calendar extends Context.Service<
             )
       )
 
-    const entries = (span: Domain.Span) =>
+    const entries = (span: Span.Span) =>
       Effect.gen(function* () {
         const found = yield* read(span)
         const drafted = Arr.map(yield* drafts.inSpan(span), entryOfDraft)
@@ -235,8 +236,11 @@ export class Calendar extends Context.Service<
           const found = Arr.findFirst(yield* connected, ({ calendar }) => calendar.id === id)
           if (Option.isNone(found)) return yield* new Errors.NotFound({ subject: "calendar", id: String(id) })
           const before = found.value.calendar
-          const after = new Domain.Calendar({ ...before, ...change })
-          const diff = Global.changed(Global.snapshot(Domain.Calendar, before), Global.snapshot(Domain.Calendar, after))
+          const after = new CalendarSchema.Calendar({ ...before, ...change })
+          const diff = Global.changed(
+            Global.snapshot(CalendarSchema.Calendar, before),
+            Global.snapshot(CalendarSchema.Calendar, after)
+          )
           return yield* writes.run(
             "calendar.calendar.changed",
             Effect.as(calendars.change(after), {
@@ -250,17 +254,17 @@ export class Calendar extends Context.Service<
 
       entries,
 
-      events: (window) => Effect.flatMap(spanOf(window), entries).pipe(Effect.map(Arr.map(Domain.eventOf))),
+      events: (window) => Effect.flatMap(spanOf(window), entries).pipe(Effect.map(Arr.map(Event.eventOf))),
 
       event: (id) =>
         Effect.gen(function* () {
-          const ref = Domain.eventRef(id)
+          const ref = Event.eventRef(id)
           const day = { start: Time.pragueMidnight(ref.date), end: Time.pragueMidnight(Time.addDays(ref.date, 1)) }
           const found = Arr.findFirst(
             yield* entries(day),
             (entry) => entry.ref.calendar === ref.calendar && entry.ref.id === ref.id
           )
-          return Domain.eventOf(yield* Errors.orNotFound("event", id)(found))
+          return Event.eventOf(yield* Errors.orNotFound("event", id)(found))
         }),
 
       freeTime: (window, minimum) =>
@@ -283,7 +287,7 @@ export class Calendar extends Context.Service<
 
       find: (id) =>
         Effect.gen(function* () {
-          const ref = Domain.eventRef(id)
+          const ref = Event.eventRef(id)
           const day = { start: Time.pragueMidnight(ref.date), end: Time.pragueMidnight(Time.addDays(ref.date, 1)) }
           const all = yield* connected
           const entry = ref.id.startsWith("block-draft-")

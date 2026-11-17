@@ -7,7 +7,8 @@ import * as Option from "effect/Option"
 import * as Global from "@ras/global"
 import * as Testing from "@ras/global/testing"
 import * as KernelModule from "@ras/kernel/Module"
-import * as Domain from "../../src/Domain.ts"
+import * as Calendar from "../../src/calendars/Calendar.ts"
+import * as Event from "../../src/events/Event.ts"
 import * as DraftRepository from "../../src/events/DraftRepository.ts"
 import * as Migrations from "../../src/Migrations.ts"
 
@@ -16,8 +17,8 @@ const tables = KernelModule.make({ name: "calendar", migrations: Migrations.migr
 const at = (iso: string) => DateTime.makeUnsafe(iso)
 
 const draft = (id: string, title: string, start: string, end: string): DraftRepository.Draft => ({
-  id: Domain.DraftId.make(id),
-  calendar: Domain.CalendarId.make(1),
+  id: Event.DraftId.make(id),
+  calendar: Calendar.CalendarId.make(1),
   title,
   span: { start: at(start), end: at(end) },
   allDay: false,

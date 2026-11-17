@@ -9,31 +9,33 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "../calendars/Calendar.ts"
+import * as Span from "../calendars/Span.ts"
+import * as Event from "./Event.ts"
 
 /** A plain event drafted in ras; it reaches its calendar only once the owner confirms it. */
 export interface Draft {
-  readonly id: Domain.DraftId
-  readonly calendar: Domain.CalendarId
+  readonly id: Event.DraftId
+  readonly calendar: Calendar.CalendarId
   readonly title: string
-  readonly span: Domain.Span
+  readonly span: Span.Span
   readonly allDay: boolean
   readonly location: Option.Option<string>
   readonly notes: Option.Option<string>
-  readonly showAs: Option.Option<Domain.ShowAs>
+  readonly showAs: Option.Option<Event.ShowAs>
   readonly refusal: Option.Option<string>
 }
 
 const DraftRow = Schema.Struct({
-  id: Domain.DraftId,
-  calendar: Domain.CalendarId,
+  id: Event.DraftId,
+  calendar: Calendar.CalendarId,
   title: Schema.String,
   start: Time.Instant,
   end: Time.Instant,
   allDay: Schema.BooleanFromBit,
   location: Schema.NullOr(Schema.String),
   notes: Schema.NullOr(Schema.String),
-  showAs: Schema.NullOr(Domain.ShowAs),
+  showAs: Schema.NullOr(Event.ShowAs),
   refusal: Schema.NullOr(Schema.String)
 })
 type DraftRow = typeof DraftRow.Type
@@ -57,11 +59,11 @@ export class DraftRepository extends Context.Service<
   DraftRepository,
   {
     /** The drafts that overlap the span. */
-    readonly inSpan: (span: Domain.Span) => Effect.Effect<ReadonlyArray<Draft>>
+    readonly inSpan: (span: Span.Span) => Effect.Effect<ReadonlyArray<Draft>>
     readonly all: Effect.Effect<ReadonlyArray<Draft>>
-    readonly byId: (id: Domain.DraftId) => Effect.Effect<Option.Option<Draft>>
+    readonly byId: (id: Event.DraftId) => Effect.Effect<Option.Option<Draft>>
     readonly save: (draft: Draft, at: string) => Effect.Effect<void, never, Global.Transaction>
-    readonly delete: (id: Domain.DraftId) => Effect.Effect<void, never, Global.Transaction>
+    readonly delete: (id: Event.DraftId) => Effect.Effect<void, never, Global.Transaction>
     readonly deleteAll: Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/calendar/DraftRepository") {

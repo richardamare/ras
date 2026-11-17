@@ -4,12 +4,13 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
-import * as Domain from "../Domain.ts"
+import * as Calendar from "../calendars/Calendar.ts"
+import * as Event from "../events/Event.ts"
 import * as Reclaim from "./Reclaim.ts"
 
-export const personal = Domain.CalendarId.make(101)
-export const work = Domain.CalendarId.make(201)
-export const workCopy = Domain.CalendarId.make(102)
+export const personal = Calendar.CalendarId.make(101)
+export const work = Calendar.CalendarId.make(201)
+export const workCopy = Calendar.CalendarId.make(102)
 
 const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
   {
@@ -38,7 +39,7 @@ const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
   }
 ]
 
-const owner = new Domain.Attendee({
+const owner = new Event.Attendee({
   name: "Owner",
   email: "owner@example.com",
   rsvp: "accepted",
@@ -47,17 +48,17 @@ const owner = new Domain.Attendee({
 })
 
 interface Planned {
-  readonly calendar: Domain.CalendarId
+  readonly calendar: Calendar.CalendarId
   readonly id: string
   readonly title: string
   /** Days after the first day of the sample, and the Prague clocks it runs between; none for an all-day event. */
   readonly day: number
   readonly clock: Option.Option<readonly [string, string]>
-  readonly kind?: Domain.Kind
-  readonly showAs?: Domain.ShowAs
-  readonly rsvp?: Domain.Rsvp
+  readonly kind?: Event.Kind
+  readonly showAs?: Event.ShowAs
+  readonly rsvp?: Event.Rsvp
   readonly category?: string
-  readonly copyOf?: { readonly calendar: Domain.CalendarId; readonly id: string }
+  readonly copyOf?: { readonly calendar: Calendar.CalendarId; readonly id: string }
 }
 
 const timed = (start: string, end: string) => Option.some([start, end] as const)
@@ -95,7 +96,7 @@ const plan: ReadonlyArray<Planned> = [
 
 /** Reclaim with invented calendars and events around `today`, for tests, the console and the connector without accounts. */
 export const make = (today: Time.PragueDate): Reclaim.Reclaim["Service"] => {
-  const entries = Arr.map(plan, (planned): Domain.Entry => {
+  const entries = Arr.map(plan, (planned): Event.Entry => {
     const date = Time.addDays(today, planned.day)
     const at = (clock: string) => Effect.runSync(Time.toInstant(Time.PragueLocal.make(`${date}T${clock}`)))
     const span = Option.match(planned.clock, {
