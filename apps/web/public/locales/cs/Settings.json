@@ -17,10 +17,12 @@
   },
   "calendars": {
     "title": "Kalendáře",
-    "description": "Do kalendářů připojeného účtu Outlook se zapisují události a bloky; ostatní se jen zobrazují.",
+    "description": "Do kalendářů připojeného účtu Outlook se zapisují události a bloky; ostatní se jen zobrazují. Vypnutý kalendář se nepočítá do volného času a nepřijímá zápisy; kalendář skrytý na obrazovce kalendáře zůstává zapnutý.",
     "writable": "Zapisovatelný",
     "readonly": "Jen ke čtení",
-    "shown": "Zobrazit"
+    "enabled": "Zapnutý",
+    "onScreen": "Na obrazovce kalendáře",
+    "none": "Zatím není synchronizovaný žádný kalendář."
   },
   "connections": {
     "title": "Připojení",

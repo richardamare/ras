@@ -17,6 +17,8 @@ import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
 import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
 import { Route as ShellProjectsIndexRouteImport } from './routes/_shell/projects/index'
 import { Route as ShellProjectsIdRouteImport } from './routes/_shell/projects/$id'
+import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
+import { Route as ShellSettingsCalendarsRouteImport } from './routes/_shell/settings/calendars'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
@@ -57,35 +59,50 @@ const ShellProjectsIdRoute = ShellProjectsIdRouteImport.update({
   path: '/projects/$id',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsCalendarsRoute = ShellSettingsCalendarsRouteImport.update({
+  id: '/calendars',
+  path: '/calendars',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
   '/board': typeof ShellBoardRoute
   '/calendar': typeof ShellCalendarRoute
-  '/settings': typeof ShellSettingsRoute
+  '/settings': typeof ShellSettingsRouteWithChildren
   '/tasks': typeof ShellTasksRoute
   '/projects/$id': typeof ShellProjectsIdRoute
+  '/settings/calendars': typeof ShellSettingsCalendarsRoute
   '/projects/': typeof ShellProjectsIndexRoute
+  '/settings/': typeof ShellSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/board': typeof ShellBoardRoute
   '/calendar': typeof ShellCalendarRoute
-  '/settings': typeof ShellSettingsRoute
   '/tasks': typeof ShellTasksRoute
   '/': typeof ShellIndexRoute
   '/projects/$id': typeof ShellProjectsIdRoute
+  '/settings/calendars': typeof ShellSettingsCalendarsRoute
   '/projects': typeof ShellProjectsIndexRoute
+  '/settings': typeof ShellSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_shell': typeof ShellRouteWithChildren
   '/_shell/board': typeof ShellBoardRoute
   '/_shell/calendar': typeof ShellCalendarRoute
-  '/_shell/settings': typeof ShellSettingsRoute
+  '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/tasks': typeof ShellTasksRoute
   '/_shell/': typeof ShellIndexRoute
   '/_shell/projects/$id': typeof ShellProjectsIdRoute
+  '/_shell/settings/calendars': typeof ShellSettingsCalendarsRoute
   '/_shell/projects/': typeof ShellProjectsIndexRoute
+  '/_shell/settings/': typeof ShellSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,16 +113,19 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/projects/$id'
+    | '/settings/calendars'
     | '/projects/'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/board'
     | '/calendar'
-    | '/settings'
     | '/tasks'
     | '/'
     | '/projects/$id'
+    | '/settings/calendars'
     | '/projects'
+    | '/settings'
   id:
     | '__root__'
     | '/_shell'
@@ -115,7 +135,9 @@ export interface FileRouteTypes {
     | '/_shell/tasks'
     | '/_shell/'
     | '/_shell/projects/$id'
+    | '/_shell/settings/calendars'
     | '/_shell/projects/'
+    | '/_shell/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -180,13 +202,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellProjectsIdRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/settings/': {
+      id: '/_shell/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof ShellSettingsIndexRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/calendars': {
+      id: '/_shell/settings/calendars'
+      path: '/calendars'
+      fullPath: '/settings/calendars'
+      preLoaderRoute: typeof ShellSettingsCalendarsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
   }
 }
+
+interface ShellSettingsRouteChildren {
+  ShellSettingsCalendarsRoute: typeof ShellSettingsCalendarsRoute
+  ShellSettingsIndexRoute: typeof ShellSettingsIndexRoute
+}
+
+const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
+  ShellSettingsCalendarsRoute: ShellSettingsCalendarsRoute,
+  ShellSettingsIndexRoute: ShellSettingsIndexRoute,
+}
+
+const ShellSettingsRouteWithChildren = ShellSettingsRoute._addFileChildren(
+  ShellSettingsRouteChildren,
+)
 
 interface ShellRouteChildren {
   ShellBoardRoute: typeof ShellBoardRoute
   ShellCalendarRoute: typeof ShellCalendarRoute
-  ShellSettingsRoute: typeof ShellSettingsRoute
+  ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
   ShellTasksRoute: typeof ShellTasksRoute
   ShellIndexRoute: typeof ShellIndexRoute
   ShellProjectsIdRoute: typeof ShellProjectsIdRoute
@@ -196,7 +246,7 @@ interface ShellRouteChildren {
 const ShellRouteChildren: ShellRouteChildren = {
   ShellBoardRoute: ShellBoardRoute,
   ShellCalendarRoute: ShellCalendarRoute,
-  ShellSettingsRoute: ShellSettingsRoute,
+  ShellSettingsRoute: ShellSettingsRouteWithChildren,
   ShellTasksRoute: ShellTasksRoute,
   ShellIndexRoute: ShellIndexRoute,
   ShellProjectsIdRoute: ShellProjectsIdRoute,
