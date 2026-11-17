@@ -42,7 +42,7 @@ Calls run only in the listed directions, so the graph has no cycle. A module rea
 ## global
 
 - **The owner** is the one person who signs in, with an email and a password through better-auth. Sign-up is closed: `ras owner` creates the one account and sets its password, and refuses a second email.
-- **Graph tokens.** Connecting Graph is its own flow, separate from sign-in: the owner connects the Outlook account once, and ras stores its access and refresh tokens with `offline_access` and the calendar scope. The `calendar` module takes the current token from `global`, refreshing it when it expires, whichever client called. No caller's token is forwarded.
+- **Graph tokens.** Connecting Graph is its own flow, separate from sign-in: the owner connects the Outlook account once, a personal Microsoft account signing in through the consumers tenant, and ras stores its access and refresh tokens with `offline_access` and the calendar scope, sealed with a key from the auth secret. The `calendar` module takes the current token from `global`, refreshing it when it expires, whichever client called. No caller's token is forwarded.
 - **The connector's sign-in.** better-auth is the OAuth 2.1 authorization server for `/mcp`, with the MCP plugin, as `dsght` does: dynamic client registration, protected resource metadata, short-lived access tokens bound to the `/mcp` resource, rotating refresh tokens. A client signs in as the owner on a sign-in page and the owner consents once per client on a consent page; the API serves both pages itself, so the connector works before the console exists. Settings lists the connected clients and revokes any of them.
 - **An agent** is a named actor the owner's bots act as: a slug (`scheduler`), a display name, active or archived. Agents are tasks' assignees, comments' authors and memory commits' authors. Every writing tool takes an optional `agent` argument naming the agent it acts as; an unknown or archived slug is refused. The agent is declared, not proven: every client signs in as the owner.
 - **Audit.** Every write appends one entry in the same transaction as the write: action, subject, before and after, the MCP client or the console, the agent if one was named, the time. The table refuses updates and deletes.
@@ -167,7 +167,6 @@ Build one step at a time. A step is done when its criterion holds on the running
 ## Open
 
 - Whether Grok can start a routine from an incoming webhook; until it can, its agents poll and ras pushes nothing.
-- Whether the owner's Outlook account is a personal Microsoft account or an Entra one, which decides the tenant the Graph connection signs in against; step 5 finds out.
 - How the host authenticates its pushes to `memory`: a deploy key or a fine-grained token from 1Password.
 - Whether the test runner is `bun test` or Vitest under Bun; step 1 picks the one that runs the Effect layers and `bun:sqlite` together.
 - The tunnel's domain.
