@@ -1,4 +1,21 @@
 {
   "title": "Home",
-  "signedInAs": "Signed in as {{email}}."
+  "running": { "title": "Running", "none": "No block is running.", "stop": "Stop" },
+  "stopFailed": "The block could not be stopped.",
+  "counts": { "open": "Open", "overdue": "Overdue", "inReview": "In review" },
+  "deadlines": {
+    "today": "Due today",
+    "tomorrow": "Due tomorrow",
+    "thisWeek": "Due this week",
+    "none": "Nothing is due."
+  },
+  "waiting": { "title": "Waiting on you", "none": "Nothing waits on you." },
+  "status": {
+    "inbox": "Inbox",
+    "todo": "To do",
+    "in_progress": "In progress",
+    "blocked": "Blocked",
+    "review": "Review",
+    "done": "Done"
+  }
 }
