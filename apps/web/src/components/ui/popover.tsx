@@ -7,6 +7,10 @@ function Popover({ ...props }: React.ComponentProps<typeof RadixUi.Popover.Root>
   return <RadixUi.Popover.Root data-slot="popover" {...props} />
 }
 
+function PopoverTrigger({ ...props }: React.ComponentProps<typeof RadixUi.Popover.Trigger>) {
+  return <RadixUi.Popover.Trigger data-slot="popover-trigger" {...props} />
+}
+
 function PopoverAnchor({ ...props }: React.ComponentProps<typeof RadixUi.Popover.Anchor>) {
   return <RadixUi.Popover.Anchor data-slot="popover-anchor" {...props} />
 }
@@ -33,4 +37,4 @@ function PopoverContent({
   )
 }
 
-export { Popover, PopoverAnchor, PopoverContent }
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger }

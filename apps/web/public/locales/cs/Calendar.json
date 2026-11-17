@@ -236,5 +236,10 @@
       "count_many": "celkem {{count}}×",
       "count_other": "celkem {{count}}×"
     }
+  },
+  "filter": {
+    "label": "Kalendáře",
+    "title": "Zobrazené kalendáře",
+    "hint": "Skrytý kalendář dál přijímá zápisy; skrytí si pamatuje tento prohlížeč."
   }
 }
