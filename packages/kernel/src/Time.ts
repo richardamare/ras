@@ -37,3 +37,12 @@ export type PragueDate = typeof PragueDate.Type
 
 /** The Prague local time of an ISO UTC instant as the database stores it. */
 export const pragueLocalOf = (iso: string): PragueLocal => toPragueLocal(DateTime.makeUnsafe(iso))
+
+/** The instant a Prague day starts; Prague's daylight-saving changes fall at night, so every midnight exists once. */
+export const pragueMidnight = (date: PragueDate): DateTime.Utc =>
+  DateTime.toUtc(DateTime.makeZonedUnsafe(`${date}T00:00`, { timeZone: prague, adjustForTimeZone: true }))
+
+export const pragueDateOf = (instant: DateTime.Utc): PragueDate => PragueDate.make(toPragueLocal(instant).slice(0, 10))
+
+export const addDays = (date: PragueDate, days: number): PragueDate =>
+  PragueDate.make(new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10))
