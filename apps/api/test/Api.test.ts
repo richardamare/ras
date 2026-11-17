@@ -41,15 +41,13 @@ describe("the composed API", () => {
       })
     )
 
-    test.effect("gives a calendar its role and serves the calendars' events", () =>
+    test.effect("turns a calendar off and serves the other calendars' events", () =>
       Effect.gen(function* () {
         const client = yield* HttpApiClient.make(Api.Api)
-        const [personal] = yield* client.calendar.calendars({ query: {} })
-        const changed = yield* client.calendar.changeCalendar({
-          params: { id: personal!.id },
-          payload: { role: "personal" }
-        })
-        assert.strictEqual(changed.role, "personal")
+        const calendars = yield* client.calendar.calendars({ query: {} })
+        const copy = calendars.find((calendar) => calendar.name === "Work (copy)")!
+        const changed = yield* client.calendar.changeCalendar({ params: { id: copy.id }, payload: { enabled: false } })
+        assert.strictEqual(changed.enabled, false)
         const day = Time.pragueDateOf(yield* DateTime.now)
         const events = yield* client.calendar.events({
           query: { from: Time.PragueLocal.make(`${day}T00:00`), to: Time.PragueLocal.make(`${day}T23:59`) }

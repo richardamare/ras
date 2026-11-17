@@ -21,10 +21,12 @@ export interface SourceCalendar {
   readonly name: string
   readonly color: string
   readonly account: number
+  /** The email of the account the calendar belongs to. */
+  readonly email: string
   readonly providerId: Option.Option<string>
 }
 
-/** The calendars Reclaim reaches and their events, as Reclaim holds them; roles and folding copies are the caller's. */
+/** The calendars Reclaim reaches and their events, as Reclaim holds them; folding copies is the caller's. */
 export class Reclaim extends Context.Service<
   Reclaim,
   {
@@ -53,6 +55,8 @@ const WireCalendar = Schema.Struct({
   colorHex: Schema.optional(Schema.NullOr(Schema.String)),
   externalId: Schema.optional(Schema.NullOr(Schema.String))
 })
+
+const WireCredential = Schema.Struct({ id: Schema.Number, email: Schema.String })
 
 const WireParticipant = Schema.Struct({
   type: Schema.String,
@@ -226,20 +230,21 @@ export const make = (apiKey: Redacted.Redacted) =>
     const get = <S extends Schema.Top>(path: string, schema: S) => send(HttpClientRequest.get(path), schema)
 
     return Reclaim.of({
-      calendars: get("/api/accounts/calendars", Schema.Record(Schema.String, Schema.Array(WireCalendar))).pipe(
-        Effect.map((accounts) =>
-          Arr.map(
-            Arr.filter(Arr.flatten(Object.values(accounts)), (calendar) => calendar.connected && calendar.id > 0),
-            (calendar): SourceCalendar => ({
-              id: Domain.CalendarId.make(calendar.id),
-              name: calendar.name,
-              color: calendar.colorHex ?? "#888888",
-              account: calendar.credentialId,
-              providerId: Option.fromNullishOr(calendar.externalId)
-            })
-          )
+      calendars: Effect.gen(function* () {
+        const accounts = yield* get("/api/accounts/calendars", Schema.Record(Schema.String, Schema.Array(WireCalendar)))
+        const credentials = yield* get("/api/credentials", Schema.Array(WireCredential))
+        return Arr.map(
+          Arr.filter(Arr.flatten(Object.values(accounts)), (calendar) => calendar.connected && calendar.id > 0),
+          (calendar): SourceCalendar => ({
+            id: Domain.CalendarId.make(calendar.id),
+            name: calendar.name,
+            color: calendar.colorHex ?? "#888888",
+            account: calendar.credentialId,
+            email: credentials.find((credential) => credential.id === calendar.credentialId)?.email ?? "",
+            providerId: Option.fromNullishOr(calendar.externalId)
+          })
         )
-      ),
+      }),
       events: (first, end) =>
         get(`/api/events/v2?start=${first}&end=${end}&allConnected=true`, Schema.Array(WireEvent)).pipe(
           Effect.map(Arr.map(entryOf))

@@ -16,7 +16,7 @@ const WindowParameters = Schema.Struct({
 export const toolkit = Toolkit.make(
   Global.read("list_calendars", {
     description:
-      "The calendars ras shows, with id, name, colour and role: `personal` takes plain events, `work` only replies, `copy` and `unmarked` nothing.",
+      "The calendars ras shows, with id, name and colour. A `writable` calendar is in the Outlook account connected to ras and takes plain events; any other only takes replies to invitations.",
     success: Schema.Array(Domain.Calendar)
   }),
   Global.read("search_calendar", {
@@ -58,21 +58,21 @@ export const toolkit = Toolkit.make(
   }),
   Global.writeTool("create_event", {
     description:
-      "Creates a plain event in a personal calendar: timed with start and end (an hour when end is omitted), or all-day with firstDay and lastDay. `repeat` makes a series that keeps its Prague clock across daylight-saving changes. With `draft` the event stays in ras, taking its time, until the owner confirms it; change_event and cancel_event change or discard a draft. Times are Prague local.",
+      "Creates a plain event in a writable calendar: timed with start and end (an hour when end is omitted), or all-day with firstDay and lastDay. `repeat` makes a series that keeps its Prague clock across daylight-saving changes. With `draft` the event stays in ras, taking its time, until the owner confirms it; change_event and cancel_event change or discard a draft. Times are Prague local.",
     parameters: Domain.NewEvent.fields,
     success: Domain.Created,
     destructive: false
   }),
   Global.writeTool("change_event", {
     description:
-      "Changes a plain event of a personal calendar: title, time, location, notes or show-as. A new start without an end keeps the length; one occurrence of a series changes alone. An invitation, a work event, a copy or Reclaim's own event is refused with what to do instead.",
+      "Changes a plain event of a writable calendar: title, time, location, notes or show-as. A new start without an end keeps the length; one occurrence of a series changes alone. An invitation, an event of another account, a copy or Reclaim's own event is refused with what to do instead.",
     parameters: { event: Domain.EventId, ...Domain.EventChange.fields },
     success: Domain.Event,
     destructive: false
   }),
   Global.writeTool("cancel_event", {
     description:
-      "Cancels a plain event of a personal calendar, one occurrence of a series alone. Refuses what change_event refuses.",
+      "Cancels a plain event of a writable calendar, one occurrence of a series alone. Refuses what change_event refuses.",
     parameters: { event: Domain.EventId },
     destructive: true
   }),

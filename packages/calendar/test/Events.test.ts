@@ -32,28 +32,28 @@ const find = (title: string, day: number) =>
   })
 
 layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event writes", (test) => {
-  test.effect("refuses an event while no calendar is personal, and one added to the work calendar", () =>
+  test.effect("refuses an event with no calendar named while several take events, and one in another account", () =>
     Effect.gen(function* () {
       const events = yield* Events.Events
       assert.strictEqual(
         yield* code(events.create({ title: "Call", start: local("2027-01-15T09:00") })),
-        "calendar.calendar.none"
+        "calendar.calendar.choose"
       )
-      const calendar = yield* Calendar.Calendar
-      yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
-      yield* calendar.changeCalendar(Sample.work, { role: "work" })
-      yield* calendar.changeCalendar(Sample.workCopy, { role: "copy" })
-      const refused = yield* Effect.flip(
-        events.create({ title: "Call", calendar: Sample.work, start: local("2027-01-15T09:00") })
+      assert.strictEqual(
+        yield* code(events.create({ title: "Call", calendar: Sample.work, start: local("2027-01-15T09:00") })),
+        "calendar.calendar.readonly"
       )
-      assert.strictEqual(refused._tag === "Refused" && refused.instead, "Create it in work Outlook.")
       assert.deepStrictEqual(yield* calls, [])
     })
   )
 
   test.effect("writes a timed event in Prague's clock, an hour long, once however often Graph is retried", () =>
     Effect.gen(function* () {
-      const created = yield* (yield* Events.Events).create({ title: "Call", start: local("2027-01-15T09:00") })
+      const created = yield* (yield* Events.Events).create({
+        title: "Call",
+        calendar: Sample.personal,
+        start: local("2027-01-15T09:00")
+      })
       assert.deepStrictEqual(
         [created.calendar, created.start, created.end, created.allDay],
         [Sample.personal, "2027-01-15T09:00", "2027-01-15T10:00", false]
@@ -83,6 +83,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event writes", (t
     Effect.gen(function* () {
       const created = yield* (yield* Events.Events).create({
         title: "Trip",
+        calendar: Sample.personal,
         firstDay: Time.PragueDate.make("2027-03-27"),
         lastDay: Time.PragueDate.make("2027-03-28")
       })
@@ -103,6 +104,7 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event writes", (t
     Effect.gen(function* () {
       yield* (yield* Events.Events).create({
         title: "Lesson",
+        calendar: Sample.personal,
         start: local("2027-03-22T09:00"),
         end: local("2027-03-22T10:00"),
         repeat: { every: "week", count: 4 }
@@ -171,26 +173,28 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("event writes", (t
     })
   )
 
-  test.effect("refuses a change to a work event, a copy and Reclaim's habit, and a reply to a plain event", () =>
-    Effect.gen(function* () {
-      const events = yield* Events.Events
-      const standup = yield* find("Standup", 0)
-      assert.strictEqual(yield* code(events.change(standup.id, { title: "Sync" })), "calendar.event.work")
-      yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: false })
-      const copy = yield* find("Standup", 0)
-      assert.strictEqual(yield* code(events.cancel(copy.id)), "calendar.event.copy")
-      assert.strictEqual(yield* code(events.change(standup.id, { title: "Sync" })), "calendar.calendar.off")
-      yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: true })
-      assert.strictEqual(
-        yield* code(events.change((yield* find("Lunch", 0)).id, { title: "Lunch" })),
-        "calendar.event.reclaim"
-      )
-      assert.strictEqual(
-        yield* code(events.reply((yield* find("Dentist", 2)).id, "accept")),
-        "calendar.event.not-invitation"
-      )
-      assert.deepStrictEqual(yield* calls, [])
-    })
+  test.effect(
+    "refuses a change to another account's event, a copy and Reclaim's habit, and a reply to a plain event",
+    () =>
+      Effect.gen(function* () {
+        const events = yield* Events.Events
+        const standup = yield* find("Standup", 0)
+        assert.strictEqual(yield* code(events.change(standup.id, { title: "Sync" })), "calendar.event.readonly")
+        yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: false })
+        const copy = yield* find("Standup", 0)
+        assert.strictEqual(yield* code(events.cancel(copy.id)), "calendar.event.copy")
+        assert.strictEqual(yield* code(events.change(standup.id, { title: "Sync" })), "calendar.calendar.off")
+        yield* (yield* Calendar.Calendar).changeCalendar(Sample.work, { enabled: true })
+        assert.strictEqual(
+          yield* code(events.change((yield* find("Lunch", 0)).id, { title: "Lunch" })),
+          "calendar.event.reclaim"
+        )
+        assert.strictEqual(
+          yield* code(events.reply((yield* find("Dentist", 2)).id, "accept")),
+          "calendar.event.not-invitation"
+        )
+        assert.deepStrictEqual(yield* calls, [])
+      })
   )
 
   test.effect("replies to an invitation in the work calendar and audits the answer", () =>

@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
 import * as Redacted from "effect/Redacted"
 import * as Ref from "effect/Ref"
 import * as Schema from "effect/Schema"
@@ -65,6 +66,8 @@ export class Outlook extends Context.Service<
     readonly cancel: (event: string) => Effect.Effect<void, Errors.SourceFailed>
     /** The id of a series' occurrence that starts at `start`, a Prague local time, which a change to it alone takes. */
     readonly occurrence: (series: string, start: Time.PragueLocal) => Effect.Effect<string, Errors.SourceFailed>
+    /** The email of the account connected to ras, whose calendars Outlook writes; none until one is connected. */
+    readonly account: Effect.Effect<Option.Option<string>>
   }
 >()("@ras/calendar/Outlook") {}
 
@@ -123,6 +126,10 @@ export const make = Effect.gen(function* () {
     }).pipe(Effect.withSpan("graph", { attributes: { method: request.method } }))
 
   return Outlook.of({
+    account: Effect.map(
+      graph.connection,
+      Option.map((connection) => connection.account)
+    ),
     create: (calendar, write) =>
       send(
         HttpClientRequest.bodyJsonUnsafe(
@@ -192,6 +199,7 @@ export const sample = Layer.succeed(
       }),
     change: (event, write) => record({ _tag: "Change", event, write }),
     cancel: (event) => record({ _tag: "Cancel", event }),
-    occurrence: (series, start) => Effect.as(record({ _tag: "Occurrence", series, start }), `${series}@${start}`)
+    occurrence: (series, start) => Effect.as(record({ _tag: "Occurrence", series, start }), `${series}@${start}`),
+    account: Effect.succeed(Option.some("owner@example.com"))
   })
 )

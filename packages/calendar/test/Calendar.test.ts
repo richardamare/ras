@@ -22,25 +22,31 @@ const titles = (events: ReadonlyArray<Domain.Event>) =>
   events.map((event) => `${event.calendar} ${event.start} ${event.title}`)
 
 layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("the calendar", (test) => {
-  test.effect("lists every connected calendar, unmarked until the owner gives it a role, and audits the role", () =>
+  test.effect("lists every connected calendar, writable in the connected account, and audits turning one off", () =>
     Effect.gen(function* () {
       const calendar = yield* Calendar.Calendar
       const listed = yield* calendar.calendars(false)
       assert.deepStrictEqual(
-        listed.map((found) => [found.name, found.role, found.enabled]),
+        listed.map((found) => [found.name, found.writable, found.enabled]),
         [
-          ["Personal", "unmarked", true],
-          ["Work (copy)", "unmarked", true],
-          ["Work", "unmarked", true]
+          ["Personal", true, true],
+          ["Work (copy)", true, true],
+          ["Work", false, true]
         ]
       )
-      const changed = yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
-      assert.strictEqual(changed.role, "personal")
+      const changed = yield* calendar.changeCalendar(Sample.work, { enabled: false })
+      assert.strictEqual(changed.enabled, false)
+      assert.deepStrictEqual(
+        (yield* calendar.calendars(false)).map((found) => found.name),
+        ["Personal", "Work (copy)"]
+      )
+      yield* calendar.changeCalendar(Sample.work, { enabled: true })
       const sql = yield* SqlClient.SqlClient
       const audit = yield* sql<{ action: string; before: string; after: string }>`
-        SELECT action, before, after FROM global_audit_entries WHERE subject = ${`calendar/${Sample.personal}`}`
+        SELECT action, before, after FROM global_audit_entries WHERE subject = ${`calendar/${Sample.work}`}`
       assert.deepStrictEqual(audit, [
-        { action: "calendar.calendar.changed", before: '{"role":"unmarked"}', after: '{"role":"personal"}' }
+        { action: "calendar.calendar.changed", before: '{"enabled":true}', after: '{"enabled":false}' },
+        { action: "calendar.calendar.changed", before: '{"enabled":false}', after: '{"enabled":true}' }
       ])
     })
   )
@@ -100,8 +106,6 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("the calendar", (t
   test.effect("finds the clash between the dentist and an invitation, and the free time around them", () =>
     Effect.gen(function* () {
       const calendar = yield* Calendar.Calendar
-      yield* calendar.changeCalendar(Sample.personal, { role: "personal" })
-      yield* calendar.changeCalendar(Sample.work, { role: "work" })
       const day = Time.addDays(yield* today, 2)
       const afternoon = { from: Time.PragueLocal.make(`${day}T13:00`), to: Time.PragueLocal.make(`${day}T17:00`) }
       const [clash] = yield* calendar.conflicts(afternoon)

@@ -17,25 +17,25 @@ The connector and the console call the same module services, so every rule holds
 
 ## Sources and who writes what
 
-| Data                                                                                           | Reached through                                               | What ras writes                                                          |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Every calendar, work and personal                                                              | Reclaim `GET /api/events/v2`, connected to all of them        | Replies to invitations                                                   |
-| The calendars of the owner's Outlook account                                                   | Graph, with the owner's Microsoft token                       | Plain events and work blocks: create, change, show-as, cancel            |
-| Mail                                                                                           | iCloud Mail over IMAP, app-specific password                  | Nothing: mailboxes open read-only, messages are fetched with `BODY.PEEK` |
-| Memory                                                                                         | A clone of the private GitHub repository `memory` on the host | Facts, as commits pushed to GitHub                                       |
-| Spaces, agents, projects, tasks, comments, work blocks, drafts, calendar roles, audit, sign-in | The SQLite database                                           | Everything; no source holds it                                           |
+| Data                                                                                                 | Reached through                                               | What ras writes                                                          |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Every calendar, work and personal                                                                    | Reclaim `GET /api/events/v2`, connected to all of them        | Replies to invitations                                                   |
+| The calendars of the owner's Outlook account                                                         | Graph, with the owner's Microsoft token                       | Plain events and work blocks: create, change, show-as, cancel            |
+| Mail                                                                                                 | iCloud Mail over IMAP, app-specific password                  | Nothing: mailboxes open read-only, messages are fetched with `BODY.PEEK` |
+| Memory                                                                                               | A clone of the private GitHub repository `memory` on the host | Facts, as commits pushed to GitHub                                       |
+| Spaces, agents, projects, tasks, comments, work blocks, drafts, calendars turned off, audit, sign-in | The SQLite database                                           | Everything; no source holds it                                           |
 
 Reclaim reads every calendar and its Calendar Sync copies events between them. Reclaim's API cannot create a plain event and the work calendar has no Graph access, so every write goes through Graph into a calendar of the owner's Outlook account, and Calendar Sync carries what belongs at work into the work calendar.
 
 ## Modules
 
-| Module     | Owns                                                                                                    | Calls                |
-| ---------- | ------------------------------------------------------------------------------------------------------- | -------------------- |
-| `global`   | The owner, sign-in and OAuth clients, agents, audit, connections                                        | nothing              |
-| `calendar` | Calendars and their roles, the event cache, the calendar rules, event drafts, Reclaim and Graph clients | `global`             |
-| `work`     | Spaces, projects, tasks with their board fields, comments, links, work blocks, block drafts             | `calendar`, `global` |
-| `memory`   | The memory clone, its search index, the GitHub webhook                                                  | `global`             |
-| `mail`     | The IMAP client and its reads                                                                           | `global`             |
+| Module     | Owns                                                                                                           | Calls                |
+| ---------- | -------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `global`   | The owner, sign-in and OAuth clients, agents, audit, connections                                               | nothing              |
+| `calendar` | Calendars and which are writable, the event cache, the calendar rules, event drafts, Reclaim and Graph clients | `global`             |
+| `work`     | Spaces, projects, tasks with their board fields, comments, links, work blocks, block drafts                    | `calendar`, `global` |
+| `memory`   | The memory clone, its search index, the GitHub webhook                                                         | `global`             |
+| `mail`     | The IMAP client and its reads                                                                                  | `global`             |
 
 Calls run only in the listed directions, so the graph has no cycle. A module reads and writes only its own tables and reaches another module through that module's service. Where `calendar` needs what `work` owns, `calendar` declares the service it needs and `work` provides it, so `calendar` never imports `work`.
 
@@ -51,8 +51,8 @@ Calls run only in the listed directions, so the graph has no cycle. A module rea
 ## calendar
 
 - **Reads** come from Reclaim over every connected calendar, cached in SQLite with each calendar's sync state. A copy Calendar Sync wrote is folded onto its original, so each event shows once.
-- **A calendar has a role:** `personal` (a calendar Graph writes), `work` (reached only through Reclaim), `copy` (written by Calendar Sync) or `unmarked`. A disabled or unmarked calendar takes nothing.
-- **The calendar rules** are one pure function with a unit test for every refusal. Plain events are created, changed and cancelled only in a personal calendar. A work event takes only a reply to its invitation; any other change is refused with "change it in work Outlook". Copies and Reclaim's own events (habits, task blocks) are shown and never written. A refusal states its reason in plain words and what to do instead.
+- **A calendar is writable** when it belongs to the one Outlook account connected through Graph: ras matches the email of the calendar's Reclaim credential to the connected account. Every other calendar is reached only through Reclaim. A calendar turned off takes nothing.
+- **The calendar rules** are one pure function with a unit test for every refusal. Plain events are created, changed and cancelled only in a writable calendar. An event of any other calendar takes only a reply to its invitation; any other change is refused with "change it in that calendar's own Outlook". Copies written by Calendar Sync and Reclaim's own events (habits, task blocks) are shown and never written. A refusal states its reason in plain words and what to do instead.
 - **Free time and conflicts** run over every enabled calendar in a window. Drafts count as taken: event drafts from `calendar`, block drafts through the busy-time service `work` provides. A conflict lists the fixes the rules allow.
 - **Graph writes are idempotent.** Every event create carries a `transactionId`, so a create that timed out but succeeded is not written twice when it is retried.
 - **Work hours** of a month come from the calendar, by category, per day and in total.
@@ -62,7 +62,7 @@ Calls run only in the listed directions, so the graph has no cycle. A module rea
 
 ### Spaces and projects
 
-A space is where a part of the owner's work belongs: name, colour, order, and the personal calendar its work blocks are written to; a calendar whose role is not `personal` is refused. Exactly one space is the default and it cannot be archived.
+A space is where a part of the owner's work belongs: name, colour, order, and the writable calendar its work blocks are written to; any other calendar is refused. Exactly one space is the default and it cannot be archived.
 
 A project is in one space and has a name, a status, a deadline and an optional description. Every block of its tasks lands in its space's calendar. A project moves to another space with its tasks; blocks already written stay in their calendar.
 
@@ -124,7 +124,7 @@ One MCP server at `/mcp`. One tool per outcome, simple arguments, `readOnlyHint`
 | **Tasks**    | Every task as a table: project, assignee, status, priority, deadline, time spent, next block                                                                                              |
 | **Calendar** | Day, week and month over every enabled calendar; drag a task to plan a block; create, move and resize plain events under the calendar rules; drafts with a bar to confirm or discard them |
 | **Projects** | Every project with status, deadline, space and progress; a project page with its tasks, time spent and upcoming blocks                                                                    |
-| **Settings** | Spaces, agents, calendar roles, connections, connected MCP clients                                                                                                                        |
+| **Settings** | Spaces, agents, calendars, connections, connected MCP clients                                                                                                                             |
 
 ## Time
 
@@ -159,7 +159,7 @@ Build one step at a time. A step is done when its criterion holds on the running
 2. **Memory.** The clone, the tools, the FTS index, the webhook. **Done when** a fact the owner pushes from the IDE is returned by `memory_read` within a minute, a `memory_write` lands as a commit by its agent on GitHub, and a write against a stale version is refused with the current text.
 3. **Live.** launchd, tunnel, secrets, backup, deploy from a release. **Done when** a Grok bot and claude.ai are connected to the ras on the host and read memory.
 4. **Board.** Agents, spaces, projects, tasks with status, assignee, body, comments and links, their tools and HTTP. **Done when** an agent's poll finds a task assigned to it, the agent moves it to `review` with a comment, and `tasks` returns it to the owner's filter.
-5. **Calendar.** Connecting Graph, the Reclaim and Graph clients, the cache, roles, rules, free time, conflicts, event drafts, the tools. **Done when** the owner connects Outlook and, after the Graph access token expires, ras refreshes it; the week across every calendar shows each event once, a show-as change and an all-day event land in the personal calendar, and a weekly series keeps its clock across a daylight-saving change.
+5. **Calendar.** Connecting Graph, the Reclaim and Graph clients, the cache, writable calendars, rules, free time, conflicts, event drafts, the tools. **Done when** the owner connects Outlook and, after the Graph access token expires, ras refreshes it; the week across every calendar shows each event once, a show-as change and an all-day event land in a writable calendar, and a weekly series keeps its clock across a daylight-saving change.
 6. **Work blocks.** Plan, start, stop, log, move, remove, block drafts, time spent. **Done when** a block planned from a thread lands in its space's calendar, start and stop leave a block with the real times, and the project shows the time spent.
 7. **Mail.** The IMAP client and the four tools. **Done when** `recent_mail` lists today's newest messages and nothing on the server is marked read.
 8. **Console.** The screens above. **Done when** the owner plans and reviews a week from the board and the calendar without opening Reclaim or Outlook.

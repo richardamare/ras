@@ -41,7 +41,7 @@ export class Space extends Schema.Class<Space>("Space")({
   name: Schema.String,
   color: Color,
   position: Schema.Int,
-  /** The personal calendar its work blocks are written to, chosen once calendars exist. */
+  /** The calendar its work blocks are written to, chosen once calendars exist. */
   calendar: Schema.NullOr(Schema.String),
   default: Schema.Boolean,
   archived: Schema.Boolean

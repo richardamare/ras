@@ -12,9 +12,30 @@ export const work = Domain.CalendarId.make(201)
 export const workCopy = Domain.CalendarId.make(102)
 
 const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
-  { id: personal, name: "Personal", color: "#f7630c", account: 1, providerId: Option.some("sample-personal") },
-  { id: workCopy, name: "Work (copy)", color: "#b146c2", account: 1, providerId: Option.some("sample-copy") },
-  { id: work, name: "Work", color: "#00cc6a", account: 2, providerId: Option.some("sample-work") }
+  {
+    id: personal,
+    name: "Personal",
+    color: "#f7630c",
+    account: 1,
+    email: "owner@example.com",
+    providerId: Option.some("sample-personal")
+  },
+  {
+    id: workCopy,
+    name: "Work (copy)",
+    color: "#b146c2",
+    account: 1,
+    email: "owner@example.com",
+    providerId: Option.some("sample-copy")
+  },
+  {
+    id: work,
+    name: "Work",
+    color: "#00cc6a",
+    account: 2,
+    email: "owner@work.example.com",
+    providerId: Option.some("sample-work")
+  }
 ]
 
 const owner = new Domain.Attendee({

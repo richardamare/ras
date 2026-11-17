@@ -1,6 +1,6 @@
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
-import type * as Domain from "./Domain.ts"
+import * as Domain from "./Domain.ts"
 
 /** One write to a calendar, as the rules judge it. */
 export type Write =
@@ -19,22 +19,6 @@ const turnedOff = (calendar: Domain.Calendar) =>
     "Turn it on under Settings, Calendars."
   )
 
-const unmarked = (calendar: Domain.Calendar) =>
-  refused(
-    "calendar.unmarked",
-    `"${calendar.name}" has no role in ras yet, so ras writes nothing to it.`,
-    "Mark it personal, work or copy under Settings, Calendars."
-  )
-
-const copied = (event: Domain.Entry) =>
-  refused(
-    "event.copy",
-    `"${event.title}" is a copy written by Calendar Sync, and the next sync would undo a change to it.`,
-    "Change the original instead."
-  )
-
-const isCopy = (calendar: Domain.Calendar, event: Domain.Entry) => calendar.role === "copy" || event.kind === "copy"
-
 const organizer = (event: Domain.Entry) =>
   Option.getOrElse(
     Option.flatMap(Option.fromUndefinedOr(event.attendees.find((attendee) => attendee.organizer)), (attendee) =>
@@ -45,55 +29,46 @@ const organizer = (event: Domain.Entry) =>
 
 const create = (calendar: Domain.Calendar): Option.Option<Errors.Refused> => {
   if (!calendar.enabled) return turnedOff(calendar)
-  switch (calendar.role) {
-    case "personal":
-      return Option.none()
-    case "work":
-      return refused(
-        "calendar.work",
-        `"${calendar.name}" is the work calendar, which ras reaches only through Reclaim and cannot add events to.`,
-        "Create it in work Outlook."
+  return calendar.writable
+    ? Option.none()
+    : refused(
+        "calendar.readonly",
+        `"${calendar.name}" is not in the Outlook account connected to ras, so ras cannot add events to it.`,
+        "Add it to a calendar of the connected account, or create it in that calendar's own Outlook."
       )
-    case "copy":
-      return refused(
-        "calendar.copy",
-        `"${calendar.name}" is a copy written by Calendar Sync, so an event added there would not reach the calendar it copies.`,
-        "Add it to a personal calendar."
-      )
-    case "unmarked":
-      return unmarked(calendar)
-  }
 }
 
 const edit = (calendar: Domain.Calendar, event: Domain.Entry, verb: string): Option.Option<Errors.Refused> => {
   if (!calendar.enabled) return turnedOff(calendar)
-  if (isCopy(calendar, event)) return copied(event)
+  if (event.kind === "copy")
+    return refused(
+      "event.copy",
+      `"${event.title}" is a copy written by Calendar Sync, and the next sync would undo a change to it.`,
+      "Change the original instead."
+    )
   if (event.kind === "reclaim")
     return refused(
       "event.reclaim",
       `"${event.title}" is Reclaim's own event, a task block or habit that Reclaim moves itself.`,
       "Change the task or the habit in Reclaim instead."
     )
-  switch (calendar.role) {
-    case "work":
-      return refused("event.work", `"${event.title}" is in the work calendar.`, "Change it in work Outlook.")
-    case "personal":
-      return event.kind === "invitation"
-        ? refused(
-            "event.invitation",
-            `"${event.title}" is an invitation from ${organizer(event)}, and only its organizer can ${verb} it.`,
-            "Reply to it instead."
-          )
-        : Option.none()
-    default:
-      return unmarked(calendar)
-  }
+  if (!calendar.writable)
+    return refused(
+      "event.readonly",
+      `"${event.title}" is in "${calendar.name}", which is not in the Outlook account connected to ras.`,
+      "Change it in that calendar's own Outlook."
+    )
+  if (event.kind === "invitation")
+    return refused(
+      "event.invitation",
+      `"${event.title}" is an invitation from ${organizer(event)}, and only its organizer can ${verb} it.`,
+      "Reply to it instead."
+    )
+  return Option.none()
 }
 
 const reply = (calendar: Domain.Calendar, event: Domain.Entry): Option.Option<Errors.Refused> => {
   if (!calendar.enabled) return turnedOff(calendar)
-  if (isCopy(calendar, event)) return copied(event)
-  if (calendar.role === "unmarked") return unmarked(calendar)
   return event.kind === "invitation"
     ? Option.none()
     : refused(
@@ -105,7 +80,8 @@ const reply = (calendar: Domain.Calendar, event: Domain.Entry): Option.Option<Er
 
 /**
  * Why the calendar rules refuse `write`, or none when they allow it. Plain events are created, changed and cancelled only
- * in a personal calendar; an invitation takes only a reply; copies and Reclaim's own events take nothing.
+ * in a calendar of the connected Outlook account; an invitation takes only a reply, in any calendar; copies and Reclaim's
+ * own events take nothing.
  */
 export const refusal = (write: Write): Option.Option<Errors.Refused> => {
   switch (write._tag) {
