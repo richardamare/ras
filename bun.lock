@@ -182,8 +182,10 @@
         "effect": "catalog:",
       },
       "devDependencies": {
+        "@effect/vitest": "catalog:",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
+        "vitest": "catalog:",
       },
     },
   },

@@ -27,3 +27,13 @@ export const toInstant = (local: PragueLocal): Effect.Effect<DateTime.Utc, Error
 
 export const toPragueLocal = (instant: DateTime.Utc): PragueLocal =>
   PragueLocal.make(DateTime.formatIsoZoned(DateTime.setZone(instant, prague)).slice(0, 16))
+
+/** A Prague calendar day, `2026-10-22`, as a deadline takes it. */
+export const PragueDate = Schema.String.check(
+  Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/),
+  Schema.makeFilter((text) => !Number.isNaN(Date.parse(`${text}T00:00:00Z`)) || `${text} is not a day`)
+).pipe(Schema.brand("PragueDate"))
+export type PragueDate = typeof PragueDate.Type
+
+/** The Prague local time of an ISO UTC instant as the database stores it. */
+export const pragueLocalOf = (iso: string): PragueLocal => toPragueLocal(DateTime.makeUnsafe(iso))
