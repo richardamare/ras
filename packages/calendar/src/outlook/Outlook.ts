@@ -24,10 +24,11 @@ export interface Clock {
 
 export interface Recurrence {
   readonly pattern: {
-    readonly type: "daily" | "weekly" | "absoluteMonthly" | "absoluteYearly"
+    readonly type: "daily" | "weekly" | "absoluteMonthly" | "relativeMonthly" | "absoluteYearly" | "relativeYearly"
     readonly interval: number
     readonly daysOfWeek?: ReadonlyArray<string>
     readonly firstDayOfWeek?: string
+    readonly index?: "first" | "second" | "third" | "fourth" | "last"
     readonly dayOfMonth?: number
     readonly month?: number
   }

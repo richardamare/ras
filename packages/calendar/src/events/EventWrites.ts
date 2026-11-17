@@ -13,6 +13,10 @@ export const Repeat = Schema.Struct({
   on: Schema.optionalKey(Schema.NonEmptyArray(Weekday)).annotate({
     description: "The weekdays of a weekly repeat; the start's weekday when omitted."
   }),
+  by: Schema.optionalKey(Schema.Literals(["date", "weekday"])).annotate({
+    description:
+      "For a monthly or yearly repeat: on the start's day of the month (`date`, when omitted), or on its weekday at the same place in the month, such as the third Tuesday or the last Friday (`weekday`)."
+  }),
   until: Schema.optionalKey(Time.PragueDate).annotate({ description: "The last day an occurrence may start on." }),
   count: Schema.optionalKey(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 999 }))).annotate({
     description: "How many occurrences, the first included."
