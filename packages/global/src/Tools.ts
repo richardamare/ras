@@ -5,7 +5,9 @@ import * as Tool from "effect/ai/Tool"
 import * as Toolkit from "effect/ai/Toolkit"
 import * as Errors from "@ras/kernel/Errors"
 import * as Actor from "./Actor.ts"
+import * as Agents from "./Agents.ts"
 import * as Http from "./Http.ts"
+import * as Store from "./Store.ts"
 
 /** A tool that only reads. It fails only with the kernel's `Failure`. */
 export const read = <
@@ -50,21 +52,44 @@ export const write = <
     .annotate(Tool.Destructive, options.destructive)
     .annotate(Tool.OpenWorld, false)
 
-/** Runs `effect` as the agent a writing tool named, or as the caller when it named none. */
-export const actingAs =
-  (slug: Actor.AgentSlug | undefined) =>
-  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-    Effect.updateService(
-      effect,
-      Actor.CurrentActor,
-      (actor) => new Actor.Actor({ channel: actor.channel, agent: Option.fromUndefinedOr(slug) })
-    )
+/**
+ * Yields the function a writing tool's handler runs its effect through: as the agent the call named, refused when that
+ * agent is unknown or archived, or as the caller when it named none.
+ */
+export const actingAs = Effect.map(
+  Effect.service(Agents.Agents),
+  (agents) =>
+    (slug: Actor.AgentSlug | undefined) =>
+    <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E | Errors.Refused, R | Actor.CurrentActor> =>
+      slug === undefined
+        ? effect
+        : Effect.flatMap(agents.active(slug), () =>
+            Effect.updateService(
+              effect,
+              Actor.CurrentActor,
+              (actor) => new Actor.Actor({ channel: actor.channel, agent: Option.some(slug) })
+            )
+          )
+)
 
 export const toolkit = Toolkit.make(
   read("whoami", {
     description: "Who ras sees: the owner, through which client, and the agent named, if any.",
     success: Http.Me
+  }),
+  read("agents", {
+    description:
+      "The agents a writing tool may name in `agent`: each one's slug and name. Archived agents are left out.",
+    success: Schema.Array(Store.Agent)
   })
 )
 
-export const handlers = toolkit.toLayer({ whoami: () => Http.me })
+export const handlers = toolkit.toLayer(
+  Effect.gen(function* () {
+    const agents = yield* Agents.Agents
+    return {
+      whoami: () => Http.me,
+      agents: () => Effect.map(agents.list, (all) => all.filter((one) => !one.archived))
+    }
+  })
+)

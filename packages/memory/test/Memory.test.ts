@@ -94,9 +94,11 @@ layer(App)("Memory", (test) => {
     Effect.gen(function* () {
       const memory = yield* Memory.Memory
       const { remote } = yield* Repositories
+      yield* (yield* Global.Agents).add(kalendarnik, "Kalendářník")
+      const actingAs = yield* Global.actingAs
       const written = yield* memory
         .write(draft("coffee-order", "Flat white, oat milk."), Option.none())
-        .pipe(Global.actingAs(kalendarnik))
+        .pipe(actingAs(kalendarnik))
       assert.strictEqual(
         yield* git(remote, "log", "-1", "--format=%an <%ae>|%s", "master"),
         "kalendarnik <kalendarnik@agents.ras.invalid>|memory(kalendarnik): coffee-order"
@@ -116,7 +118,10 @@ layer(App)("Memory", (test) => {
       const audit = yield* sql<{ action: string; agent: string }>`SELECT action, agent FROM global_audit_entries`
       assert.deepStrictEqual(
         audit.map((row) => [row.action, row.agent]),
-        [["memory.fact.written", "kalendarnik"]]
+        [
+          ["global.agent.added", null],
+          ["memory.fact.written", "kalendarnik"]
+        ]
       )
     })
   )

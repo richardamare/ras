@@ -4,9 +4,10 @@ import * as Schema from "effect/Schema"
 export const AgentSlug = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{1,31}$/)).pipe(Schema.brand("AgentSlug"))
 export type AgentSlug = typeof AgentSlug.Type
 
-/** How the owner reached ras: the console in a browser, or an MCP client they consented to. */
+/** How the owner reached ras: the console in a browser, an MCP client they consented to, or `ras` on the host. */
 export const Channel = Schema.Union([
   Schema.TaggedStruct("Console", {}),
+  Schema.TaggedStruct("Cli", {}),
   Schema.TaggedStruct("Mcp", { clientId: Schema.String, clientName: Schema.String })
 ])
 export type Channel = typeof Channel.Type
