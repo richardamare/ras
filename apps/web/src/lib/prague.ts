@@ -36,3 +36,6 @@ export const weekday = (day: string) => (new Date(`${day}T00:00:00Z`).getUTCDay(
 /** Minutes from one Prague local time to another, read as wall-clock times. */
 export const minutesBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}:00Z`) - Date.parse(`${from}:00Z`)) / 60_000)
+
+/** Minutes as `h:mm`. */
+export const duration = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`

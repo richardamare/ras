@@ -29,7 +29,8 @@ export const useNavSections = (): NavSection[] => {
       label: t("sectionConsole"),
       entries: [
         { to: "/", label: t("home"), icon: LucideReact.HouseIcon },
-        { to: "/board", label: t("board"), icon: LucideReact.KanbanIcon }
+        { to: "/board", label: t("board"), icon: LucideReact.KanbanIcon },
+        { to: "/tasks", label: t("tasks"), icon: LucideReact.ListTodoIcon }
       ]
     }
   ]

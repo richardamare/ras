@@ -13,7 +13,9 @@
     "spent": "Time spent",
     "estimate": "Estimate",
     "space": "Space",
-    "project": "Project"
+    "project": "Project",
+    "title": "Task",
+    "next": "Next block"
   },
   "status": {
     "inbox": "Inbox",
@@ -36,5 +38,9 @@
     "whatIsNeeded": "Say what is needed.",
     "whatToCheck": "Say what to check.",
     "move": "Move"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "none": "No tasks yet."
   }
 }
