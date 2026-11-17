@@ -6,6 +6,7 @@ import * as HttpApi from "effect/http-api/HttpApi"
 import type * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as Migrator from "effect/sql/Migrator"
 import type * as SqlClient from "effect/sql/SqlClient"
+import * as Connections from "./Connections.ts"
 
 /** Every module builds its handlers against an API with this id, so they serve inside the composed API. */
 export const apiId = "ras"
@@ -15,6 +16,8 @@ export type ApiId = typeof apiId
 export type Migrations = Readonly<Record<`${number}_${string}`, Effect.Effect<void, unknown, SqlClient.SqlClient>>>
 
 type AnyLayer = Layer.Layer<any, any, any>
+
+type AnySource = Effect.Effect<Connections.Source, never, any>
 
 export interface Http<Name extends string = string> {
   readonly group: HttpApiGroup.Constraint & { readonly identifier: Name }
@@ -30,7 +33,7 @@ export interface Tools {
  * What apps/api needs from one module, and nothing a sibling module calls. `services` is built in list order, so it
  * may need the services of modules listed before it. `ports` implements services that an earlier module declared
  * (work provides calendar's `BusyTime`); ports are built before every module, so they need only what apps/api
- * provides.
+ * provides. `connections` are the outside systems the module reaches, built after every module's services.
  */
 export interface Module<Name extends string = string> {
   readonly name: Name
@@ -40,6 +43,7 @@ export interface Module<Name extends string = string> {
   readonly http: Http<Name> | undefined
   readonly tools: Tools
   readonly routes: Layer.Any
+  readonly connections: ReadonlyArray<AnySource>
 }
 
 type Defaults = {
@@ -49,6 +53,7 @@ type Defaults = {
   readonly http: undefined
   readonly tools: { readonly toolkit: Toolkit.Toolkit<{}>; readonly handlers: Layer.Layer<never> }
   readonly routes: Layer.Layer<never>
+  readonly connections: readonly []
 }
 
 type Filled<D> = { readonly [K in keyof Defaults]: K extends keyof D ? D[K] : Defaults[K] }
@@ -64,6 +69,7 @@ export const make = <const D extends Partial<Omit<Module, "name">> & { readonly 
     http: undefined,
     tools: { toolkit: Toolkit.empty, handlers: Layer.empty },
     routes: Layer.empty,
+    connections: [],
     ...definition
   }) as any
 
@@ -79,7 +85,13 @@ type Needs<Ms, Available, Need = never> = Ms extends readonly [infer H extends M
   ? Needs<T, Available | Out<H["services"]>, Need | Exclude<In<H["services"]>, Available>>
   : Need
 
-type Unprovided<Ms extends ReadonlyArray<Module>> = Needs<Ms, PortsOut<Ms>> | In<Ms[number]["ports"]>
+type SourceIn<S> = S extends Effect.Effect<infer _A, infer _E, infer R> ? R : never
+type SourceNeeds<Ms extends ReadonlyArray<Module>> = SourceIn<Ms[number]["connections"][number]>
+
+type Unprovided<Ms extends ReadonlyArray<Module>> =
+  | Needs<Ms, PortsOut<Ms>>
+  | In<Ms[number]["ports"]>
+  | Exclude<SourceNeeds<Ms>, ServicesOut<Ms> | PortsOut<Ms>>
 
 /** A need that only a later module provides, or a port that needs a module's service. */
 type OutOfOrder<Ms extends ReadonlyArray<Module>> = Extract<Unprovided<Ms>, ServicesOut<Ms> | PortsOut<Ms>>
@@ -88,14 +100,21 @@ type Ordered<Ms extends ReadonlyArray<Module>> = [OutOfOrder<Ms>] extends [never
   ? unknown
   : { readonly "list each module after the modules whose services it needs": OutOfOrder<Ms> }
 
-export type Services<Ms extends ReadonlyArray<Module>> = ServicesOut<Ms> | PortsOut<Ms>
+export type Services<Ms extends ReadonlyArray<Module>> = ServicesOut<Ms> | PortsOut<Ms> | Connections.Connections
 
-/** Every module's services and ports as one layer; what it still needs is what apps/api provides. */
+/**
+ * Every module's services and ports, and `Connections` over every module's sources, as one layer; what it still needs
+ * is what apps/api provides.
+ */
 export const services = <const Ms extends Arr.NonEmptyReadonlyArray<Module>>(
   modules: Ms & Ordered<Ms>
 ): Layer.Layer<Services<Ms>, Err<Ms[number]["services"] | Ms[number]["ports"]>, Unprovided<Ms>> => {
   const ports = mergeAll(Arr.map(modules, (module) => module.ports))
-  return Arr.reduce(modules, ports, (built, module) => Layer.provideMerge(module.services as AnyLayer, built))
+  const services = Arr.reduce(modules, ports, (built, module) => Layer.provideMerge(module.services as AnyLayer, built))
+  return Layer.provideMerge(
+    Connections.layer(Arr.flatMap(modules, (module) => module.connections as ReadonlyArray<AnySource>)),
+    services
+  ) as any
 }
 
 type Groups<Ms extends ReadonlyArray<Module>> = Exclude<Ms[number]["http"], undefined>["group"]

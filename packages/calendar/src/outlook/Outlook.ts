@@ -69,6 +69,8 @@ export class Outlook extends Context.Service<
     readonly occurrence: (series: string, start: Time.PragueLocal) => Effect.Effect<string, Errors.SourceFailed>
     /** The email of the account connected to ras, whose calendars Outlook writes; none until one is connected. */
     readonly account: Effect.Effect<Option.Option<string>>
+    /** Reads one calendar of the account, the cheapest call that proves Graph takes the token. */
+    readonly reach: Effect.Effect<void, Errors.SourceFailed>
   }
 >()("@ras/calendar/Outlook") {}
 
@@ -131,6 +133,7 @@ export const make = Effect.gen(function* () {
       graph.connection,
       Option.map((connection) => connection.account)
     ),
+    reach: Effect.asVoid(send(HttpClientRequest.get("/me/calendars?$top=1&$select=id"))),
     create: (calendar, write) =>
       send(
         HttpClientRequest.bodyJsonUnsafe(
@@ -204,6 +207,7 @@ export const sample = Layer.succeed(
     change: (event, write) => record({ _tag: "Change", event, write }),
     cancel: (event) => record({ _tag: "Cancel", event }),
     occurrence: (series, start) => Effect.as(record({ _tag: "Occurrence", series, start }), `${series}@${start}`),
-    account: Effect.succeed(Option.some("owner@example.com"))
+    account: Effect.succeed(Option.some("owner@example.com")),
+    reach: Effect.void
   })
 )

@@ -48,6 +48,10 @@ export class Clone extends Context.Service<
     readonly push: Effect.Effect<boolean, Errors.SourceFailed>
     /** Drops the last commit and puts its file back as it was before it. */
     readonly undo: Effect.Effect<void, Errors.SourceFailed>
+    /** Where pulls and pushes go, without any credentials in its URL; none for a local repository. */
+    readonly upstream: Option.Option<string>
+    /** Lists the upstream's branches, the cheapest call that proves the remote answers and takes the credentials. */
+    readonly reach: Effect.Effect<void, Errors.SourceFailed>
   }
 >()("@ras/memory/Clone") {
   static readonly make = (directory: string) =>
@@ -76,9 +80,12 @@ export class Clone extends Context.Service<
       const root = yield* git("rev-parse", "--show-toplevel").pipe(
         Effect.mapError(() => failed(`${directory} is not a git repository.`))
       )
-      const tracked = yield* run(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).pipe(
-        Effect.map(({ code }) => code === 0)
-      )
+      const branch = yield* run(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+      const tracked = branch.code === 0
+      const remote = branch.output.split("/")[0] ?? ""
+      const upstream = tracked
+        ? Option.some((yield* git("remote", "get-url", remote)).replace(/\/\/[^@/]+@/, "//"))
+        : Option.none<string>()
 
       const read = (file: string) =>
         filesystem(
@@ -129,7 +136,9 @@ export class Clone extends Context.Service<
                   : Effect.fail(failed(`git push failed: ${output}`))
             )
           : Effect.succeed(true),
-        undo: Effect.asVoid(git("reset", "--quiet", "--keep", "HEAD~1"))
+        undo: Effect.asVoid(git("reset", "--quiet", "--keep", "HEAD~1")),
+        upstream,
+        reach: tracked ? Effect.asVoid(git("ls-remote", "--quiet", "--heads", remote)) : Effect.void
       })
     })
 

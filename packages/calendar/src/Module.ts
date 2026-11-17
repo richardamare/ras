@@ -9,7 +9,9 @@ import * as Events from "./events/Events.ts"
 import * as Http from "./Http.ts"
 import * as Migrations from "./Migrations.ts"
 import * as Outlook from "./outlook/Outlook.ts"
+import * as OutlookConnection from "./outlook/Connection.ts"
 import * as Reclaim from "./reclaim/Reclaim.ts"
+import * as ReclaimConnection from "./reclaim/Connection.ts"
 import * as Sample from "./reclaim/Sample.ts"
 import * as Tools from "./Tools.ts"
 
@@ -34,5 +36,6 @@ export const module = Module.make({
     Layer.provideMerge(sources)
   ),
   http: { group: Http.group, handlers: Http.handlers },
-  tools: { toolkit: Tools.toolkit, handlers: Tools.handlers }
+  tools: { toolkit: Tools.toolkit, handlers: Tools.handlers },
+  connections: [OutlookConnection.outlook, ReclaimConnection.reclaim]
 })

@@ -9,6 +9,7 @@ import * as Path from "effect/Path"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
 import * as Global from "@ras/global"
+import * as Connections from "@ras/kernel/Connections"
 import * as Testing from "@ras/global/testing"
 import * as Fact from "../../src/facts/Fact.ts"
 import * as Memory from "../../src/facts/Memory.ts"
@@ -203,6 +204,25 @@ layer(App)("Memory", (test) => {
       yield* memory.remove(Fact.Name.make("lunch"), read.facts[0]!.version)
       assert.deepStrictEqual((yield* memory.read(["lunch"])).missing, ["lunch"])
       assert.strictEqual(yield* git(remote, "ls-tree", "--name-only", "master", "lunch.md"), "")
+    })
+  )
+
+  test.effect("reports the memory repository connected to its remote, and failing once the remote is gone", () =>
+    Effect.gen(function* () {
+      const connections = yield* Connections.Connections
+      const { remote } = yield* Repositories
+      const fs = yield* FileSystem.FileSystem
+      const listed = yield* connections.list
+      assert.deepStrictEqual(
+        listed.map((one) => [one.kind, one.state, one.detail]),
+        [["github", "connected", remote]]
+      )
+      assert.strictEqual((yield* connections.check("github")).state, "connected")
+      yield* fs.rename(remote, `${remote}.gone`)
+      const checked = yield* connections
+        .check("github")
+        .pipe(Effect.ensuring(Effect.orDie(fs.rename(`${remote}.gone`, remote))))
+      assert.strictEqual(checked.state, "failing")
     })
   )
 })

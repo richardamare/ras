@@ -270,6 +270,21 @@ export type McpClientEncoded = {
     used: string | null;
 };
 
+export type SourceConnectionEncoded = {
+    /**
+     * Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub.
+     */
+    kind: 'outlook' | 'reclaim' | 'icloud' | 'github';
+    /**
+     * `notConfigured` when a setting or a sign-in is missing, `failing` when the last check could not reach it, `sample` when invented data stands in.
+     */
+    state: 'connected' | 'notConfigured' | 'failing' | 'sample';
+    /**
+     * The account it is reached as when connected; otherwise what is missing or what failed.
+     */
+    detail: string | null;
+};
+
 export type ConnectionEncoded = {
     account: string;
     connected: string;
@@ -455,6 +470,61 @@ export type GlobalConnectGraphResponses = {
 };
 
 export type GlobalConnectGraphResponse = GlobalConnectGraphResponses[keyof GlobalConnectGraphResponses];
+
+export type GlobalConnectionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/global/connections';
+};
+
+export type GlobalConnectionsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+};
+
+export type GlobalConnectionsError = GlobalConnectionsErrors[keyof GlobalConnectionsErrors];
+
+export type GlobalConnectionsResponses = {
+    /**
+     * Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it.
+     */
+    200: Array<SourceConnectionEncoded>;
+};
+
+export type GlobalConnectionsResponse = GlobalConnectionsResponses[keyof GlobalConnectionsResponses];
+
+export type GlobalCheckConnectionData = {
+    body?: never;
+    path: {
+        /**
+         * Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub.
+         */
+        kind: 'outlook' | 'reclaim' | 'icloud' | 'github';
+    };
+    query?: never;
+    url: '/global/connections/{kind}/check';
+};
+
+export type GlobalCheckConnectionErrors = {
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+};
+
+export type GlobalCheckConnectionError = GlobalCheckConnectionErrors[keyof GlobalCheckConnectionErrors];
+
+export type GlobalCheckConnectionResponses = {
+    /**
+     * The state after reaching it with its cheapest read.
+     */
+    200: SourceConnectionEncoded;
+};
+
+export type GlobalCheckConnectionResponse = GlobalCheckConnectionResponses[keyof GlobalCheckConnectionResponses];
 
 export type GlobalClientsData = {
     body?: never;
