@@ -13,11 +13,6 @@ import * as Blocks from "./Blocks.ts"
 import * as Domain from "./Domain.ts"
 import * as Store from "./Store.ts"
 
-type Write<A> = Effect.Effect<
-  A,
-  Errors.Refused | Errors.NotFound | Errors.Invalid | Errors.SourceFailed,
-  Global.CurrentActor
->
 type Read<A> = Effect.Effect<A, Errors.NotFound | Errors.Invalid>
 
 const now = Effect.map(DateTime.now, DateTime.formatIso)
@@ -46,22 +41,22 @@ export class Board extends Context.Service<
   Board,
   {
     readonly spaces: Effect.Effect<ReadonlyArray<Domain.Space>>
-    readonly addSpace: (space: typeof Domain.NewSpace.Type) => Write<Domain.Space>
-    readonly changeSpace: (id: Domain.SpaceId, change: typeof Domain.SpaceChange.Type) => Write<Domain.Space>
-    readonly archiveSpace: (id: Domain.SpaceId) => Write<Domain.Space>
+    readonly addSpace: (space: typeof Domain.NewSpace.Type) => Global.Write<Domain.Space>
+    readonly changeSpace: (id: Domain.SpaceId, change: typeof Domain.SpaceChange.Type) => Global.Write<Domain.Space>
+    readonly archiveSpace: (id: Domain.SpaceId) => Global.Write<Domain.Space>
     readonly projects: (space: Option.Option<Domain.SpaceId>) => Effect.Effect<ReadonlyArray<Domain.Project>>
     readonly project: (id: Domain.ProjectId) => Read<Domain.ProjectDetail>
-    readonly addProject: (project: Domain.NewProject) => Write<Domain.Project>
-    readonly changeProject: (id: Domain.ProjectId, change: Domain.ProjectChange) => Write<Domain.Project>
+    readonly addProject: (project: Domain.NewProject) => Global.Write<Domain.Project>
+    readonly changeProject: (id: Domain.ProjectId, change: Domain.ProjectChange) => Global.Write<Domain.Project>
     readonly tasks: (filter: Domain.TaskFilter) => Read<ReadonlyArray<Domain.TaskSummary>>
     readonly task: (id: Domain.TaskId) => Read<Domain.Task>
-    readonly addTask: (task: Domain.NewTask) => Write<Domain.Task>
-    readonly changeTask: (id: Domain.TaskId, change: Domain.TaskChange) => Write<Domain.Task>
+    readonly addTask: (task: Domain.NewTask) => Global.Write<Domain.Task>
+    readonly changeTask: (id: Domain.TaskId, change: Domain.TaskChange) => Global.Write<Domain.Task>
     /** Deletes a task with its blocks; a task with work begun on it is moved to done instead, and answered. */
-    readonly deleteTask: (id: Domain.TaskId) => Write<Option.Option<Domain.Task>>
-    readonly comment: (id: Domain.TaskId, comment: Domain.NewComment) => Write<Domain.Task>
-    readonly link: (id: Domain.TaskId, url: string) => Write<Domain.Task>
-    readonly unlink: (id: Domain.TaskId, url: string) => Write<Domain.Task>
+    readonly deleteTask: (id: Domain.TaskId) => Global.Write<Option.Option<Domain.Task>>
+    readonly comment: (id: Domain.TaskId, comment: Domain.NewComment) => Global.Write<Domain.Task>
+    readonly link: (id: Domain.TaskId, url: string) => Global.Write<Domain.Task>
+    readonly unlink: (id: Domain.TaskId, url: string) => Global.Write<Domain.Task>
   }
 >()("@ras/work/Board") {
   static readonly layer = Layer.effect(
