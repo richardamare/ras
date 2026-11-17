@@ -12,6 +12,7 @@ import * as Skeleton from "@/components/ui/skeleton"
 import type * as Grid from "@/features/calendar/grid"
 import * as Pointer from "@/features/calendar/pointer"
 import * as Url from "@/features/calendar/url"
+import * as Completion from "@/features/tasks/completion"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
@@ -224,6 +225,7 @@ function BlockCard({
           line(
             <LucideReact.SquareCheckIcon />,
             <span className="flex flex-wrap items-center gap-2">
+              <Completion.DoneCheckbox task={task.data} />
               <TaskBits.StatusBadge status={task.data.status} />
               <span className="text-xs text-muted-foreground tabular-nums">
                 {work("fields.spent")} {Prague.duration(task.data.spent)}

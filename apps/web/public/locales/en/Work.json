@@ -82,5 +82,12 @@
   },
   "brief": "Brief",
   "comments_one": "{{count}} comment",
-  "comments_other": "{{count}} comments"
+  "comments_other": "{{count}} comments",
+  "completion": {
+    "column": "Done",
+    "done": "Mark done",
+    "reopen": "Reopen",
+    "undo": "Undo",
+    "closed": "{{title}} is done."
+  }
 }

@@ -84,5 +84,12 @@
   "comments_one": "{{count}} komentář",
   "comments_few": "{{count}} komentáře",
   "comments_many": "{{count}} komentářů",
-  "comments_other": "{{count}} komentářů"
+  "comments_other": "{{count}} komentářů",
+  "completion": {
+    "column": "Hotovo",
+    "done": "Označit jako hotové",
+    "reopen": "Znovu otevřít",
+    "undo": "Vrátit",
+    "closed": "Hotovo: {{title}}"
+  }
 }

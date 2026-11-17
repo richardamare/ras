@@ -9,11 +9,13 @@ import * as Badge from "@/components/ui/badge"
 import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Progress from "@/features/projects/progress"
+import * as Completion from "@/features/tasks/completion"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
+import * as Utils from "@/lib/utils"
 import * as TaskUrl from "@/features/tasks/url"
 
 export function ProjectPage({ id }: { id: string }) {
@@ -24,6 +26,7 @@ export function ProjectPage({ id }: { id: string }) {
     Queries.workBlocksOptions({ query: { from: `${Prague.today()}T00:00`, to: Time.span.to } })
   )
   const openTask = TaskUrl.useOpenTask()
+  const completion = Completion.useTaskCompletion()
 
   if (project.isPending) return <Skeleton.Skeleton className="h-64 w-full" />
   if (project.data === undefined) return <p className="text-sm text-muted-foreground">{t("projects.notFound")}</p>
@@ -68,22 +71,33 @@ export function ProjectPage({ id }: { id: string }) {
           </Card.CardHeader>
           <Card.CardContent className="grid gap-1">
             {found.tasks.length === 0 && <p className="text-sm text-muted-foreground">{t("tasks.none")}</p>}
-            {found.tasks.map((task) => (
-              <button
-                key={task.id}
-                type="button"
-                onClick={() => openTask(task.id)}
-                className="-mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
-                <span className="min-w-0 truncate font-medium">{task.title}</span>
-                <TaskBits.PriorityFlag priority={task.priority} />
-                <span className="ms-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
-                  <TaskBits.Assignee assignee={task.assignee} />
-                  {task.deadline !== null && <TaskBits.Due task={task} />}
-                  <TaskBits.StatusBadge status={task.status} />
-                </span>
-              </button>
-            ))}
+            {found.tasks.map((task) => {
+              const phase = completion.phaseOf(task.id)
+              return (
+                <div
+                  key={task.id}
+                  className={Utils.cn(
+                    "-mx-2 flex items-center gap-1 rounded-md ps-2 hover:bg-accent",
+                    phase !== undefined && Completion.rowClass[phase]
+                  )}
+                >
+                  <Completion.DoneCheckbox task={task} />
+                  <button
+                    type="button"
+                    onClick={() => openTask(task.id)}
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
+                  >
+                    <span className="min-w-0 truncate font-medium">{task.title}</span>
+                    <TaskBits.PriorityFlag priority={task.priority} />
+                    <span className="ms-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+                      <TaskBits.Assignee assignee={task.assignee} />
+                      {task.deadline !== null && <TaskBits.Due task={task} />}
+                      <TaskBits.StatusBadge status={task.status} />
+                    </span>
+                  </button>
+                </div>
+              )
+            })}
           </Card.CardContent>
         </Card.Card>
         <Card.Card>

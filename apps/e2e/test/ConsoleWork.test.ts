@@ -209,6 +209,65 @@ describe("the console's work pages", () => {
       })
     )
 
+    it.effect("ticks a task done in the tasks table, takes a slip back with Undo, and reopens a done task", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const batch = Suite.unique("Tick")
+        const slip = yield* client.work.addTask({ payload: { title: `${batch} slip` } })
+        const finished = yield* client.work.addTask({ payload: { title: `${batch} finished` } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?q=${encodeURIComponent(batch)}`)
+        const main = page.getByRole("main")
+
+        yield* main.getByRole("checkbox", { name: `Mark done: ${slip.title}` }).click()
+        yield* page.getByText(`${slip.title} is done.`).waitFor()
+        yield* page.getByRole("button", { name: "Undo" }).click()
+        yield* main.getByRole("checkbox", { name: `Mark done: ${slip.title}` }).waitFor()
+        yield* Effect.sleep(Duration.millis(4500))
+        assert.strictEqual((yield* client.work.task({ params: { id: slip.id } })).status, "todo")
+
+        yield* main.getByRole("checkbox", { name: `Mark done: ${finished.title}` }).click()
+        yield* Effect.repeat(client.work.task({ params: { id: finished.id } }), {
+          until: (found) => found.status === "done",
+          schedule: Schedule.spaced(Duration.millis(200)),
+          times: 50
+        })
+        yield* main.getByRole("row", { name: new RegExp(finished.title) }).waitFor({ state: "detached" })
+
+        yield* choose(page, main, "Status", "All")
+        yield* main.getByRole("checkbox", { name: `Reopen: ${finished.title}` }).click()
+        yield* becomes(client.work.task({ params: { id: finished.id } }), (found) => found.status === "todo")
+      })
+    )
+
+    it.effect("keeps a long task title to one line in the tasks table and shows it whole on hover", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const batch = Suite.unique("Width")
+        const long = yield* client.work.addTask({
+          payload: { title: `${batch} ${"a very long title that keeps going ".repeat(8)}end` }
+        })
+        const short = yield* client.work.addTask({ payload: { title: `${batch} short` } })
+        const page = yield* Suite.signedInPage
+        yield* page.goto(`/tasks?q=${encodeURIComponent(batch)}`)
+        const main = page.getByRole("main")
+
+        const title = main.getByText(long.title, { exact: true })
+        const box = yield* Effect.promise(() => title.raw.boundingBox())
+        assert.isAtMost(box!.width, 320)
+        assert.isBelow(box!.height, 30)
+
+        yield* title.hover()
+        yield* page.getByRole("tooltip", { name: long.title }).waitFor()
+        yield* Effect.promise(() => page.raw.mouse.move(0, 0, { steps: 10 }))
+        yield* page.getByRole("tooltip").waitFor({ state: "detached" })
+
+        yield* main.getByText(short.title, { exact: true }).hover()
+        yield* Effect.sleep(Duration.millis(600))
+        assert.strictEqual(yield* page.getByRole("tooltip").count, 0)
+      })
+    )
+
     it.effect("shows a project's progress, its tasks and its upcoming blocks", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

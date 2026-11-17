@@ -10,12 +10,15 @@ import * as Input from "@/components/ui/input"
 import * as Select from "@/components/ui/select"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Table from "@/components/ui/table"
+import * as Truncated from "@/components/truncated"
+import * as Completion from "@/features/tasks/completion"
 import * as NewTask from "@/features/tasks/new-task-dialog"
 import * as TaskBits from "@/features/tasks/task-bits"
 import * as Work from "@/features/tasks/work"
 import * as Time from "@/features/tasks-table/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
+import * as Utils from "@/lib/utils"
 import * as TaskUrl from "@/features/tasks/url"
 
 const open = "open"
@@ -28,6 +31,7 @@ export function TasksPage() {
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())
   const blocks = ReactQuery.useQuery(Queries.workBlocksOptions({ query: Time.span }))
   const openTask = TaskUrl.useOpenTask()
+  const completion = Completion.useTaskCompletion()
   const [{ q: search, status }, setUrl] = Nuqs.useQueryStates({
     q: Nuqs.parseAsString.withDefault(""),
     status: Nuqs.parseAsString.withDefault(open)
@@ -84,7 +88,10 @@ export function TasksPage() {
           <Table.Table>
             <Table.TableHeader className="bg-muted/50">
               <Table.TableRow>
-                <Table.TableHead className="ps-4">{t("fields.title")}</Table.TableHead>
+                <Table.TableHead className="w-10 ps-4">
+                  <span className="sr-only">{t("completion.column")}</span>
+                </Table.TableHead>
+                <Table.TableHead>{t("fields.title")}</Table.TableHead>
                 <Table.TableHead>{t("fields.project")}</Table.TableHead>
                 <Table.TableHead>{t("fields.assignee")}</Table.TableHead>
                 <Table.TableHead>{t("fields.status")}</Table.TableHead>
@@ -96,19 +103,26 @@ export function TasksPage() {
             <Table.TableBody>
               {rows.map((task) => {
                 const time = times.get(task.id)
+                const phase = completion.phaseOf(task.id)
                 return (
                   <Table.TableRow
                     key={task.id}
                     tabIndex={0}
-                    className="cursor-pointer outline-none focus-visible:bg-accent"
+                    className={Utils.cn(
+                      "cursor-pointer outline-none focus-visible:bg-accent",
+                      phase !== undefined && Completion.rowClass[phase]
+                    )}
                     onClick={() => openTask(task.id)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") openTask(task.id)
                     }}
                   >
-                    <Table.TableCell className="ps-4 font-medium">
+                    <Table.TableCell className="ps-4">
+                      <Completion.DoneCheckbox task={task} />
+                    </Table.TableCell>
+                    <Table.TableCell className="font-medium">
                       <span className="flex items-center gap-2">
-                        {task.title}
+                        <Truncated.Truncated text={task.title} className="max-w-80" />
                         <TaskBits.PriorityFlag priority={task.priority} />
                       </span>
                     </Table.TableCell>
