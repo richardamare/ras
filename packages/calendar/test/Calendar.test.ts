@@ -1,10 +1,12 @@
 import { assert, describe, it, layer } from "@effect/vitest"
 import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Testing from "@ras/global/testing"
 import * as Time from "@ras/kernel/Time"
+import * as BusyTime from "../src/BusyTime.ts"
 import * as Calendar from "../src/Calendar.ts"
 import * as Domain from "../src/Domain.ts"
 import * as Module from "../src/Module.ts"
@@ -21,122 +23,127 @@ const days = (from: Time.PragueDate, count: number): Domain.Window => ({
 const titles = (events: ReadonlyArray<Domain.Event>) =>
   events.map((event) => `${event.calendar} ${event.start} ${event.title}`)
 
-layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }))("the calendar", (test) => {
-  test.effect("lists every connected calendar, writable in the connected account, and audits turning one off", () =>
-    Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
-      const listed = yield* calendar.calendars(false)
-      assert.deepStrictEqual(
-        listed.map((found) => [found.name, found.writable, found.enabled]),
-        [
-          ["Personal", true, true],
-          ["Work (copy)", true, true],
-          ["Work", false, true]
-        ]
-      )
-      const changed = yield* calendar.changeCalendar(Sample.work, { enabled: false })
-      assert.strictEqual(changed.enabled, false)
-      assert.deepStrictEqual(
-        (yield* calendar.calendars(false)).map((found) => found.name),
-        ["Personal", "Work (copy)"]
-      )
-      yield* calendar.changeCalendar(Sample.work, { enabled: true })
-      const sql = yield* SqlClient.SqlClient
-      const audit = yield* sql<{ action: string; before: string; after: string }>`
+layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(BusyTime.BusyTime.none)))(
+  "the calendar",
+  (test) => {
+    test.effect("lists every connected calendar, writable in the connected account, and audits turning one off", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const listed = yield* calendar.calendars(false)
+        assert.deepStrictEqual(
+          listed.map((found) => [found.name, found.writable, found.enabled]),
+          [
+            ["Personal", true, true],
+            ["Work (copy)", true, true],
+            ["Work", false, true]
+          ]
+        )
+        const changed = yield* calendar.changeCalendar(Sample.work, { enabled: false })
+        assert.strictEqual(changed.enabled, false)
+        assert.deepStrictEqual(
+          (yield* calendar.calendars(false)).map((found) => found.name),
+          ["Personal", "Work (copy)"]
+        )
+        yield* calendar.changeCalendar(Sample.work, { enabled: true })
+        const sql = yield* SqlClient.SqlClient
+        const audit = yield* sql<{ action: string; before: string; after: string }>`
         SELECT action, before, after FROM global_audit_entries WHERE subject = ${`calendar/${Sample.work}`}`
-      assert.deepStrictEqual(audit, [
-        { action: "calendar.calendar.changed", before: '{"enabled":true}', after: '{"enabled":false}' },
-        { action: "calendar.calendar.changed", before: '{"enabled":false}', after: '{"enabled":true}' }
-      ])
-    })
-  )
+        assert.deepStrictEqual(audit, [
+          { action: "calendar.calendar.changed", before: '{"enabled":true}', after: '{"enabled":false}' },
+          { action: "calendar.calendar.changed", before: '{"enabled":false}', after: '{"enabled":true}' }
+        ])
+      })
+    )
 
-  test.effect("shows each event once, folding Calendar Sync's copy onto its original", () =>
-    Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
-      const first = yield* today
-      const events = yield* calendar.events(days(Time.addDays(first, 2), 1))
-      assert.deepStrictEqual(titles(events), [
-        `201 ${Time.addDays(first, 2)}T09:00 Standup`,
-        `101 ${Time.addDays(first, 2)}T12:00 Lunch`,
-        `101 ${Time.addDays(first, 2)}T14:00 Dentist`,
-        `201 ${Time.addDays(first, 2)}T14:30 Quarterly review`
-      ])
-      const review = events[3]!
-      assert.strictEqual(review.kind, "invitation")
-      assert.strictEqual(review.rsvp, "needsAction")
-      assert.deepStrictEqual(yield* calendar.event(review.id), review)
-    })
-  )
+    test.effect("shows each event once, folding Calendar Sync's copy onto its original", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const first = yield* today
+        const events = yield* calendar.events(days(Time.addDays(first, 2), 1))
+        assert.deepStrictEqual(titles(events), [
+          `201 ${Time.addDays(first, 2)}T09:00 Standup`,
+          `101 ${Time.addDays(first, 2)}T12:00 Lunch`,
+          `101 ${Time.addDays(first, 2)}T14:00 Dentist`,
+          `201 ${Time.addDays(first, 2)}T14:30 Quarterly review`
+        ])
+        const review = events[3]!
+        assert.strictEqual(review.kind, "invitation")
+        assert.strictEqual(review.rsvp, "needsAction")
+        assert.deepStrictEqual(yield* calendar.event(review.id), review)
+      })
+    )
 
-  test.effect("shows the copy when the original's calendar is turned off, and hides the calendar", () =>
-    Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
-      const first = yield* today
-      yield* calendar.changeCalendar(Sample.work, { enabled: false })
-      const events = yield* calendar.events(days(first, 1))
-      assert.deepStrictEqual(
-        events.map((event) => [event.calendar, event.title, event.kind]),
-        [
-          [Sample.workCopy, "Standup", "copy"],
-          [Sample.personal, "Lunch", "reclaim"]
-        ]
-      )
-      assert.deepStrictEqual(
-        (yield* calendar.calendars(false)).map((found) => found.name),
-        ["Personal", "Work (copy)"]
-      )
-      assert.strictEqual((yield* calendar.calendars(true)).length, 3)
-      yield* calendar.changeCalendar(Sample.work, { enabled: true })
-    })
-  )
+    test.effect("shows the copy when the original's calendar is turned off, and hides the calendar", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const first = yield* today
+        yield* calendar.changeCalendar(Sample.work, { enabled: false })
+        const events = yield* calendar.events(days(first, 1))
+        assert.deepStrictEqual(
+          events.map((event) => [event.calendar, event.title, event.kind]),
+          [
+            [Sample.workCopy, "Standup", "copy"],
+            [Sample.personal, "Lunch", "reclaim"]
+          ]
+        )
+        assert.deepStrictEqual(
+          (yield* calendar.calendars(false)).map((found) => found.name),
+          ["Personal", "Work (copy)"]
+        )
+        assert.strictEqual((yield* calendar.calendars(true)).length, 3)
+        yield* calendar.changeCalendar(Sample.work, { enabled: true })
+      })
+    )
 
-  test.effect("spans an all-day event from Prague midnight to the next", () =>
-    Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
-      const day = Time.addDays(yield* today, 5)
-      const holiday = (yield* calendar.events(days(day, 1))).find((event) => event.title === "Holiday")!
-      assert.deepStrictEqual(
-        [holiday.start, holiday.end, holiday.allDay, holiday.showAs],
-        [`${day}T00:00`, `${Time.addDays(day, 1)}T00:00`, true, "free"]
-      )
-    })
-  )
+    test.effect("spans an all-day event from Prague midnight to the next", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const day = Time.addDays(yield* today, 5)
+        const holiday = (yield* calendar.events(days(day, 1))).find((event) => event.title === "Holiday")!
+        assert.deepStrictEqual(
+          [holiday.start, holiday.end, holiday.allDay, holiday.showAs],
+          [`${day}T00:00`, `${Time.addDays(day, 1)}T00:00`, true, "free"]
+        )
+      })
+    )
 
-  test.effect("finds the clash between the dentist and an invitation, and the free time around them", () =>
-    Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
-      const day = Time.addDays(yield* today, 2)
-      const afternoon = { from: Time.PragueLocal.make(`${day}T13:00`), to: Time.PragueLocal.make(`${day}T17:00`) }
-      const [clash] = yield* calendar.conflicts(afternoon)
-      assert.deepStrictEqual(
-        [clash!.first.title, clash!.second.title, clash!.from, clash!.to],
-        ["Dentist", "Quarterly review", `${day}T14:30`, `${day}T15:00`]
-      )
-      assert.deepStrictEqual(clash!.secondFixes, ["Decline it with reply_to_event."])
-      assert.deepStrictEqual(
-        (yield* calendar.freeTime(afternoon, 30)).map((slot) => [slot.start, slot.end]),
-        [
-          [`${day}T13:00`, `${day}T14:00`],
-          [`${day}T16:00`, `${day}T17:00`]
-        ]
-      )
-    })
-  )
+    test.effect("finds the clash between the dentist and an invitation, and the free time around them", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const day = Time.addDays(yield* today, 2)
+        const afternoon = { from: Time.PragueLocal.make(`${day}T13:00`), to: Time.PragueLocal.make(`${day}T17:00`) }
+        const [clash] = yield* calendar.conflicts(afternoon)
+        assert.deepStrictEqual(
+          [clash!.first.title, clash!.second.title, clash!.from, clash!.to],
+          ["Dentist", "Quarterly review", `${day}T14:30`, `${day}T15:00`]
+        )
+        assert.deepStrictEqual(clash!.secondFixes, ["Decline it with reply_to_event."])
+        assert.deepStrictEqual(
+          (yield* calendar.freeTime(afternoon, 30)).map((slot) => [slot.start, slot.end]),
+          [
+            [`${day}T13:00`, `${day}T14:00`],
+            [`${day}T16:00`, `${day}T17:00`]
+          ]
+        )
+      })
+    )
 
-  test.effect("refuses a window that ends before it starts, and an event that is not there", () =>
-    Effect.gen(function* () {
-      const calendar = yield* Calendar.Calendar
-      const day = yield* today
-      const backwards = yield* Effect.flip(
-        calendar.events({ from: Time.PragueLocal.make(`${day}T10:00`), to: Time.PragueLocal.make(`${day}T09:00`) })
-      )
-      assert.strictEqual(backwards._tag, "Invalid")
-      const missing = yield* Effect.flip(calendar.event(Domain.EventId.make(`101.${day.replaceAll("-", "")}.nothing`)))
-      assert.strictEqual(missing._tag, "NotFound")
-    })
-  )
-})
+    test.effect("refuses a window that ends before it starts, and an event that is not there", () =>
+      Effect.gen(function* () {
+        const calendar = yield* Calendar.Calendar
+        const day = yield* today
+        const backwards = yield* Effect.flip(
+          calendar.events({ from: Time.PragueLocal.make(`${day}T10:00`), to: Time.PragueLocal.make(`${day}T09:00`) })
+        )
+        assert.strictEqual(backwards._tag, "Invalid")
+        const missing = yield* Effect.flip(
+          calendar.event(Domain.EventId.make(`101.${day.replaceAll("-", "")}.nothing`))
+        )
+        assert.strictEqual(missing._tag, "NotFound")
+      })
+    )
+  }
+)
 
 describe("Reclaim", () => {
   const wire = {

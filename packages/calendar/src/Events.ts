@@ -486,6 +486,12 @@ export class Events extends Context.Service<
         confirm: (id) =>
           Effect.gen(function* () {
             const found = yield* calendar.find(id)
+            if (Option.isSome(Domain.blockOf(found.entry)))
+              return yield* refuse(
+                "event.block",
+                `"${found.entry.title}" is a work block's draft, which is confirmed with its block.`,
+                "Confirm it with confirm_drafts."
+              )
             if (found.entry.draft === undefined)
               return yield* refuse(
                 "event.not-draft",
