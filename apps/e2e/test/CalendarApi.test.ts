@@ -182,6 +182,28 @@ describe("the calendar API", () => {
       })
     )
 
+    it.effect("sums the same month's minutes on the work hours endpoint as the Insights of those calendars", () =>
+      Effect.gen(function* () {
+        const { url } = yield* Suite.Server
+        const client = yield* Suite.owner
+        const date = yield* day(0)
+        const hours = yield* HttpClientRequest.get(
+          new URL(`/calendar/work-hours/${date.slice(0, 7)}?calendar=${work}`, url)
+        ).pipe(
+          HttpClientRequest.setHeader("cookie", yield* Suite.sessionCookie),
+          HttpClient.execute,
+          Effect.flatMap(HttpClientResponse.filterStatusOk),
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(Schema.Struct({ minutes: Schema.Number })))
+        )
+        const insights = yield* client.calendar.insights({
+          query: { kind: "month", date, calendar: work }
+        })
+        assert.isAbove(hours.minutes, 0)
+        // The work hours count the whole month; the Insights split it at now into taken, planned and unconfirmed time.
+        assert.strictEqual(hours.minutes, insights.taken + insights.planned + insights.unconfirmed.minutes)
+      })
+    )
+
     it.effect("creates timed, all-day and repeating events in a writable calendar", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
