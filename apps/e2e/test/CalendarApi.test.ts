@@ -149,6 +149,24 @@ describe("the calendar API", () => {
       })
     )
 
+    it.effect("sums the month's hours of the calendars asked for", () =>
+      Effect.gen(function* () {
+        const { url } = yield* Suite.Server
+        const month = (yield* day(0)).slice(0, 7)
+        const hours = yield* HttpClientRequest.get(
+          new URL(`/calendar/work-hours/${month}?calendar=${personal}`, url)
+        ).pipe(
+          HttpClientRequest.setHeader("cookie", yield* Suite.sessionCookie),
+          HttpClient.execute,
+          Effect.flatMap(HttpClientResponse.filterStatusOk),
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(WorkHours))
+        )
+        const categories = hours.categories.map((category) => category.category)
+        assert.notInclude(categories, "WORK")
+        assert.include(categories, "No category")
+      })
+    )
+
     it.effect("creates timed, all-day and repeating events in a writable calendar", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
