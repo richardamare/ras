@@ -245,10 +245,11 @@ export function InsightsPage() {
   const [{ period, date }, setUrl] = Nuqs.useQueryStates(Url.params)
   const today = Prague.today()
   const anchor = date ?? today
-  const { chosen, toggle } = ChosenCalendars.useChosenCalendars()
-
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   const shown = (calendars.data ?? []).filter((calendar) => calendar.enabled)
+  const { chosen, toggle } = ChosenCalendars.useChosenCalendars(
+    calendars.data === undefined ? undefined : shown.map((calendar) => calendar.id)
+  )
   const ticked = chosen.length > 0
 
   const insightsOf = (day: string, enabled: boolean) => ({
