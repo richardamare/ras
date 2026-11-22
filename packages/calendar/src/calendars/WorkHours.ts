@@ -80,26 +80,38 @@ const timeBy = (
     )
 
 /**
- * The time a month's timed, blocking events take, in total, by category and per Prague day. Overlapping events count
+ * The part of an entry inside `window` that takes time. Only a timed, blocking event takes any, and a draft only from
+ * `now` on: before it, the draft was never confirmed.
+ */
+export const takenSpan = (entry: Event.Entry, window: Span.Span, now: DateTime.Utc): Option.Option<Span.Span> =>
+  Event.blocks(entry) && !entry.allDay
+    ? Busy.clip(
+        entry.span,
+        entry.draft === undefined
+          ? window
+          : { start: DateTime.max(window.start, DateTime.startOf(now, "minute")), end: window.end }
+      )
+    : Option.none()
+
+/**
+ * The time a month's events take by `takenSpan`, in total, by category and per Prague day. Overlapping events count
  * their shared time once. With `categories` only those count, matched without regard to case.
  */
 export const report = (
   entries: ReadonlyArray<Event.Entry>,
   month: Month,
-  categories: ReadonlyArray<string>
+  categories: ReadonlyArray<string>,
+  now: DateTime.Utc
 ): WorkHours => {
   const window = spanOfMonth(month)
   const wanted = categories.map((category) => category.toLowerCase())
   const counted = Arr.getSomes(
-    Arr.map(
-      Arr.filter(entries, (entry) => Event.blocks(entry) && !entry.allDay),
-      (entry) => {
-        const category = Option.getOrElse(entry.category, () => uncategorised)
-        return wanted.length > 0 && !wanted.includes(category.toLowerCase())
-          ? Option.none()
-          : Option.map(Busy.clip(entry.span, window), (span) => ({ category, span }))
-      }
-    )
+    Arr.map(entries, (entry) => {
+      const category = Option.getOrElse(entry.category, () => uncategorised)
+      return wanted.length > 0 && !wanted.includes(category.toLowerCase())
+        ? Option.none()
+        : Option.map(takenSpan(entry, window, now), (span) => ({ category, span }))
+    })
   )
   const pieces = Arr.flatMap(counted, (item) =>
     byDay(item.span).map((piece) => ({ ...piece, category: item.category }))

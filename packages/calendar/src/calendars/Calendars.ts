@@ -303,7 +303,7 @@ export class Calendar extends Context.Service<
         Effect.gen(function* () {
           const counted = Arr.filter(yield* shown, (id) => chosen.length === 0 || chosen.includes(id))
           const found = originals(yield* gathered(WorkHours.spanOfMonth(month)), counted).toSorted(byStart)
-          return WorkHours.report(found, month, categories)
+          return WorkHours.report(found, month, categories, yield* DateTime.now)
         }),
 
       insights: (period, chosen) =>

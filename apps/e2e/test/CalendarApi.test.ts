@@ -199,8 +199,7 @@ describe("the calendar API", () => {
           query: { kind: "month", date, calendar: work }
         })
         assert.isAbove(hours.minutes, 0)
-        // The work hours count the whole month; the Insights split it at now into taken, planned and unconfirmed time.
-        assert.strictEqual(hours.minutes, insights.taken + insights.planned + insights.unconfirmed.minutes)
+        assert.strictEqual(hours.minutes, insights.taken + insights.planned)
       })
     )
 

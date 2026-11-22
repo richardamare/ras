@@ -206,16 +206,15 @@ export const report = (
   const split = DateTime.max(whole.start, DateTime.min(DateTime.startOf(now, "minute"), whole.end))
   const past = { start: whole.start, end: split }
   const future = { start: split, end: whole.end }
-  const counted = Arr.filter(
-    entries,
-    (entry) => Event.blocks(entry) && !entry.allDay && calendars.includes(entry.ref.calendar)
+  const chosen = Arr.filter(entries, (entry) => calendars.includes(entry.ref.calendar))
+  const within = (part: (entry: Event.Entry) => Option.Option<Span.Span>): ReadonlyArray<Piece> =>
+    Arr.getSomes(Arr.map(chosen, (entry) => Option.map(part(entry), (span) => ({ entry, span }))))
+  const taken = within((entry) => WorkHours.takenSpan(entry, past, now))
+  const planned = within((entry) => WorkHours.takenSpan(entry, future, now))
+  // As of the period's start, a draft's whole past part lies ahead, so the rule hands all of it back.
+  const drafts = within((entry) =>
+    entry.draft === undefined ? Option.none() : WorkHours.takenSpan(entry, past, past.start)
   )
-  const within = (window: Span.Span): ReadonlyArray<Piece> =>
-    Arr.getSomes(Arr.map(counted, (entry) => Option.map(Busy.clip(entry.span, window), (span) => ({ entry, span }))))
-  const [drafts, taken] = Arr.partition(within(past), (piece) =>
-    piece.entry.draft === undefined ? Result.fail(piece) : Result.succeed(piece)
-  )
-  const planned = within(future)
   const [blocks, others] = Arr.partition(taken, (piece) =>
     Option.match(Event.blockOf(piece.entry), {
       onNone: () => Result.fail(piece),
