@@ -1348,6 +1348,24 @@
               ]
             },
             "required": false
+          },
+          {
+            "name": "calendar",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "required": false
           }
         ],
         "security": [],
@@ -1358,6 +1376,113 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkHoursEncoded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "SourceFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceFailedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calendar/insights": {
+      "get": {
+        "tags": ["calendar"],
+        "operationId": "calendar.insights",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["week", "month", "quarter"]
+            },
+            "required": true
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "calendar",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "The calendars to count; without it, every shown calendar counts."
+            },
+            "required": false
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Insights",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsEncoded"
                 }
               }
             }
@@ -4738,6 +4863,261 @@
           }
         },
         "required": ["name", "email", "rsvp", "organizer", "optional"],
+        "additionalProperties": false
+      },
+      "InsightsEncoded": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["week", "month", "quarter"]
+              },
+              "date": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "date"],
+            "additionalProperties": false
+          },
+          "first": {
+            "type": "string"
+          },
+          "last": {
+            "type": "string"
+          },
+          "taken": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minutes taken from the period's start up to now."
+          },
+          "planned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Minutes planned from now until the period ends."
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "first": {
+                  "type": "string"
+                },
+                "last": {
+                  "type": "string"
+                },
+                "taken": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "planned": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["first", "last", "taken", "planned"],
+              "additionalProperties": false
+            },
+            "description": "A week's days, a month's weeks cut at its edges, or a quarter's months, adding up to the period."
+          },
+          "workBlocks": {
+            "type": "object",
+            "properties": {
+              "minutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "block": {
+                      "type": "string",
+                      "description": "The work block, from the marker its event carries."
+                    },
+                    "minutes": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["block", "minutes"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["minutes", "blocks"],
+            "additionalProperties": false,
+            "description": "The taken time of work blocks, less the time other events share with them."
+          },
+          "otherEvents": {
+            "type": "object",
+            "properties": {
+              "minutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "titles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "minutes": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["title", "minutes"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["minutes", "titles"],
+            "additionalProperties": false,
+            "description": "The taken time of every other event, by title; with the work blocks it adds up to the taken time."
+          },
+          "calendars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "calendar": {
+                  "type": "integer",
+                  "maximum": 9007199254740991,
+                  "exclusiveMinimum": 0
+                },
+                "taken": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "planned": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["calendar", "taken", "planned"],
+              "additionalProperties": false
+            },
+            "description": "Each chosen calendar's own time, its overlaps counted once."
+          },
+          "unanswered": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event": {
+                  "type": "string"
+                },
+                "calendar": {
+                  "type": "integer",
+                  "maximum": 9007199254740991,
+                  "exclusiveMinimum": 0
+                },
+                "title": {
+                  "type": "string"
+                },
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                },
+                "minutes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["event", "calendar", "title", "start", "end", "minutes"],
+              "additionalProperties": false
+            },
+            "description": "Invitations before now the owner never answered; their time counts as taken."
+          },
+          "unconfirmed": {
+            "type": "object",
+            "properties": {
+              "minutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "drafts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "event": {
+                      "type": "string"
+                    },
+                    "calendar": {
+                      "type": "integer",
+                      "maximum": 9007199254740991,
+                      "exclusiveMinimum": 0
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    },
+                    "minutes": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "block": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["event", "calendar", "title", "start", "end", "minutes", "block"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["minutes", "drafts"],
+            "additionalProperties": false,
+            "description": "Drafts before now, which count as neither taken nor planned time."
+          }
+        },
+        "required": [
+          "period",
+          "first",
+          "last",
+          "taken",
+          "planned",
+          "parts",
+          "workBlocks",
+          "otherEvents",
+          "calendars",
+          "unanswered",
+          "unconfirmed"
+        ],
         "additionalProperties": false
       },
       "WorkHoursEncoded": {

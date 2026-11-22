@@ -12,10 +12,13 @@ import * as Event from "../src/events/Event.ts"
 import * as Module from "../src/Module.ts"
 import * as CalendarTesting from "../src/Testing.ts"
 import * as Tools from "../src/Tools.ts"
+import * as WorkHours from "../src/calendars/WorkHours.ts"
 
 const fenced = (text: string) => text.startsWith("«untrusted-data»") && text.endsWith("«/untrusted-data»")
 
 const events = Schema.decodeUnknownSync(Schema.toCodecJson(Schema.Array(Event.Event)))
+
+const workHours = Schema.decodeUnknownSync(Schema.toCodecJson(WorkHours.WorkHours))
 
 const final = <E, R>(results: Effect.Effect<Stream.Stream<{ readonly encodedResult: unknown }, E, R>, E, R>) =>
   Effect.map(Effect.flatMap(results, Stream.runCollect), (all) => all.at(-1)!.encodedResult)
@@ -67,6 +70,23 @@ layer(
         )
       )
       assert.isTrue(Exit.isSuccess(taken))
+    })
+  )
+
+  test.effect("count only the asked calendars' time in work hours, and every calendar's without them", () =>
+    Effect.gen(function* () {
+      const kit = yield* Tools.toolkit
+      const today = Time.pragueDateOf(yield* DateTime.now)
+      const month = WorkHours.Month.make(today.slice(0, 7))
+      const minutesToday = (calendars?: ReadonlyArray<number>) =>
+        Effect.map(
+          final(kit.handle("work_hours", calendars === undefined ? { month } : { month, calendars })),
+          (found) => workHours(found).days.find((day) => day.date === today)?.minutes
+        )
+      assert.strictEqual(yield* minutesToday(), 75)
+      assert.strictEqual(yield* minutesToday([CalendarTesting.personal]), 60)
+      assert.strictEqual(yield* minutesToday([CalendarTesting.workCopy]), 15)
+      assert.strictEqual(yield* minutesToday([CalendarTesting.work, CalendarTesting.workCopy]), 15)
     })
   )
 })

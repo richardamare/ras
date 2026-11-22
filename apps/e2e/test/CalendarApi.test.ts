@@ -149,6 +149,60 @@ describe("the calendar API", () => {
       })
     )
 
+    it.effect("counts the planned time of the chosen calendars, a copy once with its original", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const date = yield* day(7)
+        const both = yield* client.calendar.insights({ query: { kind: "week", date, calendar: [work, workCopy] } })
+        const original = yield* client.calendar.insights({ query: { kind: "week", date, calendar: work } })
+        assert.isAtLeast(original.planned, 7 * 15)
+        assert.strictEqual(both.planned, original.planned)
+        assert.deepStrictEqual(both.calendars, [
+          { calendar: work, taken: 0, planned: original.planned },
+          { calendar: workCopy, taken: 0, planned: 0 }
+        ])
+      })
+    )
+
+    it.effect("sums the month's hours of the calendars asked for", () =>
+      Effect.gen(function* () {
+        const { url } = yield* Suite.Server
+        const month = (yield* day(0)).slice(0, 7)
+        const hours = yield* HttpClientRequest.get(
+          new URL(`/calendar/work-hours/${month}?calendar=${personal}`, url)
+        ).pipe(
+          HttpClientRequest.setHeader("cookie", yield* Suite.sessionCookie),
+          HttpClient.execute,
+          Effect.flatMap(HttpClientResponse.filterStatusOk),
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(WorkHours))
+        )
+        const categories = hours.categories.map((category) => category.category)
+        assert.notInclude(categories, "WORK")
+        assert.include(categories, "No category")
+      })
+    )
+
+    it.effect("sums the same month's minutes on the work hours endpoint as the Insights of those calendars", () =>
+      Effect.gen(function* () {
+        const { url } = yield* Suite.Server
+        const client = yield* Suite.owner
+        const date = yield* day(0)
+        const hours = yield* HttpClientRequest.get(
+          new URL(`/calendar/work-hours/${date.slice(0, 7)}?calendar=${work}`, url)
+        ).pipe(
+          HttpClientRequest.setHeader("cookie", yield* Suite.sessionCookie),
+          HttpClient.execute,
+          Effect.flatMap(HttpClientResponse.filterStatusOk),
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(Schema.Struct({ minutes: Schema.Number })))
+        )
+        const insights = yield* client.calendar.insights({
+          query: { kind: "month", date, calendar: work }
+        })
+        assert.isAbove(hours.minutes, 0)
+        assert.strictEqual(hours.minutes, insights.taken + insights.planned)
+      })
+    )
+
     it.effect("creates timed, all-day and repeating events in a writable calendar", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

@@ -4,14 +4,17 @@ import * as Zod from "zod"
 const key = "ras-calendar-hidden"
 const Stored = Zod.array(Zod.number().int())
 
-const read = (): ReadonlySet<number> => {
+/** The calendar ids this browser keeps under `key`, none when it keeps nothing readable. */
+export const storedCalendars = (key: string): ReadonlyArray<number> => {
   try {
     const stored = Stored.safeParse(JSON.parse(localStorage.getItem(key) ?? "[]"))
-    return new Set(stored.success ? stored.data : [])
+    return stored.success ? stored.data : []
   } catch {
-    return new Set()
+    return []
   }
 }
+
+const read = (): ReadonlySet<number> => new Set(storedCalendars(key))
 
 /** Adds the calendar to the hidden ones or takes it out. */
 export const toggled = (hidden: ReadonlySet<number>, calendar: number): ReadonlySet<number> => {

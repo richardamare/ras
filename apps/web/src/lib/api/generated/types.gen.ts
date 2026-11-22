@@ -205,6 +205,89 @@ export type AttendeeEncoded = {
     optional: boolean;
 };
 
+export type InsightsEncoded = {
+    period: {
+        kind: 'week' | 'month' | 'quarter';
+        date: string;
+    };
+    first: string;
+    last: string;
+    /**
+     * Minutes taken from the period's start up to now.
+     */
+    taken: number;
+    /**
+     * Minutes planned from now until the period ends.
+     */
+    planned: number;
+    /**
+     * A week's days, a month's weeks cut at its edges, or a quarter's months, adding up to the period.
+     */
+    parts: Array<{
+        first: string;
+        last: string;
+        taken: number;
+        planned: number;
+    }>;
+    /**
+     * The taken time of work blocks, less the time other events share with them.
+     */
+    workBlocks: {
+        minutes: number;
+        blocks: Array<{
+            /**
+             * The work block, from the marker its event carries.
+             */
+            block: string;
+            minutes: number;
+        }>;
+    };
+    /**
+     * The taken time of every other event, by title; with the work blocks it adds up to the taken time.
+     */
+    otherEvents: {
+        minutes: number;
+        titles: Array<{
+            title: string;
+            minutes: number;
+        }>;
+    };
+    /**
+     * Each chosen calendar's own time, its overlaps counted once.
+     */
+    calendars: Array<{
+        calendar: number;
+        taken: number;
+        planned: number;
+    }>;
+    /**
+     * Invitations before now the owner never answered; their time counts as taken.
+     */
+    unanswered: Array<{
+        event: string;
+        calendar: number;
+        title: string;
+        start: string;
+        end: string;
+        minutes: number;
+    }>;
+    /**
+     * Drafts before now, which count as neither taken nor planned time.
+     */
+    unconfirmed: {
+        minutes: number;
+        drafts: Array<{
+            event: string;
+            calendar: number;
+            title: string;
+            start: string;
+            end: string;
+            minutes: number;
+            block: string | null;
+        }>;
+    };
+};
+
 export type WorkHoursEncoded = {
     month: string;
     /**
@@ -1041,6 +1124,7 @@ export type CalendarWorkHoursData = {
     };
     query?: {
         category?: string | Array<string>;
+        calendar?: string | Array<string>;
     };
     url: '/calendar/work-hours/{month}';
 };
@@ -1078,6 +1162,54 @@ export type CalendarWorkHoursResponses = {
 };
 
 export type CalendarWorkHoursResponse = CalendarWorkHoursResponses[keyof CalendarWorkHoursResponses];
+
+export type CalendarInsightsData = {
+    body?: never;
+    path?: never;
+    query: {
+        kind: 'week' | 'month' | 'quarter';
+        date: string;
+        /**
+         * The calendars to count; without it, every shown calendar counts.
+         */
+        calendar?: string | Array<string>;
+    };
+    url: '/calendar/insights';
+};
+
+export type CalendarInsightsErrors = {
+    /**
+     * Invalid
+     */
+    400: InvalidEncoded;
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+    /**
+     * NotFound
+     */
+    404: NotFoundEncoded;
+    /**
+     * Refused
+     */
+    409: RefusedEncoded;
+    /**
+     * SourceFailed
+     */
+    502: SourceFailedEncoded;
+};
+
+export type CalendarInsightsError = CalendarInsightsErrors[keyof CalendarInsightsErrors];
+
+export type CalendarInsightsResponses = {
+    /**
+     * Insights
+     */
+    200: InsightsEncoded;
+};
+
+export type CalendarInsightsResponse = CalendarInsightsResponses[keyof CalendarInsightsResponses];
 
 export type CalendarReplyToEventData = {
     body: {

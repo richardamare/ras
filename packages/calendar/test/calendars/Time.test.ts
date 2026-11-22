@@ -35,6 +35,9 @@ const personal = new Calendar.Calendar({
   enabled: true
 })
 
+/** Long after every month the tests ask about. */
+const later = at("2030-01-01T00:00:00Z")
+
 /** 08:00 to 12:00 Prague on 15 January 2027. */
 const morning = { start: at("2027-01-15T07:00:00Z"), end: at("2027-01-15T11:00:00Z") }
 
@@ -111,7 +114,8 @@ describe("work hours", () => {
         entry("free", "2027-01-18T08:00:00Z", "2027-01-18T09:00:00Z", { showAs: "free" })
       ],
       WorkHours.Month.make("2027-01"),
-      []
+      [],
+      later
     )
     assert.strictEqual(report.minutes, 300)
     assert.deepStrictEqual(report.categories, [
@@ -134,12 +138,37 @@ describe("work hours", () => {
         entry("school", "2027-03-30T08:00:00Z", "2027-03-30T09:00:00Z", { category: Option.some("SCHOOL") })
       ],
       WorkHours.Month.make("2027-03"),
-      ["work"]
+      ["work"],
+      later
     )
     assert.strictEqual(report.minutes, 120)
     assert.deepStrictEqual(
       report.days.map((day) => day.date),
       ["2027-03-31"]
+    )
+  })
+
+  it("leaves a draft's time before now out and counts its time from now on, as the Insights do", () => {
+    const draft = { id: Event.DraftId.make("4f1c2b7a-9d3e-4a6b-8c5f-2e7d1a9b0c03"), refusal: Option.none() }
+    const report = WorkHours.report(
+      [
+        entry("past draft", "2027-01-11T08:00:00Z", "2027-01-11T10:00:00Z", { draft }),
+        entry("running draft", "2027-01-13T10:00:00Z", "2027-01-13T12:00:00Z", { draft }),
+        entry("future draft", "2027-01-14T08:00:00Z", "2027-01-14T09:00:00Z", { draft }),
+        entry("past event", "2027-01-12T08:00:00Z", "2027-01-12T09:30:00Z")
+      ],
+      WorkHours.Month.make("2027-01"),
+      [],
+      at("2027-01-13T11:00:00Z")
+    )
+    assert.strictEqual(report.minutes, 210)
+    assert.deepStrictEqual(
+      report.days.map((day) => [day.date, day.minutes]),
+      [
+        ["2027-01-12", 90],
+        ["2027-01-13", 60],
+        ["2027-01-14", 60]
+      ]
     )
   })
 })
