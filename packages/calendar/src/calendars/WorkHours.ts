@@ -43,7 +43,8 @@ export const spanOfMonth = (month: Month): Span.Span => {
   }
 }
 
-const minutes = (spans: ReadonlyArray<Span.Span>, window: Span.Span) =>
+/** The minutes the spans take inside `window`, their shared time counted once. */
+export const minutes = (spans: ReadonlyArray<Span.Span>, window: Span.Span) =>
   Math.round(
     Arr.reduce(
       Busy.merge(spans, window),
