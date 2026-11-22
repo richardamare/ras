@@ -8,6 +8,7 @@ import * as Errors from "@ras/kernel/Errors"
 import * as Calendars from "./calendars/Calendars.ts"
 import * as Busy from "./calendars/Busy.ts"
 import * as Calendar from "./calendars/Calendar.ts"
+import * as Insights from "./calendars/Insights.ts"
 import * as Span from "./calendars/Span.ts"
 import * as WorkHours from "./calendars/WorkHours.ts"
 import * as Event from "./events/Event.ts"
@@ -15,6 +16,8 @@ import * as EventWrites from "./events/EventWrites.ts"
 import * as Events from "./events/Events.ts"
 
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
+
+const calendarId = Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId))
 
 export const group = HttpApiGroup.make("calendar")
   .add(
@@ -26,7 +29,7 @@ export const group = HttpApiGroup.make("calendar")
   )
   .add(
     HttpApiEndpoint.patch("changeCalendar", "/calendars/:id", {
-      params: { id: Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId)) },
+      params: { id: calendarId },
       payload: Calendar.CalendarChange,
       success: Calendar.Calendar,
       error: failures
@@ -65,6 +68,18 @@ export const group = HttpApiGroup.make("calendar")
       params: { month: WorkHours.Month },
       query: { category: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])) },
       success: WorkHours.WorkHours,
+      error: failures
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("insights", "/insights", {
+      query: {
+        ...Insights.Period.fields,
+        calendar: Schema.optionalKey(Schema.Union([calendarId, Schema.Array(calendarId)])).annotate({
+          description: "The calendars to count; without it, every shown calendar counts."
+        })
+      },
+      success: Insights.Insights,
       error: failures
     })
   )
@@ -113,6 +128,9 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (end
       .handle("conflicts", ({ query }) => calendar.conflicts(query))
       .handle("workHours", ({ params, query }) =>
         calendar.workHours(params.month, query.category === undefined ? [] : [query.category].flat())
+      )
+      .handle("insights", ({ query: { calendar: chosen, ...period } }) =>
+        calendar.insights(period, chosen === undefined ? [] : [chosen].flat())
       )
       .handle("createEvent", ({ payload }) => events.create(payload))
       .handle("changeEvent", ({ params, payload }) => events.change(params.id, payload))

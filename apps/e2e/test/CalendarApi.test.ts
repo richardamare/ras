@@ -149,6 +149,21 @@ describe("the calendar API", () => {
       })
     )
 
+    it.effect("counts the planned time of the chosen calendars, a copy once with its original", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        const date = yield* day(7)
+        const both = yield* client.calendar.insights({ query: { kind: "week", date, calendar: [work, workCopy] } })
+        const original = yield* client.calendar.insights({ query: { kind: "week", date, calendar: work } })
+        assert.isAtLeast(original.planned, 7 * 15)
+        assert.strictEqual(both.planned, original.planned)
+        assert.deepStrictEqual(both.calendars, [
+          { calendar: work, taken: 0, planned: original.planned },
+          { calendar: workCopy, taken: 0, planned: 0 }
+        ])
+      })
+    )
+
     it.effect("creates timed, all-day and repeating events in a writable calendar", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner

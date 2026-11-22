@@ -19,6 +19,7 @@ import * as Span from "./Span.ts"
 import * as Event from "../events/Event.ts"
 import * as DraftRepository from "../events/DraftRepository.ts"
 import * as EventCacheRepository from "./EventCacheRepository.ts"
+import * as Insights from "./Insights.ts"
 import * as Outlook from "../outlook/Outlook.ts"
 import * as Reclaim from "../reclaim/Reclaim.ts"
 import * as WorkHours from "./WorkHours.ts"
@@ -126,6 +127,11 @@ export class Calendar extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<Busy.Conflict>, Errors.Invalid | Errors.SourceFailed>
     /** The month's work hours; with `categories`, only those categories count. */
     readonly workHours: (month: WorkHours.Month, categories: ReadonlyArray<string>) => Read<WorkHours.WorkHours>
+    /** The Insights of a period; with `calendars`, only those of the shown calendars count, otherwise every shown one. */
+    readonly insights: (
+      period: Insights.Period,
+      calendars: ReadonlyArray<CalendarSchema.CalendarId>
+    ) => Read<Insights.Insights>
     /** Every connected calendar, turned-off ones too, with the handles a write to its provider needs. */
     readonly connected: Read<ReadonlyArray<CalendarRepository.Connected>>
     /** An event in any connected calendar, a turned-off one too, so the rules can say why it takes no write. */
@@ -202,12 +208,18 @@ export class Calendar extends Context.Service<
             )
       )
 
-    const entries = (span: Span.Span) =>
+    /** The events and drafts of every connected calendar that overlap the span, copies included. */
+    const gathered = (span: Span.Span) =>
       Effect.gen(function* () {
         const found = yield* read(span)
         const drafted = Arr.map(yield* drafts.inSpan(span), entryOfDraft)
         const blocks = Arr.map(yield* busy.drafts(span), entryOfBlockDraft)
-        return originals([...found, ...drafted, ...blocks], yield* shown).toSorted(byStart)
+        return [...found, ...drafted, ...blocks]
+      })
+
+    const entries = (span: Span.Span) =>
+      Effect.gen(function* () {
+        return originals(yield* gathered(span), yield* shown).toSorted(byStart)
       })
 
     const quietly = sync.pipe(
@@ -282,6 +294,14 @@ export class Calendar extends Context.Service<
 
       workHours: (month, categories) =>
         Effect.map(entries(WorkHours.spanOfMonth(month)), (found) => WorkHours.report(found, month, categories)),
+
+      insights: (period, chosen) =>
+        Effect.gen(function* () {
+          const visible = yield* shown
+          const counted = chosen.length === 0 ? visible : Arr.filter(chosen, (id) => visible.includes(id))
+          const found = yield* gathered(Insights.spanOfPeriod(period))
+          return Insights.report(originals(found, counted), period, counted, yield* DateTime.now)
+        }),
 
       connected,
 
