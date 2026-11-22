@@ -125,8 +125,15 @@ export class Calendar extends Context.Service<
     readonly conflicts: (
       window: Span.Window
     ) => Effect.Effect<ReadonlyArray<Busy.Conflict>, Errors.Invalid | Errors.SourceFailed>
-    /** The month's work hours; with `categories`, only those categories count. */
-    readonly workHours: (month: WorkHours.Month, categories: ReadonlyArray<string>) => Read<WorkHours.WorkHours>
+    /**
+     * The month's work hours; with `categories` only those categories count, and with `calendars` only those
+     * calendars, a copy counting when its original's calendar is not among them.
+     */
+    readonly workHours: (
+      month: WorkHours.Month,
+      categories: ReadonlyArray<string>,
+      calendars: ReadonlyArray<CalendarSchema.CalendarId>
+    ) => Read<WorkHours.WorkHours>
     /** The Insights of a period; with `calendars`, only those of the shown calendars count, otherwise every shown one. */
     readonly insights: (
       period: Insights.Period,
@@ -292,8 +299,12 @@ export class Calendar extends Context.Service<
           return Busy.conflicts(found, shownCalendars, span)
         }),
 
-      workHours: (month, categories) =>
-        Effect.map(entries(WorkHours.spanOfMonth(month)), (found) => WorkHours.report(found, month, categories)),
+      workHours: (month, categories, chosen) =>
+        Effect.gen(function* () {
+          const counted = Arr.filter(yield* shown, (id) => chosen.length === 0 || chosen.includes(id))
+          const found = originals(yield* gathered(WorkHours.spanOfMonth(month)), counted).toSorted(byStart)
+          return WorkHours.report(found, month, categories)
+        }),
 
       insights: (period, chosen) =>
         Effect.gen(function* () {

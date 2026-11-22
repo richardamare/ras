@@ -1348,6 +1348,24 @@
               ]
             },
             "required": false
+          },
+          {
+            "name": "calendar",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "required": false
           }
         ],
         "security": [],

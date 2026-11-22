@@ -53,11 +53,14 @@ export const toolkit = Toolkit.make(
   }),
   Global.read("work_hours", {
     description:
-      "The time a month's events take, in total, by category and per day. Overlapping events count once; all-day, free and declined events do not count.",
+      "The time a month's events take, across every calendar or the ones asked for, in total, by category and per day. Overlapping events count once; all-day, free and declined events do not count.",
     parameters: Schema.Struct({
       month: WorkHours.Month.annotate({ description: "The Prague month, such as 2026-10." }),
       categories: Schema.optionalKey(Schema.Array(Schema.String)).annotate({
         description: "Only these categories, such as WORK; every category when omitted."
+      }),
+      calendars: Schema.optionalKey(Schema.Array(Calendar.CalendarId)).annotate({
+        description: "Only these calendars, by the ids list_calendars gives; every calendar when omitted."
       })
     }),
     success: WorkHours.WorkHours
@@ -116,7 +119,7 @@ export const handlers = toolkit.toLayer(
       calendar_event: ({ event }) => Effect.map(calendar.event(event), fencedEvent),
       find_free_time: ({ minimum, ...window }) => calendar.freeTime(window, minimum),
       find_conflicts: (window) => Effect.map(calendar.conflicts(window), (found) => found.map(fencedConflict)),
-      work_hours: ({ month, categories }) => calendar.workHours(month, categories ?? []),
+      work_hours: ({ month, categories, calendars }) => calendar.workHours(month, categories ?? [], calendars ?? []),
       create_event: ({ agent, ...event }) => events.create(event).pipe(actingAs(agent)),
       change_event: ({ agent, event, ...change }) =>
         events.change(event, change).pipe(Effect.map(fencedEvent), actingAs(agent)),

@@ -15,6 +15,8 @@ import * as Event from "./events/Event.ts"
 import * as EventWrites from "./events/EventWrites.ts"
 import * as Events from "./events/Events.ts"
 
+const CalendarParameter = Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId))
+
 const failures = [Errors.Refused, Errors.NotFound, Errors.Invalid, Errors.SourceFailed]
 
 const calendarId = Schema.NumberFromString.pipe(Schema.decodeTo(Calendar.CalendarId))
@@ -66,7 +68,10 @@ export const group = HttpApiGroup.make("calendar")
   .add(
     HttpApiEndpoint.get("workHours", "/work-hours/:month", {
       params: { month: WorkHours.Month },
-      query: { category: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])) },
+      query: {
+        category: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+        calendar: Schema.optionalKey(Schema.Union([CalendarParameter, Schema.Array(CalendarParameter)]))
+      },
       success: WorkHours.WorkHours,
       error: failures
     })
@@ -127,7 +132,11 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (end
       .handle("freeTime", ({ query: { minimum, ...window } }) => calendar.freeTime(window, minimum))
       .handle("conflicts", ({ query }) => calendar.conflicts(query))
       .handle("workHours", ({ params, query }) =>
-        calendar.workHours(params.month, query.category === undefined ? [] : [query.category].flat())
+        calendar.workHours(
+          params.month,
+          query.category === undefined ? [] : [query.category].flat(),
+          query.calendar === undefined ? [] : [query.calendar].flat()
+        )
       )
       .handle("insights", ({ query: { calendar: chosen, ...period } }) =>
         calendar.insights(period, chosen === undefined ? [] : [chosen].flat())

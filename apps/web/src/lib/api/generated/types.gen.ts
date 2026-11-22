@@ -1124,6 +1124,7 @@ export type CalendarWorkHoursData = {
     };
     query?: {
         category?: string | Array<string>;
+        calendar?: string | Array<string>;
     };
     url: '/calendar/work-hours/{month}';
 };
