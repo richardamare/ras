@@ -100,7 +100,6 @@ const monthOf = (date: Time.PragueDate): Range => {
   return { first, end: Time.PragueDate.make(next) }
 }
 
-/** Days since the Monday of the date's week. */
 const sinceMonday = (date: Time.PragueDate) => (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7
 
 const rangeOf = (period: Period): Range => {
@@ -169,7 +168,6 @@ const byKey = <A>(
     .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([name, group]) => [name, minutes(group)] as const)
 
-/** The instants a period runs between. */
 export const spanOfPeriod = (period: Period): Span.Span => spanOf(rangeOf(period))
 
 interface Piece {

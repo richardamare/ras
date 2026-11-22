@@ -9,14 +9,13 @@ const monthFirst = (day: string, by: number) => {
   return date.toISOString().slice(0, 10)
 }
 
-/** The first day of the period of `kind` that holds `day`. */
 export const first = (kind: Kind, day: string) => {
   if (kind === "week") return Prague.addDays(day, -Prague.weekday(day))
   if (kind === "month") return monthFirst(day, 0)
   return monthFirst(day, -((Number(day.slice(5, 7)) - 1) % 3))
 }
 
-/** A day in the period `by` periods away; a month or a quarter is named by its first day. */
+/** For a month or a quarter, the period's first day. */
 export const step = (kind: Kind, day: string, by: number) => {
   if (kind === "week") return Prague.addDays(day, 7 * by)
   return monthFirst(first(kind, day), kind === "month" ? by : 3 * by)
