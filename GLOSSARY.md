@@ -1,0 +1,21 @@
+# ras
+
+ras is the owner's personal assistant: it plans work into calendars, tracks the time it takes, and reads mail and memory on the owner's behalf.
+
+## Language
+
+**Calendar**:
+One calendar ras shows, such as an Outlook calendar of the connected account or a read-only one shared into it.
+_Avoid_: Space (a space has a calendar, it is not one)
+
+**Space**:
+An area work belongs to, such as personal or a client, holding its projects and tasks. Each space writes its work blocks to one calendar.
+_Avoid_: Calendar, workspace
+
+**Work block**:
+A stretch of time worked or planned on one task, kept as an event in its space's calendar.
+_Avoid_: Worklog, time entry
+
+**Insights**:
+The statistics of the time the events of the calendars the owner picks take per week, month and calendar quarter: the time already taken, and beside it the time still planned.
+_Avoid_: Calendar insights, calendar stats, report, dashboard
