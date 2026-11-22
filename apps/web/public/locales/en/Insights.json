@@ -1,0 +1,48 @@
+{
+  "title": "Insights",
+  "today": "Today",
+  "unreachable": "The insights could not be read.",
+  "period": {
+    "label": "Period",
+    "week": "Week",
+    "month": "Month",
+    "quarter": "Quarter"
+  },
+  "previous": {
+    "week": "Previous week",
+    "month": "Previous month",
+    "quarter": "Previous quarter"
+  },
+  "next": {
+    "week": "Next week",
+    "month": "Next month",
+    "quarter": "Next quarter"
+  },
+  "quarterLabel": "Q{{quarter}} {{year}}",
+  "calendars": "Calendars",
+  "noneChosen": "No calendar is ticked. Tick the calendars whose time you want to see.",
+  "taken": "Taken",
+  "planned": "Still planned",
+  "weekBefore": "Week before",
+  "thisWeek": "This week",
+  "parts": {
+    "week": "Days",
+    "month": "Weeks",
+    "quarter": "Months"
+  },
+  "workBlocks": "Work blocks",
+  "otherEvents": "Other events",
+  "noProject": "No project",
+  "unknownTask": "Unknown task",
+  "untitled": "(no title)",
+  "perCalendar": "Per calendar",
+  "nothing": "Nothing in this period.",
+  "unanswered": {
+    "title": "Invitations you never answered",
+    "hint": "They count as taken time. Answer them on the calendar page."
+  },
+  "unconfirmed": {
+    "title": "Unconfirmed drafts",
+    "hint": "Past drafts count in no total. Confirm or discard them on the calendar page."
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "title": "Přehledy",
+  "today": "Dnes",
+  "unreachable": "Přehledy se nepodařilo načíst.",
+  "period": {
+    "label": "Období",
+    "week": "Týden",
+    "month": "Měsíc",
+    "quarter": "Čtvrtletí"
+  },
+  "previous": {
+    "week": "Předchozí týden",
+    "month": "Předchozí měsíc",
+    "quarter": "Předchozí čtvrtletí"
+  },
+  "next": {
+    "week": "Další týden",
+    "month": "Další měsíc",
+    "quarter": "Další čtvrtletí"
+  },
+  "quarterLabel": "{{quarter}}. čtvrtletí {{year}}",
+  "calendars": "Kalendáře",
+  "noneChosen": "Není zaškrtnutý žádný kalendář. Zaškrtněte kalendáře, jejichž čas chcete vidět.",
+  "taken": "Odpracováno",
+  "planned": "Ještě naplánováno",
+  "weekBefore": "Předchozí týden",
+  "thisWeek": "Tento týden",
+  "parts": {
+    "week": "Dny",
+    "month": "Týdny",
+    "quarter": "Měsíce"
+  },
+  "workBlocks": "Pracovní bloky",
+  "otherEvents": "Ostatní události",
+  "noProject": "Bez projektu",
+  "unknownTask": "Neznámý úkol",
+  "untitled": "(bez názvu)",
+  "perCalendar": "Podle kalendáře",
+  "nothing": "V tomto období nic není.",
+  "unanswered": {
+    "title": "Pozvánky, na které jste neodpověděli",
+    "hint": "Počítají se do odpracovaného času. Odpovězte na ně na stránce kalendáře."
+  },
+  "unconfirmed": {
+    "title": "Nepotvrzené koncepty",
+    "hint": "Minulé koncepty se nepočítají do žádného součtu. Potvrďte je nebo zahoďte na stránce kalendáře."
+  }
+}
