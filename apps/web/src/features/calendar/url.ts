@@ -2,7 +2,7 @@ import * as Nuqs from "nuqs"
 
 import * as Grid from "@/features/calendar/grid"
 
-const day = Nuqs.createParser({
+export const day = Nuqs.createParser({
   parse: (value) => (/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null),
   serialize: (value: string) => value
 })

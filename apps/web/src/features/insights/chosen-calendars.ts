@@ -1,19 +1,9 @@
 import * as Nuqs from "nuqs"
-import * as Zod from "zod"
 
+import * as HiddenCalendars from "@/features/calendar/hidden-calendars"
 import * as Url from "@/features/insights/url"
 
 const key = "ras-insights-calendars"
-const Stored = Zod.array(Zod.number().int())
-
-const read = (): ReadonlyArray<number> => {
-  try {
-    const stored = Stored.safeParse(JSON.parse(localStorage.getItem(key) ?? "[]"))
-    return stored.success ? stored.data : []
-  } catch {
-    return []
-  }
-}
 
 /**
  * The calendars the address names, or without them the ones this browser last ticked that the page still lists; until
@@ -33,7 +23,7 @@ export const toggled = (chosen: ReadonlyArray<number>, calendar: number): Readon
 /** The calendars ticked on the Insights page, kept in the address and remembered in this browser. */
 export const useChosenCalendars = (listed: ReadonlyArray<number> | undefined) => {
   const [{ calendar }, setUrl] = Nuqs.useQueryStates(Url.params)
-  const chosen = chosenOf(calendar, read(), listed)
+  const chosen = chosenOf(calendar, HiddenCalendars.storedCalendars(key), listed)
   const toggle = (id: number) => {
     const next = toggled(chosen, id)
     localStorage.setItem(key, JSON.stringify(next))
