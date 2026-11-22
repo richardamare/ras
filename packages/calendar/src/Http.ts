@@ -112,7 +112,7 @@ export const handlers = HttpApiBuilder.group(Global.api(group), "calendar", (end
       .handle("freeTime", ({ query: { minimum, ...window } }) => calendar.freeTime(window, minimum))
       .handle("conflicts", ({ query }) => calendar.conflicts(query))
       .handle("workHours", ({ params, query }) =>
-        calendar.workHours(params.month, query.category === undefined ? [] : [query.category].flat())
+        calendar.workHours(params.month, query.category === undefined ? [] : [query.category].flat(), [])
       )
       .handle("createEvent", ({ payload }) => events.create(payload))
       .handle("changeEvent", ({ params, payload }) => events.change(params.id, payload))

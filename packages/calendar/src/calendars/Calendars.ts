@@ -124,8 +124,15 @@ export class Calendar extends Context.Service<
     readonly conflicts: (
       window: Span.Window
     ) => Effect.Effect<ReadonlyArray<Busy.Conflict>, Errors.Invalid | Errors.SourceFailed>
-    /** The month's work hours; with `categories`, only those categories count. */
-    readonly workHours: (month: WorkHours.Month, categories: ReadonlyArray<string>) => Read<WorkHours.WorkHours>
+    /**
+     * The month's work hours; with `categories` only those categories count, and with `calendars` only those
+     * calendars, a copy counting when its original's calendar is not among them.
+     */
+    readonly workHours: (
+      month: WorkHours.Month,
+      categories: ReadonlyArray<string>,
+      calendars: ReadonlyArray<CalendarSchema.CalendarId>
+    ) => Read<WorkHours.WorkHours>
     /** Every connected calendar, turned-off ones too, with the handles a write to its provider needs. */
     readonly connected: Read<ReadonlyArray<CalendarRepository.Connected>>
     /** An event in any connected calendar, a turned-off one too, so the rules can say why it takes no write. */
@@ -202,13 +209,15 @@ export class Calendar extends Context.Service<
             )
       )
 
-    const entries = (span: Span.Span) =>
+    const entriesOf = (span: Span.Span, counted: ReadonlyArray<CalendarSchema.CalendarId>) =>
       Effect.gen(function* () {
         const found = yield* read(span)
         const drafted = Arr.map(yield* drafts.inSpan(span), entryOfDraft)
         const blocks = Arr.map(yield* busy.drafts(span), entryOfBlockDraft)
-        return originals([...found, ...drafted, ...blocks], yield* shown).toSorted(byStart)
+        return originals([...found, ...drafted, ...blocks], counted).toSorted(byStart)
       })
+
+    const entries = (span: Span.Span) => Effect.flatMap(shown, (ids) => entriesOf(span, ids))
 
     const quietly = sync.pipe(
       Effect.catchCause((cause) => Effect.logWarning("The calendar sync failed; the cache keeps what it had.", cause))
@@ -280,8 +289,12 @@ export class Calendar extends Context.Service<
           return Busy.conflicts(found, shownCalendars, span)
         }),
 
-      workHours: (month, categories) =>
-        Effect.map(entries(WorkHours.spanOfMonth(month)), (found) => WorkHours.report(found, month, categories)),
+      workHours: (month, categories, chosen) =>
+        Effect.gen(function* () {
+          const counted = Arr.filter(yield* shown, (id) => chosen.length === 0 || chosen.includes(id))
+          const found = yield* entriesOf(WorkHours.spanOfMonth(month), counted)
+          return WorkHours.report(found, month, categories)
+        }),
 
       connected,
 
