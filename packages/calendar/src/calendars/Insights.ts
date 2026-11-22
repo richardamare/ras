@@ -142,7 +142,7 @@ const partsOf = (period: Period, range: Range): ReadonlyArray<Range> => {
 
 const millis = DateTime.toEpochMillis
 
-/** The parts of the spans that none of the `holes`, merged and in order, cover. */
+/** The parts of the spans that none of the `holes` cover. */
 const without = (spans: ReadonlyArray<Span.Span>, holes: ReadonlyArray<Span.Span>): ReadonlyArray<Span.Span> =>
   Arr.flatMap(spans, (span) =>
     Arr.reduce(holes, [span] as ReadonlyArray<Span.Span>, (left, hole) =>
@@ -222,15 +222,15 @@ export const report = (
     })
   )
   const otherTime = Busy.merge(spansOf(others), past)
-  const blockMinutes = (group: ReadonlyArray<{ readonly piece: Piece }>) =>
+  // Shared time goes to other events first, then to the block that starts first, so the blocks add up to their total.
+  const byStart = blocks.toSorted((a, b) => millis(a.piece.span.start) - millis(b.piece.span.start))
+  const owned = Arr.map(byStart, ({ block, piece }, index) => ({
+    block,
+    spans: without([piece.span], [...otherTime, ...Arr.map(byStart.slice(0, index), (earlier) => earlier.piece.span)])
+  }))
+  const blockMinutes = (group: ReadonlyArray<{ readonly spans: ReadonlyArray<Span.Span> }>) =>
     WorkHours.minutes(
-      without(
-        Busy.merge(
-          Arr.map(group, ({ piece }) => piece.span),
-          past
-        ),
-        otherTime
-      ),
+      Arr.flatMap(group, (found) => found.spans),
       past
     )
   const ofCalendar = (pieces: ReadonlyArray<Piece>, calendar: Calendar.CalendarId) =>
@@ -248,9 +248,9 @@ export const report = (
       planned: WorkHours.minutes(spansOf(planned), spanOf(part))
     })),
     workBlocks: {
-      minutes: blockMinutes(blocks),
+      minutes: blockMinutes(owned),
       blocks: Arr.map(
-        byKey(blocks, (found) => found.block, blockMinutes),
+        byKey(owned, (found) => found.block, blockMinutes),
         ([block, minutes]) => ({ block, minutes })
       )
     },

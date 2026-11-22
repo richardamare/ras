@@ -221,6 +221,27 @@ describe("insights of a period", () => {
     assert.strictEqual(insights.workBlocks.minutes + insights.otherEvents.minutes, insights.taken)
   })
 
+  it("gives the shared time of overlapping work blocks to the one that starts first, the blocks adding up", () => {
+    const insights = Insights.report(
+      [
+        block(review, "2027-01-11T09:00:00Z", "2027-01-11T11:00:00Z"),
+        block(design, "2027-01-11T08:00:00Z", "2027-01-11T10:00:00Z"),
+        block(review, "2027-01-12T08:00:00Z", "2027-01-12T09:00:00Z"),
+        block(design, "2027-01-12T08:00:00Z", "2027-01-12T09:00:00Z")
+      ],
+      period("week", "2027-01-11"),
+      [own],
+      later
+    )
+    assert.deepStrictEqual(insights.workBlocks, {
+      minutes: 240,
+      blocks: [
+        { block: design, minutes: 120 },
+        { block: review, minutes: 120 }
+      ]
+    })
+  })
+
   it("gives each chosen calendar its subtotal, counting its own overlaps once, and leaves the others out", () => {
     const insights = Insights.report(
       [
