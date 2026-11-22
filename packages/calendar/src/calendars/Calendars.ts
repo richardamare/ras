@@ -199,6 +199,10 @@ export class Calendar extends Context.Service<
       )
     )
 
+    /** Every shown calendar when none is chosen, otherwise the chosen ones that are shown, in the chosen order. */
+    const countedOf = (chosen: ReadonlyArray<CalendarSchema.CalendarId>) =>
+      Effect.map(shown, (visible) => (chosen.length === 0 ? visible : Arr.filter(chosen, (id) => visible.includes(id))))
+
     /** From the cache when it holds the span, otherwise from Reclaim. */
     const read = (span: Span.Span) =>
       Effect.flatMap(filled, (state) =>
@@ -301,15 +305,14 @@ export class Calendar extends Context.Service<
 
       workHours: (month, categories, chosen) =>
         Effect.gen(function* () {
-          const counted = Arr.filter(yield* shown, (id) => chosen.length === 0 || chosen.includes(id))
+          const counted = yield* countedOf(chosen)
           const found = originals(yield* gathered(WorkHours.spanOfMonth(month)), counted).toSorted(byStart)
           return WorkHours.report(found, month, categories, yield* DateTime.now)
         }),
 
       insights: (period, chosen) =>
         Effect.gen(function* () {
-          const visible = yield* shown
-          const counted = chosen.length === 0 ? visible : Arr.filter(chosen, (id) => visible.includes(id))
+          const counted = yield* countedOf(chosen)
           const found = yield* gathered(Insights.spanOfPeriod(period))
           return Insights.report(originals(found, counted), period, counted, yield* DateTime.now)
         }),
