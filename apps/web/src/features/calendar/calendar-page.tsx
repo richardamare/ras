@@ -58,8 +58,7 @@ export function CalendarPage() {
   const colors = new Map(allCalendars.map((calendar) => [calendar.id, calendar.color]))
   const colorOf = (calendar: number) => colors.get(calendar) ?? "var(--primary)"
 
-  const shownEvents = Grid.shownEvents(events.data ?? []).filter((event) => shown.has(event.calendar))
-  const shownBlocks = (blocks.data ?? []).filter((block) => shown.has(block.calendar))
+  const { events: shownEvents, blocks: shownBlocks } = Grid.shown(events.data ?? [], blocks.data ?? [], shown)
   const draftsInView =
     shownEvents.filter((event) => event.draft !== null).length +
     shownBlocks.filter((block) => block.state === "draft").length
