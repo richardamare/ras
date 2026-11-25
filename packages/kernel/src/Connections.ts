@@ -7,8 +7,8 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import type * as Errors from "./Errors.ts"
 
-export const Kind = Schema.Literals(["outlook", "reclaim", "icloud", "github"]).annotate({
-  description: "Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub."
+export const Kind = Schema.Literals(["outlook", "google", "reclaim", "icloud", "github"]).annotate({
+  description: "Outlook through Graph, Google Calendar, Reclaim, iCloud Mail, or the memory repository on GitHub."
 })
 export type Kind = typeof Kind.Type
 

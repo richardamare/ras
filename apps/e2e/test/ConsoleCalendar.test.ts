@@ -213,7 +213,7 @@ describe("the console's calendar", () => {
         yield* page.getByRole("button", { name: "Calendars" }).click()
         yield* page.getByRole("checkbox", { name: "Personal" }).click()
         yield* page.getByText("Lunch").first().waitFor({ state: "detached" })
-        yield* page.getByRole("button", { name: /Calendars 2\/3/ }).waitFor()
+        yield* page.getByRole("button", { name: /Calendars 3\/4/ }).waitFor()
 
         yield* page.getByRole("checkbox", { name: "Personal" }).click()
         yield* page.getByText("Lunch").first().waitFor()

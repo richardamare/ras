@@ -373,7 +373,7 @@
         "security": [],
         "responses": {
           "200": {
-            "description": "Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it.",
+            "description": "Outlook, Google, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -381,7 +381,7 @@
                   "items": {
                     "$ref": "#/components/schemas/SourceConnectionEncoded"
                   },
-                  "description": "Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it."
+                  "description": "Outlook, Google, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it."
                 }
               }
             }
@@ -409,8 +409,8 @@
             "in": "path",
             "schema": {
               "type": "string",
-              "enum": ["outlook", "reclaim", "icloud", "github"],
-              "description": "Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub."
+              "enum": ["outlook", "google", "reclaim", "icloud", "github"],
+              "description": "Outlook through Graph, Google Calendar, Reclaim, iCloud Mail, or the memory repository on GitHub."
             },
             "required": true
           }
@@ -5353,7 +5353,7 @@
           },
           "writable": {
             "type": "boolean",
-            "description": "A calendar of the Outlook account connected to ras, which takes plain events; any other only takes replies to invitations."
+            "description": "A calendar of an Outlook or Google account connected to ras, which takes plain events; any other only takes replies to invitations."
           },
           "enabled": {
             "type": "boolean"
@@ -5400,8 +5400,8 @@
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["outlook", "reclaim", "icloud", "github"],
-            "description": "Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub."
+            "enum": ["outlook", "google", "reclaim", "icloud", "github"],
+            "description": "Outlook through Graph, Google Calendar, Reclaim, iCloud Mail, or the memory repository on GitHub."
           },
           "state": {
             "type": "string",

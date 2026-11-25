@@ -17,7 +17,7 @@
   },
   "calendars": {
     "title": "Calendars",
-    "description": "Calendars of the connected Outlook account take events and blocks; the others are only shown. A calendar that is off is left out of free time and takes no writes; one hidden from the calendar screen stays on.",
+    "description": "Calendars of the Outlook and Google accounts connected to ras take events and blocks; the others are only shown. A calendar that is off is left out of free time and takes no writes; one hidden from the calendar screen stays on.",
     "writable": "Writable",
     "readonly": "Read only",
     "enabled": "On",
@@ -32,6 +32,7 @@
     "check": "Check",
     "kind": {
       "outlook": "Outlook",
+      "google": "Google",
       "reclaim": "Reclaim",
       "icloud": "iCloud Mail",
       "github": "GitHub"

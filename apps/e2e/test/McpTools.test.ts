@@ -297,7 +297,7 @@ describe("the MCP tools", () => {
         const calendars = yield* Mcp.call(session, "list_calendars", {}, Calendars)
         assert.deepStrictEqual(
           calendars.map((calendar) => calendar.name),
-          ["Personal", "Work (copy)", "Work"]
+          ["Personal", "Work (copy)", "Work", "Family"]
         )
 
         const from = yield* day(0)

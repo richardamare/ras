@@ -10,7 +10,7 @@ export class Calendar extends Schema.Class<Calendar>("Calendar")({
   color: Schema.String,
   writable: Schema.Boolean.annotate({
     description:
-      "A calendar of the Outlook account connected to ras, which takes plain events; any other only takes replies to invitations."
+      "A calendar of an Outlook or Google account connected to ras, which takes plain events; any other only takes replies to invitations."
   }),
   enabled: Schema.Boolean
 }) {}

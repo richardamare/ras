@@ -5,12 +5,14 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
 import * as Calendar from "../calendars/Calendar.ts"
+import * as GoogleCalendar from "../google/GoogleCalendar.ts"
 import * as Event from "../events/Event.ts"
 import * as Reclaim from "./Reclaim.ts"
 
 export const personal = Calendar.CalendarId.make(101)
 export const work = Calendar.CalendarId.make(201)
 export const workCopy = Calendar.CalendarId.make(102)
+export const family = Calendar.CalendarId.make(301)
 
 const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
   {
@@ -36,6 +38,14 @@ const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
     account: 2,
     email: "owner@work.example.com",
     providerId: Option.some("sample-work")
+  },
+  {
+    id: family,
+    name: "Family",
+    color: "#33b679",
+    account: 3,
+    email: GoogleCalendar.sampleAccount,
+    providerId: Option.some("family@group.calendar.google.com")
   }
 ]
 
@@ -63,7 +73,10 @@ interface Planned {
 
 const timed = (start: string, end: string) => Option.some([start, end] as const)
 
-/** An invented fortnight: standups at work with their copies, a dentist, a weekly gym, a habit Reclaim placed, a clash and a holiday. */
+/**
+ * An invented fortnight: standups at work with their copies, a dentist, a weekly gym, a habit Reclaim placed, a clash,
+ * a holiday and a school run in the family's Google calendar.
+ */
 const plan: ReadonlyArray<Planned> = [
   ...Arr.flatMap(Arr.range(0, 13), (day): ReadonlyArray<Planned> => [
     { calendar: work, id: `standup-${day}`, title: "Standup", day, clock: timed("09:00", "09:15"), category: "WORK" },
@@ -91,7 +104,8 @@ const plan: ReadonlyArray<Planned> = [
     rsvp: "needsAction",
     category: "WORK"
   },
-  { calendar: personal, id: "holiday", title: "Holiday", day: 5, clock: Option.none(), showAs: "free" }
+  { calendar: personal, id: "holiday", title: "Holiday", day: 5, clock: Option.none(), showAs: "free" },
+  { calendar: family, id: "school-run", title: "School run", day: 4, clock: timed("07:30", "08:00") }
 ]
 
 /** Reclaim with invented calendars and events around `today`, for tests, the console and the connector without accounts. */

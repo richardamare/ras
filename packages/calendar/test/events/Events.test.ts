@@ -12,6 +12,7 @@ import * as Calendars from "../../src/calendars/Calendars.ts"
 import * as Event from "../../src/events/Event.ts"
 import * as Events from "../../src/events/Events.ts"
 import * as Module from "../../src/Module.ts"
+import * as GoogleCalendar from "../../src/google/GoogleCalendar.ts"
 import * as Outlook from "../../src/outlook/Outlook.ts"
 import * as Reclaim from "../../src/reclaim/Reclaim.ts"
 import * as Sample from "../../src/reclaim/Sample.ts"
@@ -246,8 +247,8 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
             [write.subject, write.body?.content, write.showAs, write.transactionId],
             ["ras: Plan the week", `ras-block:${block}`, "busy", block]
           )
-          yield* events.moveBlock(id, { id: block, title: "ras: Plan the week", span })
-          yield* events.removeBlock(id)
+          yield* events.moveBlock(Sample.personal, id, { id: block, title: "ras: Plan the week", span })
+          yield* events.removeBlock(Sample.personal, id)
           assert.deepStrictEqual(
             (yield* calls).map((call) => call._tag),
             ["Change", "Cancel"]
@@ -271,6 +272,60 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
           const shown = Event.eventOf(entry)
           assert.deepStrictEqual([shown.block, shown.notes], [block, "Bring the list."])
         })
+    )
+
+    test.effect("writes an event, a change and a block into a Google calendar through the Calendar API", () =>
+      Effect.gen(function* () {
+        const events = yield* Events.Events
+        yield* Ref.set(GoogleCalendar.sampleCalls, [])
+        const created = yield* events.create({
+          title: "Swim",
+          calendar: Sample.family,
+          start: local("2027-01-15T17:00"),
+          showAs: "free",
+          repeat: { every: "week", count: 4 }
+        })
+        assert.strictEqual(created.calendar, Sample.family)
+        const run = yield* find("School run", 4)
+        yield* events.change(run.id, { start: local(`${Time.addDays(yield* today, 4)}T07:45`) })
+        const block = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+        const span = {
+          start: yield* Time.toInstant(local("2027-01-16T09:00")),
+          end: yield* Time.toInstant(local("2027-01-16T10:00"))
+        }
+        const id = yield* events.placeBlock(Sample.family, { id: block, title: "ras: Plan the week", span })
+        yield* events.removeBlock(Sample.family, id)
+        const [insert, patch, placed, remove, ...rest] = yield* Ref.getAndSet(GoogleCalendar.sampleCalls, [])
+        assert.deepStrictEqual(rest, [])
+        assert.deepStrictEqual(yield* calls, [])
+        assert.deepStrictEqual(insert, {
+          _tag: "Insert",
+          calendar: "family@group.calendar.google.com",
+          body: {
+            summary: "Swim",
+            transparency: "transparent",
+            start: { dateTime: "2027-01-15T17:00:00", timeZone: "Europe/Prague" },
+            end: { dateTime: "2027-01-15T18:00:00", timeZone: "Europe/Prague" },
+            recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=FR;COUNT=4"],
+            id: (insert as Extract<GoogleCalendar.Call, { _tag: "Insert" }>).body.id!
+          }
+        })
+        assert.match((insert as Extract<GoogleCalendar.Call, { _tag: "Insert" }>).body.id!, /^[a-v0-9]{32}$/)
+        assert.deepStrictEqual(
+          [patch?._tag, (patch as Extract<GoogleCalendar.Call, { _tag: "Patch" }>).event],
+          ["Patch", "school-run"]
+        )
+        const write = (placed as Extract<GoogleCalendar.Call, { _tag: "Insert" }>).body
+        assert.deepStrictEqual(
+          [write.summary, write.description, write.transparency, write.id],
+          ["ras: Plan the week", `ras-block:${block}`, "opaque", block.replaceAll("-", "")]
+        )
+        assert.deepStrictEqual(remove, {
+          _tag: "Remove",
+          calendar: "family@group.calendar.google.com",
+          event: block.replaceAll("-", "")
+        })
+      })
     )
   }
 )

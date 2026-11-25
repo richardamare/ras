@@ -20,6 +20,7 @@ import * as Event from "../events/Event.ts"
 import * as DraftRepository from "../events/DraftRepository.ts"
 import * as EventCacheRepository from "./EventCacheRepository.ts"
 import * as Insights from "./Insights.ts"
+import * as GoogleCalendar from "../google/GoogleCalendar.ts"
 import * as Outlook from "../outlook/Outlook.ts"
 import * as Reclaim from "../reclaim/Reclaim.ts"
 import * as WorkHours from "./WorkHours.ts"
@@ -160,6 +161,7 @@ export class Calendar extends Context.Service<
   static readonly make = Effect.gen(function* () {
     const reclaim = yield* Reclaim.Reclaim
     const outlook = yield* Outlook.Outlook
+    const google = yield* GoogleCalendar.GoogleCalendar
     const busy = yield* BusyTime.BusyTime
     const writes = yield* Global.Writes
     const calendars = yield* CalendarRepository.CalendarRepository
@@ -190,7 +192,16 @@ export class Calendar extends Context.Service<
       Option.isSome(state) ? Effect.succeed(state) : Effect.andThen(sync, cache.state)
     )
 
-    const connected = Effect.andThen(filled, Effect.flatMap(outlook.account, calendars.connected))
+    /** The accounts whose calendars ras writes, Outlook's first. */
+    const accounts = Effect.map(
+      Effect.all({ outlook: outlook.account, google: google.account }),
+      (found): ReadonlyArray<CalendarRepository.Account> => [
+        ...Option.toArray(Option.map(found.outlook, (email) => ({ provider: "outlook" as const, email }))),
+        ...Option.toArray(Option.map(found.google, (email) => ({ provider: "google" as const, email })))
+      ]
+    )
+
+    const connected = Effect.andThen(filled, Effect.flatMap(accounts, calendars.connected))
 
     const shown = Effect.map(connected, (all) =>
       Arr.map(

@@ -162,7 +162,7 @@ export class Blocks extends Context.Service<
 
       const discard = (row: BlockRepository.StoredBlock) =>
         Effect.gen(function* () {
-          if (Option.isSome(row.event)) yield* events.removeBlock(row.event.value)
+          if (Option.isSome(row.event)) yield* events.removeBlock(row.calendar, row.event.value)
           yield* writes.run(
             "work.block.removed",
             Effect.as(storedBlocks.delete(row.id), {
@@ -274,7 +274,7 @@ export class Blocks extends Context.Service<
           const running = found.value
           const now = yield* DateTime.now
           const end = DateTime.max(now, DateTime.add(running.start, { minutes: 1 }))
-          yield* events.moveBlock(Option.getOrThrow(running.event), {
+          yield* events.moveBlock(running.calendar, Option.getOrThrow(running.event), {
             id: running.id,
             title: running.title,
             span: span(running.start, end)
@@ -299,7 +299,11 @@ export class Blocks extends Context.Service<
             const end = yield* Time.toInstant(input.end)
             yield* length(start, end)
             if (Option.isSome(row.event))
-              yield* events.moveBlock(row.event.value, { id: row.id, title: row.title, span: span(start, end) })
+              yield* events.moveBlock(row.calendar, row.event.value, {
+                id: row.id,
+                title: row.title,
+                span: span(start, end)
+              })
             const moved: BlockRepository.StoredBlock = { ...row, start, end: Option.some(end) }
             return yield* save(
               "work.block.moved",

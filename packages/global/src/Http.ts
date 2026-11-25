@@ -76,7 +76,7 @@ export const group = HttpApiGroup.make("global")
     HttpApiEndpoint.get("connections", "/connections", {
       success: Schema.Array(Connections.Connection).annotate({
         description:
-          "Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it."
+          "Outlook, Google, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it."
       })
     })
   )

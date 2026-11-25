@@ -10,10 +10,21 @@ import * as Sql from "@ras/kernel/Sql"
 import * as Calendar from "./Calendar.ts"
 import type * as Reclaim from "../reclaim/Reclaim.ts"
 
+/** The providers ras writes plain events through. */
+export type Provider = "outlook" | "google"
+
+/** An account connected to ras for writes, by the provider that writes its calendars. */
+export interface Account {
+  readonly provider: Provider
+  readonly email: string
+}
+
 /** A connected calendar with its settings and the handles a write to its provider needs. */
 export interface Connected {
   readonly calendar: Calendar.Calendar
   readonly source: Reclaim.SourceCalendar
+  /** The provider that writes it, when its account is connected to ras. */
+  readonly provider: Option.Option<Provider>
 }
 
 const CalendarRow = Schema.Struct({
@@ -27,33 +38,40 @@ const CalendarRow = Schema.Struct({
 })
 type CalendarRow = typeof CalendarRow.Type
 
-/** The calendars of the `writable` account take plain events. */
+/** The calendars of an account connected to ras take plain events. */
 const toConnected =
-  (writable: Option.Option<string>) =>
-  (row: CalendarRow): Connected => ({
-    calendar: new Calendar.Calendar({
-      id: row.id,
-      name: row.name,
-      color: row.color,
-      writable: Option.exists(writable, (account) => account.toLowerCase() === row.email.toLowerCase()),
-      enabled: row.enabled
-    }),
-    source: {
-      id: row.id,
-      name: row.name,
-      color: row.color,
-      account: row.account,
-      email: row.email,
-      providerId: Option.fromNullOr(row.providerId)
+  (accounts: ReadonlyArray<Account>) =>
+  (row: CalendarRow): Connected => {
+    const provider = Option.map(
+      Arr.findFirst(accounts, (account) => account.email.toLowerCase() === row.email.toLowerCase()),
+      (account) => account.provider
+    )
+    return {
+      calendar: new Calendar.Calendar({
+        id: row.id,
+        name: row.name,
+        color: row.color,
+        writable: Option.isSome(provider),
+        enabled: row.enabled
+      }),
+      source: {
+        id: row.id,
+        name: row.name,
+        color: row.color,
+        account: row.account,
+        email: row.email,
+        providerId: Option.fromNullOr(row.providerId)
+      },
+      provider
     }
-  })
+  }
 
 /** The calendars Reclaim listed in the last sync, and the owner's settings for each. */
 export class CalendarRepository extends Context.Service<
   CalendarRepository,
   {
     /** The calendars Reclaim listed in the last sync, in its order. */
-    readonly connected: (writable: Option.Option<string>) => Effect.Effect<ReadonlyArray<Connected>>
+    readonly connected: (accounts: ReadonlyArray<Account>) => Effect.Effect<ReadonlyArray<Connected>>
     readonly change: (calendar: Calendar.Calendar) => Effect.Effect<void, never, Global.Transaction>
   }
 >()("@ras/calendar/CalendarRepository") {
@@ -63,13 +81,13 @@ export class CalendarRepository extends Context.Service<
       const sql = yield* SqlClient.SqlClient
 
       return CalendarRepository.of({
-        connected: (writable) =>
+        connected: (accounts) =>
           Sql.rows(
             CalendarRow,
             sql`
               SELECT id, name, color, account, email, provider_id AS "providerId", enabled
               FROM calendar_calendars WHERE connected = 1 ORDER BY position`
-          ).pipe(Effect.map(Arr.map(toConnected(writable)))),
+          ).pipe(Effect.map(Arr.map(toConnected(accounts)))),
 
         change: (calendar) =>
           Global.write(

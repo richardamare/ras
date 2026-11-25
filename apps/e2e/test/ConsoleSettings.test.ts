@@ -113,7 +113,7 @@ describe("the console's settings", () => {
         yield* personalRow.getByLabel("On the calendar screen").click()
         yield* personalRow.getByRole("checkbox", { name: "On the calendar screen", checked: false }).waitFor()
         yield* page.goto("/calendar")
-        yield* page.getByRole("button", { name: /Calendars 2\/3/ }).waitFor()
+        yield* page.getByRole("button", { name: /Calendars 3\/4/ }).waitFor()
       })
     )
 
@@ -122,7 +122,7 @@ describe("the console's settings", () => {
         const page = yield* Suite.signedInPage
         yield* page.goto("/settings/connections")
         yield* page.getByText("iCloud Mail").waitFor()
-        assert.strictEqual(yield* page.getByText("Sample data", { exact: true }).count, 4)
+        assert.strictEqual(yield* page.getByText("Sample data", { exact: true }).count, 5)
       })
     )
 
