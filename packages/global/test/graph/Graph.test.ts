@@ -11,7 +11,6 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
 import * as Graph from "../../src/graph/Graph.ts"
-import * as GraphTokenRepository from "../../src/graph/GraphTokenRepository.ts"
 import * as Testing from "../../src/Testing.ts"
 import * as Writes from "../../src/audit/Writes.ts"
 
@@ -59,7 +58,6 @@ const client = Layer.effect(
 )
 
 const connected = Layer.effect(Graph.Graph, Effect.orDie(Graph.make)).pipe(
-  Layer.provide(GraphTokenRepository.GraphTokenRepository.layer),
   Layer.provideMerge(Writes.Writes.layer),
   Layer.provide(client),
   Layer.provideMerge(microsoft),

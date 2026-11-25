@@ -1,6 +1,7 @@
 import * as BunRuntime from "@effect/platform-bun/BunRuntime"
 import * as BunServices from "@effect/platform-bun/BunServices"
 import * as Config from "effect/Config"
+import type * as Context from "effect/Context"
 import * as Console from "effect/Console"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -9,6 +10,7 @@ import * as Argument from "effect/cli/Argument"
 import * as Command from "effect/cli/Command"
 import * as Flag from "effect/cli/Flag"
 import * as Prompt from "effect/cli/Prompt"
+import type * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Package from "../../../package.json" with { type: "json" }
 import * as Api from "./composition/Api.ts"
@@ -88,35 +90,47 @@ const agent = Command.make("agent").pipe(
   ])
 )
 
-const outlook = (file: string) =>
-  Global.graph.pipe(Layer.provide(Global.Writes.layer), Layer.provide(Server.database(file)))
+/** `ras <name> connect` and `ras <name> status` for an account ras holds its own tokens to. */
+const accountCommand = <I>(
+  name: string,
+  label: string,
+  signIn: string,
+  connection: Context.Key<I, Global.OAuthService>,
+  layer: Layer.Layer<I, never, Global.Writes | SqlClient.SqlClient>
+) => {
+  const at = (file: string) => layer.pipe(Layer.provide(Global.Writes.layer), Layer.provide(Server.database(file)))
+  return Command.make(name).pipe(
+    Command.withDescription(`Connects the owner's ${label} account, whose calendars ras writes.`),
+    Command.withSubcommands([
+      Command.make("connect", { database }, (flags) =>
+        Effect.flatMap(Effect.service(connection), (account) => account.connect).pipe(
+          Effect.flatMap((url) => Console.log(`Open this within ten minutes and allow ras the calendar:\n${url.href}`)),
+          Effect.provide(at(flags.database))
+        )
+      ).pipe(
+        Command.withDescription(
+          `Prints the ${signIn} sign-in that connects ${label}; ras's callback stores the tokens.`
+        )
+      ),
+      Command.make("status", { database }, (flags) =>
+        Effect.flatMap(Effect.service(connection), (account) => account.connection).pipe(
+          Effect.flatMap((found) =>
+            Console.log(
+              Option.match(found, {
+                onNone: () => `${label} is not connected.`,
+                onSome: (connected) => `${label} ${connected.account} is connected since ${connected.connected}.`
+              })
+            )
+          ),
+          Effect.provide(at(flags.database))
+        )
+      ).pipe(Command.withDescription(`Says which ${label} account is connected.`))
+    ])
+  )
+}
 
-const graph = Command.make("graph").pipe(
-  Command.withDescription("Connects the owner's Outlook account, whose calendars Graph writes."),
-  Command.withSubcommands([
-    Command.make("connect", { database }, (flags) =>
-      Global.Graph.use((outlookGraph) => outlookGraph.connect).pipe(
-        Effect.flatMap((url) => Console.log(`Open this within ten minutes and allow ras the calendar:\n${url.href}`)),
-        Effect.provide(outlook(flags.database))
-      )
-    ).pipe(
-      Command.withDescription("Prints the Microsoft sign-in that connects Outlook; ras's callback stores the tokens.")
-    ),
-    Command.make("status", { database }, (flags) =>
-      Global.Graph.use((outlookGraph) => outlookGraph.connection).pipe(
-        Effect.flatMap((connection) =>
-          Console.log(
-            Option.match(connection, {
-              onNone: () => "Outlook is not connected.",
-              onSome: (found) => `Outlook ${found.account} is connected since ${found.connected}.`
-            })
-          )
-        ),
-        Effect.provide(outlook(flags.database))
-      )
-    ).pipe(Command.withDescription("Says which Outlook account is connected."))
-  ])
-)
+const graph = accountCommand("graph", "Outlook", "Microsoft", Global.Graph, Global.graph)
+const google = accountCommand("google", "Google", "Google", Global.Google, Global.google)
 
 const backup = Command.make("backup", { database }, (flags) =>
   Effect.provide(Backup.run, Server.database(flags.database))
@@ -128,6 +142,8 @@ const openapi = Command.make("openapi", {}, () => Console.log(JSON.stringify(Api
   Command.withDescription("Prints the OpenAPI document of the HTTP API. Needs no configuration and no database.")
 )
 
-const ras = Command.make("ras").pipe(Command.withSubcommands([serve, migrate, owner, agent, graph, backup, openapi]))
+const ras = Command.make("ras").pipe(
+  Command.withSubcommands([serve, migrate, owner, agent, graph, google, backup, openapi])
+)
 
 Command.run(ras, { version: Package.version }).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain)
