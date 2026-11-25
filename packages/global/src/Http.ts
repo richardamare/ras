@@ -14,7 +14,9 @@ import * as Actor from "./audit/Actor.ts"
 import * as Agents from "./agents/Agents.ts"
 import * as Client from "./auth/Client.ts"
 import * as Clients from "./auth/Clients.ts"
+import * as Google from "./google/Google.ts"
 import * as Graph from "./graph/Graph.ts"
+import * as OAuth from "./oauth/OAuth.ts"
 import * as Agent from "./agents/Agent.ts"
 
 export class Authenticated extends HttpApiMiddleware.Service<Authenticated, { provides: Actor.CurrentActor }>()(
@@ -50,12 +52,23 @@ export const group = HttpApiGroup.make("global")
   )
   .add(
     HttpApiEndpoint.get("graph", "/graph", {
-      success: Schema.NullOr(Graph.Connection).annotate({ description: "The Outlook account connected, if any." })
+      success: Schema.NullOr(OAuth.Connection).annotate({ description: "The Outlook account connected, if any." })
     })
   )
   .add(
     HttpApiEndpoint.post("connectGraph", "/graph/connect", {
       success: Schema.Struct({ url: Schema.String.annotate({ description: "Open it to sign in to Microsoft." }) }),
+      error: Errors.Refused
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("google", "/google", {
+      success: Schema.NullOr(OAuth.Connection).annotate({ description: "The Google account connected, if any." })
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("connectGoogle", "/google/connect", {
+      success: Schema.Struct({ url: Schema.String.annotate({ description: "Open it to sign in to Google." }) }),
       error: Errors.Refused
     })
   )
@@ -91,11 +104,14 @@ export const handlers = HttpApiBuilder.group(api(group), "global", (endpoints) =
   Effect.gen(function* () {
     const agents = yield* Agents.Agents
     const graph = yield* Graph.Graph
+    const google = yield* Google.Google
     const clients = yield* Clients.Clients
     const connections = yield* Connections.Connections
     return endpoints
       .handle("graph", () => Effect.map(graph.connection, Option.getOrNull))
       .handle("connectGraph", () => Effect.map(graph.connect, (url) => ({ url: url.href })))
+      .handle("google", () => Effect.map(google.connection, Option.getOrNull))
+      .handle("connectGoogle", () => Effect.map(google.connect, (url) => ({ url: url.href })))
       .handle("connections", () => connections.list)
       .handle("checkConnection", ({ params }) => connections.check(params.kind))
       .handle("whoami", () => me)

@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as SqlClient from "effect/sql/SqlClient"
 import type * as Module from "@ras/kernel/Module"
+import * as TokenRepository from "./oauth/TokenRepository.ts"
 
 /** better-auth's tables, as `Auth.schemaSql` printed them for better-auth 1.7.25. */
 const signIn = [
@@ -81,5 +82,6 @@ export const migrations: Module.Migrations = {
         verifier TEXT NOT NULL,
         expires_at TEXT NOT NULL
       ) STRICT`
-  })
+  }),
+  "0005_create_google": TokenRepository.tablesOf("google")
 }

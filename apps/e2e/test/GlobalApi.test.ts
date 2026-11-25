@@ -64,6 +64,14 @@ describe("the global API and ras's own routes", () => {
       })
     )
 
+    it.effect("says Google is not connected, and refuses to connect it without a Google app", () =>
+      Effect.gen(function* () {
+        const client = yield* Suite.owner
+        assert.isNull(yield* client.global.google())
+        assert.strictEqual(yield* Suite.refusal(client.global.connectGoogle()), "global.google.unset")
+      })
+    )
+
     it.effect("reports each outside system as sample data, checks one on demand, and refuses an unknown one", () =>
       Effect.gen(function* () {
         const client = yield* Suite.owner
@@ -89,12 +97,15 @@ describe("the global API and ras's own routes", () => {
       })
     )
 
-    it.effect("answers Microsoft's callback without a grant with a 400 page", () =>
+    it.effect("answers Microsoft's and Google's callbacks without a grant with a 400 page", () =>
       Effect.gen(function* () {
         const { url } = yield* Suite.Server
-        const response = yield* HttpClient.get(new URL("/graph/callback?error_description=Declined", url))
-        assert.strictEqual(response.status, 400)
-        assert.include(yield* response.text, "Declined")
+        const microsoft = yield* HttpClient.get(new URL("/graph/callback?error_description=Declined", url))
+        assert.strictEqual(microsoft.status, 400)
+        assert.include(yield* microsoft.text, "Declined")
+        const google = yield* HttpClient.get(new URL("/google/callback?error=access_denied", url))
+        assert.strictEqual(google.status, 400)
+        assert.include(yield* google.text, "Google sent no grant back")
       })
     )
 

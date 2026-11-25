@@ -279,6 +279,92 @@
         }
       }
     },
+    "/global/google": {
+      "get": {
+        "tags": ["global"],
+        "operationId": "global.google",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The Google account connected, if any.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConnectionEncoded"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The Google account connected, if any."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global/google/connect": {
+      "post": {
+        "tags": ["global"],
+        "operationId": "global.connectGoogle",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "Open it to sign in to Google."
+                    }
+                  },
+                  "required": ["url"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefusedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/global/connections": {
       "get": {
         "tags": ["global"],

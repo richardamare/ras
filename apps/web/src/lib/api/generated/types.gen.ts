@@ -554,6 +554,65 @@ export type GlobalConnectGraphResponses = {
 
 export type GlobalConnectGraphResponse = GlobalConnectGraphResponses[keyof GlobalConnectGraphResponses];
 
+export type GlobalGoogleData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/global/google';
+};
+
+export type GlobalGoogleErrors = {
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+};
+
+export type GlobalGoogleError = GlobalGoogleErrors[keyof GlobalGoogleErrors];
+
+export type GlobalGoogleResponses = {
+    /**
+     * The Google account connected, if any.
+     */
+    200: ConnectionEncoded | null;
+};
+
+export type GlobalGoogleResponse = GlobalGoogleResponses[keyof GlobalGoogleResponses];
+
+export type GlobalConnectGoogleData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/global/google/connect';
+};
+
+export type GlobalConnectGoogleErrors = {
+    /**
+     * Unauthorized
+     */
+    401: EffectHttpApiErrorUnauthorizedEncoded;
+    /**
+     * Refused
+     */
+    409: RefusedEncoded;
+};
+
+export type GlobalConnectGoogleError = GlobalConnectGoogleErrors[keyof GlobalConnectGoogleErrors];
+
+export type GlobalConnectGoogleResponses = {
+    /**
+     * Success
+     */
+    200: {
+        /**
+         * Open it to sign in to Google.
+         */
+        url: string;
+    };
+};
+
+export type GlobalConnectGoogleResponse = GlobalConnectGoogleResponses[keyof GlobalConnectGoogleResponses];
+
 export type GlobalConnectionsData = {
     body?: never;
     path?: never;
