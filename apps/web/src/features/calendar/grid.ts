@@ -113,8 +113,23 @@ const entryOn = (day: string, key: string, item: Item, start: string, end: strin
   return { key, item, start, end, startsAt, endsAt: Math.min(dayMinutes, Math.max(endsAt, startsAt + minimumMinutes)) }
 }
 
-/** A block's own event stands for the block, so the grid draws the block and leaves that event out. */
-export const shownEvents = (events: ReadonlyArray<Api.EventEncoded>) => events.filter((event) => event.block === null)
+/**
+ * A block's own event stands for the block, so the grid draws the block and leaves that event out. A block shows
+ * when its calendar is shown, or when a shown calendar holds a copy of its event, as one synced from a calendar
+ * the console does not show.
+ */
+export const shown = (
+  events: ReadonlyArray<Api.EventEncoded>,
+  blocks: ReadonlyArray<Api.BlockEncoded>,
+  calendars: ReadonlySet<number>
+) => {
+  const inShown = events.filter((event) => calendars.has(event.calendar))
+  const copied = new Set(inShown.flatMap((event) => (event.block === null ? [] : [event.block])))
+  return {
+    events: inShown.filter((event) => event.block === null),
+    blocks: blocks.filter((block) => calendars.has(block.calendar) || copied.has(block.id))
+  }
+}
 
 export const dayColumns = (
   events: ReadonlyArray<Api.EventEncoded>,

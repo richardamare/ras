@@ -144,8 +144,20 @@ Vitest.describe("the calendar's columns", () => {
   })
 
   Vitest.test("a block's own event is left out for the block", () => {
-    Vitest.expect(
-      Grid.shownEvents([event({ id: "a" }), event({ id: "b", block: "block" })]).map((one) => one.id)
-    ).toEqual(["a"])
+    const shown = Grid.shown([event({ id: "a" }), event({ id: "b", block: "block" })], [block({})], new Set([1]))
+    Vitest.expect([shown.events.map((one) => one.id), shown.blocks.map((one) => one.id)]).toEqual([["a"], ["block"]])
+  })
+
+  Vitest.test("a block shows through a copy of its event when its own calendar is not shown", () => {
+    const shown = Grid.shown(
+      [event({ id: "copy", calendar: 2, block: "copied" }), event({ id: "hidden", calendar: 3, block: "elsewhere" })],
+      [
+        block({ id: "copied", calendar: 1 }),
+        block({ id: "elsewhere", calendar: 1 }),
+        block({ id: "own", calendar: 2 })
+      ],
+      new Set([2])
+    )
+    Vitest.expect([shown.events, shown.blocks.map((one) => one.id)]).toEqual([[], ["copied", "own"]])
   })
 })
