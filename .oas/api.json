@@ -2025,7 +2025,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The calendar the space's work blocks are written to, one of the connected Outlook account."
+                    "description": "The calendar the space's work blocks are written to, one of a connected Outlook or Google account."
                   },
                   "default": {
                     "type": "boolean",

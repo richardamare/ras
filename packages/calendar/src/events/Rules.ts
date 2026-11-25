@@ -34,8 +34,8 @@ const create = (calendar: Calendar.Calendar): Option.Option<Errors.Refused> => {
     ? Option.none()
     : refused(
         "calendar.readonly",
-        `"${calendar.name}" is not in the Outlook account connected to ras, so ras cannot add events to it.`,
-        "Add it to a calendar of the connected account, or create it in that calendar's own Outlook."
+        `"${calendar.name}" is not in an Outlook or Google account connected to ras, so ras cannot add events to it.`,
+        "Add it to a calendar of a connected account, or create it in that calendar's own app."
       )
 }
 
@@ -62,8 +62,8 @@ const edit = (calendar: Calendar.Calendar, event: Event.Entry, verb: string): Op
   if (!calendar.writable)
     return refused(
       "event.readonly",
-      `"${event.title}" is in "${calendar.name}", which is not in the Outlook account connected to ras.`,
-      "Change it in that calendar's own Outlook."
+      `"${event.title}" is in "${calendar.name}", which is not in an Outlook or Google account connected to ras.`,
+      "Change it in that calendar's own app."
     )
   if (event.kind === "invitation")
     return refused(
@@ -87,7 +87,7 @@ const reply = (calendar: Calendar.Calendar, event: Event.Entry): Option.Option<E
 
 /**
  * Why the calendar rules refuse `write`, or none when they allow it. Plain events are created, changed and cancelled only
- * in a calendar of the connected Outlook account; an invitation takes only a reply, in any calendar; copies and Reclaim's
+ * in a calendar of a connected Outlook or Google account; an invitation takes only a reply, in any calendar; copies and Reclaim's
  * own events take nothing.
  */
 export const refusal = (write: Write): Option.Option<Errors.Refused> => {

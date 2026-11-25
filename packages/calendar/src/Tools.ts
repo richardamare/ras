@@ -22,7 +22,7 @@ const WindowParameters = Schema.Struct({
 export const toolkit = Toolkit.make(
   Global.read("list_calendars", {
     description:
-      "The calendars ras shows, with id, name and colour. A `writable` calendar is in the Outlook account connected to ras and takes plain events; any other only takes replies to invitations.",
+      "The calendars ras shows, with id, name and colour. A `writable` calendar is in an Outlook or Google account connected to ras and takes plain events; any other only takes replies to invitations.",
     success: Schema.Array(Calendar.Calendar)
   }),
   Global.read("search_calendar", {

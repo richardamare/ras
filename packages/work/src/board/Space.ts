@@ -12,7 +12,7 @@ export class Space extends Schema.Class<Space>("Space")({
   name: Schema.String,
   color: Color,
   position: Schema.Int,
-  /** The calendar its work blocks are written to, one of the connected Outlook account. */
+  /** The calendar its work blocks are written to, one of a connected Outlook or Google account. */
   calendar: Schema.NullOr(Calendar.CalendarId),
   default: Schema.Boolean,
   archived: Schema.Boolean
@@ -28,7 +28,7 @@ export const SpaceChange = Schema.Struct({
   color: Schema.optionalKey(Color),
   position: Schema.optionalKey(Schema.Int),
   calendar: Schema.optionalKey(Schema.NullOr(Calendar.CalendarId)).annotate({
-    description: "The calendar the space's work blocks are written to, one of the connected Outlook account."
+    description: "The calendar the space's work blocks are written to, one of a connected Outlook or Google account."
   }),
   default: Schema.optionalKey(Schema.Literal(true)).annotate({ description: "Makes this the default space." })
 })

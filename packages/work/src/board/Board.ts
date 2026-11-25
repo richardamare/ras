@@ -108,8 +108,8 @@ export class Board extends Context.Service<
           if (!found.writable || !found.enabled)
             return yield* refuse(
               "work.space.calendar",
-              `"${found.name}" is ${found.enabled ? "not in the Outlook account connected to ras" : "turned off"}, and work blocks go only to a calendar ras writes.`,
-              "Choose a calendar of the connected Outlook account that is on."
+              `"${found.name}" is ${found.enabled ? "not in an Outlook or Google account connected to ras" : "turned off"}, and work blocks go only to a calendar ras writes.`,
+              "Choose a calendar of a connected Outlook or Google account that is on."
             )
           return found
         })

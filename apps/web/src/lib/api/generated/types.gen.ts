@@ -1433,7 +1433,7 @@ export type WorkChangeSpaceData = {
         color?: string;
         position?: number;
         /**
-         * The calendar the space's work blocks are written to, one of the connected Outlook account.
+         * The calendar the space's work blocks are written to, one of a connected Outlook or Google account.
          */
         calendar?: number | null;
         /**

@@ -58,13 +58,13 @@ describe("the calendar rules", () => {
   it("refuses an event added to a calendar of another account", () => {
     const refused = Option.getOrThrow(Rules.refusal({ _tag: "Create", calendar: other }))
     assert.strictEqual(refused.code, "calendar.calendar.readonly")
-    assert.include(refused.reason, "not in the Outlook account connected to ras")
+    assert.include(refused.reason, "not in an Outlook or Google account connected to ras")
   })
 
-  it("refuses a change to an event of another account, telling to change it in its own Outlook", () => {
+  it("refuses a change to an event of another account, telling to change it in its own app", () => {
     const refused = Option.getOrThrow(Rules.refusal({ _tag: "Change", calendar: other, event: event("plain") }))
     assert.strictEqual(refused.code, "calendar.event.readonly")
-    assert.strictEqual(refused.instead, "Change it in that calendar's own Outlook.")
+    assert.strictEqual(refused.instead, "Change it in that calendar's own app.")
     assert.strictEqual(code({ _tag: "Cancel", calendar: other, event: event("invitation") }), "calendar.event.readonly")
   })
 
