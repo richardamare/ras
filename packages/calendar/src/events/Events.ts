@@ -16,14 +16,14 @@ import * as Span from "../calendars/Span.ts"
 import * as Event from "./Event.ts"
 import * as EventWrites from "./EventWrites.ts"
 import * as DraftRepository from "./DraftRepository.ts"
-import * as Outlook from "../outlook/Outlook.ts"
+import * as GoogleWriter from "../google/Writer.ts"
+import * as OutlookWriter from "../outlook/Writer.ts"
 import * as Reclaim from "../reclaim/Reclaim.ts"
+import * as Recurrence from "./Recurrence.ts"
 import * as Rules from "./Rules.ts"
+import type * as Writer from "./Writer.ts"
 
-/** When an event happens, in Prague local time: a start and an end, or whole days from the first to the last. */
-export type When =
-  | { readonly _tag: "Timed"; readonly start: Time.PragueLocal; readonly end: Time.PragueLocal }
-  | { readonly _tag: "AllDay"; readonly first: Time.PragueDate; readonly last: Time.PragueDate }
+type When = Writer.When
 
 const invalid = (reason: string) => Effect.fail(new Errors.Invalid({ reason }))
 
@@ -33,7 +33,7 @@ const plus = (local: Time.PragueLocal, millis: number) =>
 const days = (first: Time.PragueDate, last: Time.PragueDate) =>
   Math.round((Date.parse(`${last}T00:00:00Z`) - Date.parse(`${first}T00:00:00Z`)) / 86_400_000)
 
-/** A time that exists in Prague and ends after it starts; anything else is refused before Graph is called. */
+/** A time that exists in Prague and ends after it starts; anything else is refused before a provider is called. */
 const checked = (when: When): Effect.Effect<When, Errors.Invalid> =>
   when._tag === "AllDay"
     ? days(when.first, when.last) < 0
@@ -96,82 +96,7 @@ export const changedWhen = (
   return Effect.map(checked({ _tag: "AllDay", first, last }), Option.some)
 }
 
-const clock = (local: string): Outlook.Clock => ({ dateTime: `${local}:00`, timeZone: Outlook.timeZone })
-
-const schedule = (when: When): Outlook.Write =>
-  when._tag === "Timed"
-    ? { start: clock(when.start), end: clock(when.end), isAllDay: false }
-    : { start: clock(`${when.first}T00:00`), end: clock(`${Time.addDays(when.last, 1)}T00:00`), isAllDay: true }
-
 const firstDayOf = (when: When) => (when._tag === "Timed" ? Time.PragueDate.make(when.start.slice(0, 10)) : when.first)
-
-const weekdays: ReadonlyArray<EventWrites.Weekday> = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday"
-]
-
-const weekdayOf = (date: Time.PragueDate) => weekdays[new Date(`${date}T00:00:00Z`).getUTCDay()]!
-
-/** Where the day falls among the month's days of its weekday; a day in the month's final week is its last. */
-const indexOf = (date: Time.PragueDate) =>
-  Time.addDays(date, 7).slice(5, 7) === date.slice(5, 7)
-    ? (["first", "second", "third", "fourth"] as const)[Math.floor((Number(date.slice(8, 10)) - 1) / 7)]!
-    : "last"
-
-/** Graph's patterned recurrence for a repeat, starting on the event's first day, its clock kept in Prague. */
-export const recurrenceOf = (
-  start: Time.PragueDate,
-  repeat: EventWrites.Repeat
-): Effect.Effect<Outlook.Recurrence, Errors.Invalid> =>
-  Effect.gen(function* () {
-    if (repeat.until !== undefined && repeat.count !== undefined)
-      return yield* invalid("Give repeat until or count, not both.")
-    if (repeat.on !== undefined && repeat.every !== "week")
-      return yield* invalid("repeat on applies to a weekly repeat only.")
-    if (repeat.by !== undefined && repeat.every !== "month" && repeat.every !== "year")
-      return yield* invalid("repeat by applies to a monthly or yearly repeat only.")
-    if (repeat.until !== undefined && days(start, repeat.until) < 0)
-      return yield* invalid(`The repeat ends on ${repeat.until}, before the event starts.`)
-    const weekday = weekdayOf(start)
-    if (repeat.on !== undefined && !repeat.on.includes(weekday))
-      return yield* invalid(`A weekly repeat starting on ${start} must include ${weekday}.`)
-    const [, month, day] = start.split("-").map(Number) as [number, number, number]
-    const interval = repeat.interval ?? 1
-    const pattern: Outlook.Recurrence["pattern"] =
-      repeat.every === "day"
-        ? { type: "daily", interval }
-        : repeat.every === "week"
-          ? {
-              type: "weekly",
-              interval,
-              daysOfWeek: weekdays.filter((name) => (repeat.on ?? [weekday]).includes(name)),
-              firstDayOfWeek: "monday"
-            }
-          : repeat.by === "weekday"
-            ? repeat.every === "month"
-              ? { type: "relativeMonthly", interval, daysOfWeek: [weekday], index: indexOf(start) }
-              : { type: "relativeYearly", interval, daysOfWeek: [weekday], index: indexOf(start), month }
-            : repeat.every === "month"
-              ? { type: "absoluteMonthly", interval, dayOfMonth: day }
-              : { type: "absoluteYearly", interval, dayOfMonth: day, month }
-    const range: Outlook.Recurrence["range"] =
-      repeat.until !== undefined
-        ? { type: "endDate", startDate: start, endDate: repeat.until, recurrenceTimeZone: Outlook.timeZone }
-        : repeat.count !== undefined
-          ? {
-              type: "numbered",
-              startDate: start,
-              numberOfOccurrences: repeat.count,
-              recurrenceTimeZone: Outlook.timeZone
-            }
-          : { type: "noEnd", startDate: start, recurrenceTimeZone: Outlook.timeZone }
-    return { pattern, range }
-  })
 
 const refusedBy = (write: Rules.Write) =>
   Option.match(Rules.refusal(write), { onNone: () => Effect.void, onSome: Effect.fail })
@@ -179,16 +104,15 @@ const refusedBy = (write: Rules.Write) =>
 const refuse = (code: string, reason: string, instead: string) =>
   Effect.fail(new Errors.Refused({ code: `calendar.${code}`, reason, instead }))
 
-const graphCalendar = (target: CalendarRepository.Connected) =>
-  Option.match(target.source.providerId, {
-    onNone: () =>
-      refuse(
+/** A calendar a new event can go to: Reclaim knows the id its provider gives it. */
+const reachable = (target: CalendarRepository.Connected) =>
+  Option.isSome(target.source.providerId)
+    ? Effect.void
+    : refuse(
         "calendar.unreachable",
-        `"${target.calendar.name}" has no Outlook id in Reclaim, so ras cannot write to it.`,
+        `"${target.calendar.name}" has no id of its provider in Reclaim, so ras cannot write to it.`,
         "Reconnect the calendar in Reclaim."
-      ),
-    onSome: Effect.succeed
-  })
+      )
 
 const rsvpOf: Record<EventWrites.Reply, Event.Rsvp> = {
   accept: "accepted",
@@ -221,19 +145,6 @@ const createdOf = (
     draft
   })
 
-/** The fields of a plain event that a write sends to Graph, each one only when it is given. */
-const fieldsOf = (fields: {
-  readonly title?: string | undefined
-  readonly notes?: string | undefined
-  readonly location?: string | undefined
-  readonly showAs?: Event.ShowAs | undefined
-}): Outlook.Write => ({
-  ...(fields.title === undefined ? {} : { subject: fields.title }),
-  ...(fields.notes === undefined ? {} : { body: { contentType: "text", content: fields.notes } }),
-  ...(fields.location === undefined ? {} : { location: { displayName: fields.location } }),
-  ...(fields.showAs === undefined ? {} : { showAs: fields.showAs })
-})
-
 const viewOf = (when: When) =>
   when._tag === "Timed"
     ? { start: when.start, end: when.end }
@@ -249,14 +160,14 @@ export interface BlockEvent {
   readonly span: Span.Span
 }
 
-const blockWrite = (block: BlockEvent): Outlook.Write => ({
-  subject: block.title,
-  body: { contentType: "text", content: Event.blockMarker(block.id) },
-  start: clock(Time.toPragueLocal(block.span.start)),
-  end: clock(Time.toPragueLocal(block.span.end)),
-  isAllDay: false,
-  showAs: "busy"
-})
+/** A block's event: busy, its notes carrying the block's marker. */
+const blockWrite = (block: BlockEvent) =>
+  ({
+    title: block.title,
+    notes: Event.blockMarker(block.id),
+    showAs: "busy",
+    when: { _tag: "Timed", start: Time.toPragueLocal(block.span.start), end: Time.toPragueLocal(block.span.end) }
+  }) satisfies Writer.Write
 
 export class Events extends Context.Service<
   Events,
@@ -279,9 +190,16 @@ export class Events extends Context.Service<
       calendar: Calendar.CalendarId,
       block: BlockEvent
     ) => Effect.Effect<string, Errors.Refused | Errors.NotFound | Errors.SourceFailed>
-    /** Moves a block's event, by the Graph id `placeBlock` returned. */
-    readonly moveBlock: (event: string, block: BlockEvent) => Effect.Effect<void, Errors.SourceFailed>
-    readonly removeBlock: (event: string) => Effect.Effect<void, Errors.SourceFailed>
+    /** Moves a block's event, by the id `placeBlock` returned in the calendar it placed it in. */
+    readonly moveBlock: (
+      calendar: Calendar.CalendarId,
+      event: string,
+      block: BlockEvent
+    ) => Effect.Effect<void, Errors.NotFound | Errors.SourceFailed>
+    readonly removeBlock: (
+      calendar: Calendar.CalendarId,
+      event: string
+    ) => Effect.Effect<void, Errors.NotFound | Errors.SourceFailed>
   }
 >()("@ras/calendar/Events") {
   static readonly layer = Layer.effect(
@@ -289,7 +207,10 @@ export class Events extends Context.Service<
     Effect.gen(function* () {
       const calendar = yield* Calendars.Calendar
       const reclaim = yield* Reclaim.Reclaim
-      const outlook = yield* Outlook.Outlook
+      const writers: Record<CalendarRepository.Provider, Writer.Writer> = {
+        outlook: yield* OutlookWriter.make,
+        google: yield* GoogleWriter.make
+      }
       const one = yield* Semaphore.make(1)
       const writes = yield* Global.Writes
       const drafts = yield* DraftRepository.DraftRepository
@@ -325,8 +246,8 @@ export class Events extends Context.Service<
           return yield* writable.length === 0
             ? refuse(
                 "calendar.none",
-                "No calendar of the Outlook account connected to ras is on, so ras has nowhere to write the event.",
-                "Connect Outlook under Settings, Connections, or turn one of its calendars on."
+                "No calendar of an account connected to ras is on, so ras has nowhere to write the event.",
+                "Connect Outlook or Google under Settings, Connections, or turn one of its calendars on."
               )
             : refuse(
                 "calendar.choose",
@@ -335,29 +256,31 @@ export class Events extends Context.Service<
               )
         })
 
-      /** The Graph id a change to the event takes: its own, or its occurrence's when it is part of a series. */
-      const graphEvent = (found: { readonly calendar: CalendarRepository.Connected; readonly entry: Event.Entry }) =>
-        Effect.flatMap(reclaim.providerId(found.calendar.source, found.entry.ref.id), (series) =>
-          found.entry.recurring
-            ? outlook.occurrence(series, Time.toPragueLocal(found.entry.span.start))
-            : Effect.succeed(series)
-        )
+      /** The writer of the calendar's account; one whose account is not connected to ras takes no write. */
+      const writerOf = (connected: CalendarRepository.Connected) =>
+        Option.match(connected.provider, {
+          onNone: () =>
+            Effect.fail(
+              new Errors.SourceFailed({
+                source: "calendar",
+                reason: `"${connected.calendar.name}" is in no account connected to ras, so ras cannot write to it.`
+              })
+            ),
+          onSome: (provider) => Effect.succeed(writers[provider])
+        })
 
       /** Writes a new plain event into its calendar, which the rules allowed. */
       const write = (
         chosen: CalendarRepository.Connected,
-        fields: Parameters<typeof fieldsOf>[0] & { readonly title: string },
+        fields: Writer.Write & { readonly title: string },
         when: When,
-        recurrence: Outlook.Recurrence | undefined,
-        transactionId: string
+        recurrence: Recurrence.Recurrence | undefined,
+        key: string
       ) =>
         Effect.gen(function* () {
-          const created = yield* outlook.create(yield* graphCalendar(chosen), {
-            ...fieldsOf(fields),
-            ...schedule(when),
-            ...(recurrence === undefined ? {} : { recurrence }),
-            transactionId
-          })
+          yield* reachable(chosen)
+          const writer = yield* writerOf(chosen)
+          const created = yield* writer.create(chosen.source, { ...fields, when, recurrence, key })
           const result = createdOf(chosen.calendar.id, fields.title, when, recurrence !== undefined, created.link, null)
           yield* calendar.refresh
           return yield* audit(
@@ -385,6 +308,11 @@ export class Events extends Context.Service<
           )
         })
 
+      const placed = (id: Calendar.CalendarId) =>
+        Effect.flatMap(calendar.connected, (all) =>
+          Errors.orNotFound("calendar", String(id))(Arr.findFirst(all, (entry) => entry.calendar.id === id))
+        )
+
       const storedDraft = (id: Event.DraftId) => Effect.flatMap(drafts.byId(id), Errors.orNotFound("draft", id))
 
       return Events.of({
@@ -394,7 +322,7 @@ export class Events extends Context.Service<
             if (input.draft === true && input.repeat !== undefined)
               return yield* invalid("A repeating event cannot be a draft. Create it without repeat, or not as a draft.")
             const recurrence =
-              input.repeat === undefined ? undefined : yield* recurrenceOf(firstDayOf(when), input.repeat)
+              input.repeat === undefined ? undefined : yield* Recurrence.of(firstDayOf(when), input.repeat)
             const chosen = yield* target(input.calendar)
             yield* refusedBy({ _tag: "Create", calendar: chosen.calendar })
             if (input.draft !== true) return yield* write(chosen, input, when, recurrence, crypto.randomUUID())
@@ -439,10 +367,19 @@ export class Events extends Context.Service<
                 Option.some(before)
               )
             }
-            yield* outlook.change(yield* graphEvent(found), {
-              ...fieldsOf(change),
-              ...Option.match(when, { onNone: () => ({}), onSome: schedule })
-            })
+            yield* Effect.flatMap(writerOf(found.calendar), (writer) =>
+              writer.change(
+                found.calendar.source,
+                { _tag: "Read", entry: found.entry },
+                {
+                  title: change.title,
+                  notes: change.notes,
+                  location: change.location,
+                  showAs: change.showAs,
+                  when: Option.getOrUndefined(when)
+                }
+              )
+            )
             const after = new Event.Event({
               ...before,
               ...Option.match(when, { onNone: () => ({}), onSome: viewOf }),
@@ -473,7 +410,9 @@ export class Events extends Context.Service<
                 })
               )
             }
-            yield* outlook.cancel(yield* graphEvent(found))
+            yield* Effect.flatMap(writerOf(found.calendar), (writer) =>
+              writer.cancel(found.calendar.source, { _tag: "Read", entry: found.entry })
+            )
             yield* calendar.refresh
             yield* audit("calendar.event.cancelled", `event/${id}`, undefined, before, null)
           }),
@@ -556,20 +495,30 @@ export class Events extends Context.Service<
 
         placeBlock: (id, block) =>
           Effect.gen(function* () {
-            const chosen = Arr.findFirst(yield* calendar.connected, (entry) => entry.calendar.id === id)
-            if (Option.isNone(chosen)) return yield* new Errors.NotFound({ subject: "calendar", id: String(id) })
-            yield* refusedBy({ _tag: "Create", calendar: chosen.value.calendar })
-            const created = yield* outlook.create(yield* graphCalendar(chosen.value), {
-              ...blockWrite(block),
-              transactionId: block.id
-            })
+            const chosen = yield* placed(id)
+            yield* refusedBy({ _tag: "Create", calendar: chosen.calendar })
+            yield* reachable(chosen)
+            const writer = yield* writerOf(chosen)
+            const created = yield* writer.create(chosen.source, { ...blockWrite(block), key: block.id })
             yield* calendar.refresh
             return created.id
           }),
 
-        moveBlock: (event, block) => Effect.andThen(outlook.change(event, blockWrite(block)), calendar.refresh),
+        moveBlock: (id, event, block) =>
+          Effect.gen(function* () {
+            const chosen = yield* placed(id)
+            const writer = yield* writerOf(chosen)
+            yield* writer.change(chosen.source, { _tag: "Placed", id: event }, blockWrite(block))
+            yield* calendar.refresh
+          }),
 
-        removeBlock: (event) => Effect.andThen(outlook.cancel(event), calendar.refresh)
+        removeBlock: (id, event) =>
+          Effect.gen(function* () {
+            const chosen = yield* placed(id)
+            const writer = yield* writerOf(chosen)
+            yield* writer.cancel(chosen.source, { _tag: "Placed", id: event })
+            yield* calendar.refresh
+          })
       })
     })
   )

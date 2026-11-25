@@ -80,6 +80,7 @@ describe("the global API and ras's own routes", () => {
           connections.map((connection) => [connection.kind, connection.state]),
           [
             ["outlook", "sample"],
+            ["google", "sample"],
             ["reclaim", "sample"],
             ["icloud", "sample"],
             ["github", "sample"]

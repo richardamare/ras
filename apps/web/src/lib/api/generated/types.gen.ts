@@ -336,7 +336,7 @@ export type CalendarEncoded = {
     name: string;
     color: string;
     /**
-     * A calendar of the Outlook account connected to ras, which takes plain events; any other only takes replies to invitations.
+     * A calendar of an Outlook or Google account connected to ras, which takes plain events; any other only takes replies to invitations.
      */
     writable: boolean;
     enabled: boolean;
@@ -355,9 +355,9 @@ export type McpClientEncoded = {
 
 export type SourceConnectionEncoded = {
     /**
-     * Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub.
+     * Outlook through Graph, Google Calendar, Reclaim, iCloud Mail, or the memory repository on GitHub.
      */
-    kind: 'outlook' | 'reclaim' | 'icloud' | 'github';
+    kind: 'outlook' | 'google' | 'reclaim' | 'icloud' | 'github';
     /**
      * `notConfigured` when a setting or a sign-in is missing, `failing` when the last check could not reach it, `sample` when invented data stands in.
      */
@@ -631,7 +631,7 @@ export type GlobalConnectionsError = GlobalConnectionsErrors[keyof GlobalConnect
 
 export type GlobalConnectionsResponses = {
     /**
-     * Outlook, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it.
+     * Outlook, Google, Reclaim, iCloud Mail and GitHub, each in the state its settings give, without reaching it.
      */
     200: Array<SourceConnectionEncoded>;
 };
@@ -642,9 +642,9 @@ export type GlobalCheckConnectionData = {
     body?: never;
     path: {
         /**
-         * Outlook through Graph, Reclaim, iCloud Mail, or the memory repository on GitHub.
+         * Outlook through Graph, Google Calendar, Reclaim, iCloud Mail, or the memory repository on GitHub.
          */
-        kind: 'outlook' | 'reclaim' | 'icloud' | 'github';
+        kind: 'outlook' | 'google' | 'reclaim' | 'icloud' | 'github';
     };
     query?: never;
     url: '/global/connections/{kind}/check';
@@ -1433,7 +1433,7 @@ export type WorkChangeSpaceData = {
         color?: string;
         position?: number;
         /**
-         * The calendar the space's work blocks are written to, one of the connected Outlook account.
+         * The calendar the space's work blocks are written to, one of a connected Outlook or Google account.
          */
         calendar?: number | null;
         /**

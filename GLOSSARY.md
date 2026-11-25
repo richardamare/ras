@@ -5,7 +5,7 @@ ras is the owner's personal assistant: it plans work into calendars, tracks the 
 ## Language
 
 **Calendar**:
-One calendar ras shows, such as an Outlook calendar of the connected account or a read-only one shared into it.
+One calendar ras shows, such as a calendar of the Outlook or Google account connected to ras, or a read-only one shared into it.
 _Avoid_: Space (a space has a calendar, it is not one)
 
 **Space**:

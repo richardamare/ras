@@ -114,7 +114,7 @@ describe("the HTTP API", () => {
         const calendars = yield* client.calendar.calendars({ query: {} })
         assert.deepStrictEqual(
           calendars.map((calendar) => calendar.name),
-          ["Personal", "Work (copy)", "Work"]
+          ["Personal", "Work (copy)", "Work", "Family"]
         )
         const day = Time.pragueDateOf(yield* DateTime.now)
         // The calendar fills its cache in a sync it starts at boot, so the first answers can still be empty.

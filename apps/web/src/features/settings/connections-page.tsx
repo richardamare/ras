@@ -17,6 +17,7 @@ type State = Api.SourceConnectionEncoded["state"]
 
 const icons: Record<Kind, LucideReact.LucideIcon> = {
   outlook: LucideReact.CalendarIcon,
+  google: LucideReact.CalendarDaysIcon,
   reclaim: LucideReact.CalendarSyncIcon,
   icloud: LucideReact.InboxIcon,
   github: LucideReact.GitBranchIcon
@@ -29,10 +30,16 @@ const badges: Record<State, "secondary" | "outline" | "destructive"> = {
   sample: "outline"
 }
 
-function ConnectOutlook({ connected }: { connected: boolean }) {
+/** The sign-in each account ras holds its own tokens to starts with. */
+const connects = {
+  outlook: Queries.globalConnectGraphMutation,
+  google: Queries.globalConnectGoogleMutation
+} as const
+
+function ConnectAccount({ kind, connected }: { kind: keyof typeof connects; connected: boolean }) {
   const { t } = ReactI18next.useTranslation("Settings")
   const connect = ReactQuery.useMutation({
-    ...Queries.globalConnectGraphMutation(),
+    ...connects[kind](),
     onSuccess: (result) => window.location.assign(result.url),
     onError: (error) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
   })
@@ -60,8 +67,8 @@ function ConnectionRow({ connection }: { connection: Api.SourceConnectionEncoded
       <span className="font-medium">{t(`connections.kind.${shown.kind}`)}</span>
       <Badge.Badge variant={badges[shown.state]}>{t(`connections.state.${shown.state}`)}</Badge.Badge>
       <span className="ms-auto flex items-center gap-2">
-        {shown.kind === "outlook" && shown.state !== "sample" && (
-          <ConnectOutlook connected={shown.state !== "notConfigured"} />
+        {(shown.kind === "outlook" || shown.kind === "google") && shown.state !== "sample" && (
+          <ConnectAccount kind={shown.kind} connected={shown.state !== "notConfigured"} />
         )}
         {shown.state !== "sample" && shown.state !== "notConfigured" && (
           <Button.Button

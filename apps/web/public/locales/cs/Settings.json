@@ -17,7 +17,7 @@
   },
   "calendars": {
     "title": "Kalendáře",
-    "description": "Do kalendářů připojeného účtu Outlook se zapisují události a bloky; ostatní se jen zobrazují. Vypnutý kalendář se nepočítá do volného času a nepřijímá zápisy; kalendář skrytý na obrazovce kalendáře zůstává zapnutý.",
+    "description": "Do kalendářů účtů Outlook a Google připojených k ras se zapisují události a bloky; ostatní se jen zobrazují. Vypnutý kalendář se nepočítá do volného času a nepřijímá zápisy; kalendář skrytý na obrazovce kalendáře zůstává zapnutý.",
     "writable": "Zapisovatelný",
     "readonly": "Jen ke čtení",
     "enabled": "Zapnutý",
@@ -32,6 +32,7 @@
     "check": "Zkontrolovat",
     "kind": {
       "outlook": "Outlook",
+      "google": "Google",
       "reclaim": "Reclaim",
       "icloud": "iCloud Mail",
       "github": "GitHub"

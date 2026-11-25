@@ -19,6 +19,7 @@ import * as DraftRepository from "../../src/events/DraftRepository.ts"
 import * as EventCacheRepository from "../../src/calendars/EventCacheRepository.ts"
 import * as Migrations from "../../src/Migrations.ts"
 import * as Module from "../../src/Module.ts"
+import * as GoogleCalendar from "../../src/google/GoogleCalendar.ts"
 import * as Outlook from "../../src/outlook/Outlook.ts"
 import * as Reclaim from "../../src/reclaim/Reclaim.ts"
 import * as Sample from "../../src/reclaim/Sample.ts"
@@ -36,7 +37,7 @@ const titles = (events: ReadonlyArray<Event.Event>) =>
 layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(BusyTime.BusyTime.none)))(
   "the calendar",
   (test) => {
-    test.effect("lists every connected calendar, writable in the connected account, and audits turning one off", () =>
+    test.effect("lists every connected calendar, writable in a connected account, and audits turning one off", () =>
       Effect.gen(function* () {
         const calendar = yield* Calendars.Calendar
         const listed = yield* calendar.calendars(false)
@@ -45,14 +46,15 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
           [
             ["Personal", true, true],
             ["Work (copy)", true, true],
-            ["Work", false, true]
+            ["Work", false, true],
+            ["Family", true, true]
           ]
         )
         const changed = yield* calendar.changeCalendar(Sample.work, { enabled: false })
         assert.strictEqual(changed.enabled, false)
         assert.deepStrictEqual(
           (yield* calendar.calendars(false)).map((found) => found.name),
-          ["Personal", "Work (copy)"]
+          ["Personal", "Work (copy)", "Family"]
         )
         yield* calendar.changeCalendar(Sample.work, { enabled: true })
         const sql = yield* SqlClient.SqlClient
@@ -98,9 +100,9 @@ layer(Testing.layer([Module.module], { RAS_SAMPLE: "true" }).pipe(Layer.provide(
         )
         assert.deepStrictEqual(
           (yield* calendar.calendars(false)).map((found) => found.name),
-          ["Personal", "Work (copy)"]
+          ["Personal", "Work (copy)", "Family"]
         )
-        assert.strictEqual((yield* calendar.calendars(true)).length, 3)
+        assert.strictEqual((yield* calendar.calendars(true)).length, 4)
         yield* calendar.changeCalendar(Sample.work, { enabled: true })
       })
     )
@@ -239,6 +241,7 @@ describe("refreshes after writes", () => {
           Layer.mergeAll(
             counting,
             Outlook.sample,
+            GoogleCalendar.sample,
             BusyTime.BusyTime.none,
             CalendarRepository.CalendarRepository.layer,
             EventCacheRepository.EventCacheRepository.layer,
