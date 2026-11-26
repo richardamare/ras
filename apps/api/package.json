@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./api": "./src/composition/Api.ts"
+    "./api": "./src/composition/Api.ts",
+    "./testing": "./src/Testing.ts"
   },
   "scripts": {
     "typecheck": "tsc",

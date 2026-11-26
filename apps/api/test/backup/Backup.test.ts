@@ -7,6 +7,14 @@ import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Testing from "@ras/global/testing"
 import * as Backup from "../../src/backup/Backup.ts"
+import * as ApiTesting from "../../src/Testing.ts"
+
+const readable = (bytes: Uint8Array) => {
+  const copy = BunSqlite.Database.deserialize(bytes)
+  const tables = copy.query("SELECT name FROM sqlite_master WHERE name = 'global_audit_entries'").all()
+  copy.close()
+  return tables.length === 1
+}
 
 describe("the backup", () => {
   it("keeps the newest backups by name", () => {
@@ -45,6 +53,19 @@ describe("the backup", () => {
         files.map((file) => /^ras-\d{4}-\d{2}-\d{2}T\d{4}\.db$/.test(file)),
         [true]
       )
+    }).pipe(Effect.scoped, Effect.provide(Testing.database([])), Effect.provide(BunServices.layer))
+  )
+
+  it.effect("uploads a readable snapshot of the database to R2 and keeps the newest 30 there", () =>
+    Effect.gen(function* () {
+      const s3 = yield* ApiTesting.localS3(0)
+      const older = Array.from({ length: 30 }, (_, day) => `ras-1969-12-${String(day + 1).padStart(2, "0")}T0300.db`)
+      for (const name of older) s3.objects.set(name, new Uint8Array())
+      yield* Backup.run.pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord(s3.settings))))
+      const kept = [...s3.objects.keys()].toSorted()
+      assert.strictEqual(kept.length, 30)
+      assert.deepStrictEqual(kept.slice(0, 29), older.slice(1))
+      assert.isTrue(readable(s3.objects.get(kept[29]!)!))
     }).pipe(Effect.scoped, Effect.provide(Testing.database([])), Effect.provide(BunServices.layer))
   )
 })
