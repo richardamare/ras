@@ -57,6 +57,10 @@ jobs:
 
   checks:
     needs: preflight
+    # A called workflow gets no more than its caller grants, and ci.yml's PR-only changes job asks for pull-requests.
+    permissions:
+      contents: read
+      pull-requests: read
     uses: ./.github/workflows/ci.yml
 
   publish:
