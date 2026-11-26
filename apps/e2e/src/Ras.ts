@@ -44,7 +44,7 @@ export const serve = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
   const port = yield* Config.Port("RAS_E2E_PORT").pipe(Config.withDefault(4240))
   const url = new URL(`http://localhost:${port}`)
-  const bucket = yield* ApiTesting.localS3
+  const s3 = yield* ApiTesting.localS3
 
   const scratch = yield* fs.makeTempDirectoryScoped({ prefix: "ras-e2e-" })
   const memory = path.join(scratch, "memory")
@@ -67,7 +67,7 @@ export const serve = Effect.gen(function* () {
       RAS_AUTH_SECRET: "ras-e2e-auth-secret-not-for-production",
       RAS_MEMORY_WEBHOOK_SECRET: webhookSecret,
       RAS_BACKUP_SCHEDULER_ACCOUNT: schedulerAccount,
-      ...bucket.settings,
+      ...ApiTesting.settings(s3.bucket),
       RAS_SAMPLE: "true"
     }
   }
@@ -82,5 +82,5 @@ export const serve = Effect.gen(function* () {
     Effect.timeout(Duration.seconds(30)),
     Effect.orDie
   )
-  return { url, bucket: bucket.settings }
+  return { url, bucket: s3.bucket }
 })

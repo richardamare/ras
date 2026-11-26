@@ -1,9 +1,11 @@
 import * as BunSqlite from "bun:sqlite"
 import * as BunServices from "@effect/platform-bun/BunServices"
 import { assert, describe, it } from "@effect/vitest"
+import * as Arr from "effect/Array"
 import * as ConfigProvider from "effect/ConfigProvider"
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
+import * as Order from "effect/Order"
 import * as Path from "effect/Path"
 import * as Testing from "@ras/global/testing"
 import * as Backup from "../../src/backup/Backup.ts"
@@ -59,10 +61,12 @@ describe("the backup", () => {
   it.effect("uploads a readable snapshot of the database to R2 and keeps the newest 30 there", () =>
     Effect.gen(function* () {
       const s3 = yield* ApiTesting.localS3
-      const older = Array.from({ length: 30 }, (_, day) => `ras-1969-12-${String(day + 1).padStart(2, "0")}T0300.db`)
-      for (const name of older) s3.objects.set(name, new Uint8Array())
-      yield* Backup.run.pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord(s3.settings))))
-      const kept = [...s3.objects.keys()].toSorted()
+      const older = Arr.makeBy(30, (day) => `ras-1969-12-${String(day + 1).padStart(2, "0")}T0300.db`)
+      Arr.forEach(older, (name) => s3.objects.set(name, new Uint8Array()))
+      yield* Backup.run.pipe(
+        Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord(ApiTesting.settings(s3.bucket))))
+      )
+      const kept = Arr.sort(Arr.fromIterable(s3.objects.keys()), Order.String)
       assert.strictEqual(kept.length, 30)
       assert.deepStrictEqual(kept.slice(0, 29), older.slice(1))
       assert.isTrue(readable(s3.objects.get(kept[29]!)!))

@@ -5,12 +5,13 @@ import * as Exit from "effect/Exit"
 import * as Layer from "effect/Layer"
 import * as Scope from "effect/Scope"
 import type * as Vitest from "vitest/node"
+import * as ApiTesting from "@ras/api/testing"
 import * as Ras from "../src/Ras.ts"
 
 declare module "vitest" {
   export interface ProvidedContext {
     readonly rasUrl: string
-    readonly backupBucket: Readonly<Record<string, string>>
+    readonly backupBucket: ApiTesting.Bucket
   }
 }
 

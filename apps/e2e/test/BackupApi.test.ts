@@ -1,4 +1,6 @@
 import { assert, describe, layer } from "@effect/vitest"
+import * as Arr from "effect/Array"
+import * as Clock from "effect/Clock"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as HttpClient from "effect/http/HttpClient"
@@ -20,7 +22,7 @@ const backUp = (token: Option.Option<string>) =>
 const googleToken = (claims: Readonly<Record<string, unknown>>) =>
   Effect.gen(function* () {
     const { url } = yield* Suite.Server
-    const now = Math.floor(Date.now() / 1000)
+    const now = Math.floor((yield* Clock.currentTimeMillis) / 1000)
     return yield* ApiTesting.sampleIdToken({
       iss: "https://accounts.google.com",
       aud: new URL("/backup", url).href,
@@ -35,13 +37,16 @@ const googleToken = (claims: Readonly<Record<string, unknown>>) =>
 const backups = Effect.gen(function* () {
   const { backupBucket } = yield* Suite.Server
   const bucket = new Bun.S3Client({
-    endpoint: backupBucket["RAS_BACKUP_R2_ENDPOINT"]!,
-    bucket: backupBucket["RAS_BACKUP_R2_BUCKET"]!,
-    accessKeyId: backupBucket["RAS_BACKUP_R2_ACCESS_KEY_ID"]!,
-    secretAccessKey: backupBucket["RAS_BACKUP_R2_SECRET_ACCESS_KEY"]!
+    endpoint: backupBucket.endpoint,
+    bucket: backupBucket.name,
+    accessKeyId: backupBucket.accessKeyId,
+    secretAccessKey: backupBucket.secretAccessKey
   })
   const listed = yield* Effect.promise(() => bucket.list({ prefix: "ras-" }))
-  return (listed.contents ?? []).map((object) => object.key)
+  return Option.fromNullishOr(listed.contents).pipe(
+    Option.getOrElse(() => []),
+    Arr.map((object) => object.key)
+  )
 })
 
 describe("the backup route", () => {
@@ -77,7 +82,7 @@ describe("the backup route", () => {
         const before = yield* backups
         const token = yield* googleToken({})
         assert.strictEqual(yield* backUp(Option.some(token)), 204)
-        const added = (yield* backups).filter((name) => !before.includes(name))
+        const added = Arr.difference(yield* backups, before)
         assert.strictEqual(added.length, 1)
         assert.match(added[0]!, /^ras-\d{4}-\d{2}-\d{2}T\d{4}\.db$/)
       })

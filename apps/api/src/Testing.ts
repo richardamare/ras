@@ -1,19 +1,40 @@
+import * as Arr from "effect/Array"
 import * as Base64Url from "effect/encoding/Base64Url"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import * as SampleKey from "./backup/SampleKey.ts"
 
-/** An S3-compatible endpoint holding one bucket in memory, with the settings that point `Backup.run` at it. */
+/** Where an S3-compatible bucket is and the key that opens it. */
+export const Bucket = Schema.Struct({
+  endpoint: Schema.String,
+  name: Schema.String,
+  accessKeyId: Schema.String,
+  secretAccessKey: Schema.String
+})
+export type Bucket = typeof Bucket.Type
+
+/** The settings that point `Backup.run` at `bucket`. */
+export const settings = (bucket: Bucket): Readonly<Record<string, string>> => ({
+  RAS_BACKUP_R2_ENDPOINT: bucket.endpoint,
+  RAS_BACKUP_R2_BUCKET: bucket.name,
+  RAS_BACKUP_R2_ACCESS_KEY_ID: bucket.accessKeyId,
+  RAS_BACKUP_R2_SECRET_ACCESS_KEY: bucket.secretAccessKey
+})
+
+/** An S3-compatible endpoint holding one bucket in memory. */
 export interface LocalS3 {
-  readonly settings: Readonly<Record<string, string>>
+  readonly bucket: Bucket
   readonly objects: Map<string, Uint8Array>
 }
 
 const bucket = "ras-backups"
 
 const listing = (keys: ReadonlyArray<string>) =>
-  `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>${bucket}</Name><KeyCount>${keys.length}</KeyCount><IsTruncated>false</IsTruncated>${keys
-    .map((key) => `<Contents><Key>${key}</Key></Contents>`)
-    .join("")}</ListBucketResult>`
+  `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>${bucket}</Name><KeyCount>${keys.length}</KeyCount><IsTruncated>false</IsTruncated>${Arr.join(
+    Arr.map(keys, (key) => `<Contents><Key>${key}</Key></Contents>`),
+    ""
+  )}</ListBucketResult>`
 
 /** Listens on a free port until the scope closes. */
 export const localS3 = Effect.acquireRelease(
@@ -33,8 +54,8 @@ export const localS3 = Effect.acquireRelease(
           return new Response(null, { status: 204 })
         }
         if (key !== "") return new Response(null, { status: 404 })
-        const prefix = url.searchParams.get("prefix") ?? ""
-        return new Response(listing([...objects.keys()].filter((name) => name.startsWith(prefix))))
+        const prefix = Option.getOrElse(Option.fromNullOr(url.searchParams.get("prefix")), () => "")
+        return new Response(listing(Arr.filter(Arr.fromIterable(objects.keys()), (name) => name.startsWith(prefix))))
       }
     })
     return { server, objects }
@@ -43,11 +64,11 @@ export const localS3 = Effect.acquireRelease(
 ).pipe(
   Effect.map(({ server, objects }): LocalS3 => ({
     objects,
-    settings: {
-      RAS_BACKUP_R2_ENDPOINT: `http://localhost:${server.port}`,
-      RAS_BACKUP_R2_BUCKET: bucket,
-      RAS_BACKUP_R2_ACCESS_KEY_ID: "local",
-      RAS_BACKUP_R2_SECRET_ACCESS_KEY: "local"
+    bucket: {
+      endpoint: `http://localhost:${server.port}`,
+      name: bucket,
+      accessKeyId: "local",
+      secretAccessKey: "local"
     }
   }))
 )
