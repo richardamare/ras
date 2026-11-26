@@ -32,3 +32,9 @@ logs
 *.db
 *.db-shm
 *.db-wal
+
+.terraform/
+*.tfstate
+*.tfstate.*
+deploy/modules/*/.terraform.lock.hcl
+deploy/envs/prod/private.auto.tfvars

@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.turbo
+.git
+.devbox
+.claude
+.private
+**/*.db*
+deploy/envs/prod
+deploy/modules
