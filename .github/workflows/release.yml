@@ -1,7 +1,7 @@
 name: release
 
-# A pushed tag vX.Y.Z publishes the GitHub release for the master commit it points at. A version with a suffix, such
-# as v1.2.0-rc.1, publishes a prerelease that never becomes the latest release.
+# A pushed tag vX.Y.Z publishes the GitHub release for the master commit it points at, then deploys it to Cloud Run.
+# A version with a suffix, such as v1.2.0-rc.1, publishes a prerelease that never becomes the latest release.
 on:
   push:
     tags: ["v*.*.*"]
@@ -75,3 +75,10 @@ jobs:
           if [[ -n "$PREVIOUS_TAG" ]]; then args+=(--notes-start-tag "$PREVIOUS_TAG"); fi
           if [[ "$PRERELEASE" == true ]]; then args+=(--prerelease --latest=false); else args+=(--latest); fi
           gh release create "$TAG" "${args[@]}"
+
+  deploy:
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
