@@ -19,3 +19,7 @@ _Avoid_: Worklog, time entry
 **Insights**:
 The statistics of the time the events of the calendars the owner picks take per week, month and calendar quarter: the time already taken, and beside it the time still planned.
 _Avoid_: Calendar insights, calendar stats, report, dashboard
+
+**Backup**:
+A full copy of the database, named `ras-<Prague time>.db`, in the R2 bucket. Cloud Scheduler asks for one every night through the backup route, and the owner takes one with `ras backup`.
+_Avoid_: Snapshot, dump, export

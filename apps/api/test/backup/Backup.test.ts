@@ -58,7 +58,7 @@ describe("the backup", () => {
 
   it.effect("uploads a readable snapshot of the database to R2 and keeps the newest 30 there", () =>
     Effect.gen(function* () {
-      const s3 = yield* ApiTesting.localS3(0)
+      const s3 = yield* ApiTesting.localS3
       const older = Array.from({ length: 30 }, (_, day) => `ras-1969-12-${String(day + 1).padStart(2, "0")}T0300.db`)
       for (const name of older) s3.objects.set(name, new Uint8Array())
       yield* Backup.run.pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord(s3.settings))))
