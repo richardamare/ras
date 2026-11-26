@@ -282,7 +282,7 @@ export class Events extends Context.Service<
           const writer = yield* writerOf(chosen)
           const created = yield* writer.create(chosen.source, { ...fields, when, recurrence, key })
           const result = createdOf(chosen.calendar.id, fields.title, when, recurrence !== undefined, created.link, null)
-          yield* calendar.refresh
+          yield* calendar.wrote
           return yield* audit(
             "calendar.event.created",
             `calendar/${chosen.calendar.id}/event/${created.id}`,
@@ -389,7 +389,7 @@ export class Events extends Context.Service<
               showAs: change.showAs ?? before.showAs
             })
             const diff = Global.changed(Global.snapshot(Event.Event, before), Global.snapshot(Event.Event, after))
-            yield* calendar.refresh
+            yield* calendar.wrote
             return yield* audit("calendar.event.changed", `event/${id}`, after, diff.before, diff.after)
           }),
 
@@ -413,7 +413,7 @@ export class Events extends Context.Service<
             yield* Effect.flatMap(writerOf(found.calendar), (writer) =>
               writer.cancel(found.calendar.source, { _tag: "Read", entry: found.entry })
             )
-            yield* calendar.refresh
+            yield* calendar.wrote
             yield* audit("calendar.event.cancelled", `event/${id}`, undefined, before, null)
           }),
 
@@ -422,7 +422,7 @@ export class Events extends Context.Service<
             const found = yield* calendar.find(id)
             yield* refusedBy({ _tag: "Reply", calendar: found.calendar.calendar, event: found.entry })
             yield* reclaim.reply(found.entry.ref.calendar, found.entry.ref.id, reply)
-            yield* calendar.refresh
+            yield* calendar.wrote
             yield* audit(
               "calendar.event.replied",
               `event/${id}`,
@@ -500,7 +500,7 @@ export class Events extends Context.Service<
             yield* reachable(chosen)
             const writer = yield* writerOf(chosen)
             const created = yield* writer.create(chosen.source, { ...blockWrite(block), key: block.id })
-            yield* calendar.refresh
+            yield* calendar.wrote
             return created.id
           }),
 
@@ -509,7 +509,7 @@ export class Events extends Context.Service<
             const chosen = yield* placed(id)
             const writer = yield* writerOf(chosen)
             yield* writer.change(chosen.source, { _tag: "Placed", id: event }, blockWrite(block))
-            yield* calendar.refresh
+            yield* calendar.wrote
           }),
 
         removeBlock: (id, event) =>
@@ -517,7 +517,7 @@ export class Events extends Context.Service<
             const chosen = yield* placed(id)
             const writer = yield* writerOf(chosen)
             yield* writer.cancel(chosen.source, { _tag: "Placed", id: event })
-            yield* calendar.refresh
+            yield* calendar.wrote
           })
       })
     })
