@@ -1,6 +1,6 @@
 import * as ReactRouter from "@tanstack/react-router"
 
-import * as ProjectPage from "@/features/projects/project-page"
+import * as ProjectPage from "@/features/projects/components/project-page"
 
 function Project() {
   const { id } = Route.useParams()
