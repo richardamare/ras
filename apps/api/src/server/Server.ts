@@ -11,6 +11,8 @@ import * as Global from "@ras/global"
 import * as Module from "@ras/kernel/Module"
 import * as Api from "../composition/Api.ts"
 import * as Backup from "../backup/Backup.ts"
+import * as BackupRoute from "../backup/Route.ts"
+import * as GoogleIdTokens from "../backup/GoogleIdTokens.ts"
 import * as Mcp from "./Mcp.ts"
 import * as Modules from "../composition/Modules.ts"
 
@@ -36,6 +38,7 @@ export const routes = Layer.mergeAll(
   ),
   Mcp.routes,
   Module.routes(Modules.modules),
+  BackupRoute.routes.pipe(Layer.provide(GoogleIdTokens.layer)),
   health,
   webConsole
 )

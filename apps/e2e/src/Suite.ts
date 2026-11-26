@@ -9,13 +9,19 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as HttpApiClient from "effect/http-api/HttpApiClient"
 import * as Api from "@ras/api/api"
+import * as ApiTesting from "@ras/api/testing"
 import * as Vitest from "vitest"
 import * as Browser from "./Browser.ts"
 import * as Ras from "./Ras.ts"
 
 /** The ras the global setup started. */
-export class Server extends Context.Service<Server, { readonly url: URL }>()("@ras/e2e/Server") {
-  static readonly layer = Layer.sync(Server, () => ({ url: new URL(Vitest.inject("rasUrl")) }))
+export class Server extends Context.Service<Server, { readonly url: URL; readonly backupBucket: ApiTesting.Bucket }>()(
+  "@ras/e2e/Server"
+) {
+  static readonly layer = Layer.sync(Server, () => ({
+    url: new URL(Vitest.inject("rasUrl")),
+    backupBucket: Vitest.inject("backupBucket")
+  }))
 }
 
 /** Everything a test file needs: the server, Chromium, an HTTP client and the Bun platform. */

@@ -9,11 +9,14 @@ import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as ChildProcess from "effect/process/ChildProcess"
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner"
+import * as ApiTesting from "@ras/api/testing"
 import * as MemoryTesting from "@ras/memory/testing"
 
 export const owner = { email: "owner@e2e.test", password: "e2e-owner-password" } as const
 
 export const webhookSecret = "ras-e2e-webhook-secret"
+
+export const schedulerAccount = "ras-scheduler@ras-e2e.iam.gserviceaccount.com"
 
 const api = new URL("../../api", import.meta.url).pathname
 
@@ -32,8 +35,8 @@ const run = (command: string, args: ReadonlyArray<string>, options: ChildProcess
 
 /**
  * A ras of its own in a scratch directory, on `RAS_E2E_PORT`: a fresh database holding the owner, an empty memory
- * repository, and the sample calendars and mailbox, so no test reaches an outside service. Closing the scope stops it
- * and deletes the directory.
+ * repository, the sample calendars and mailbox, and a local bucket its backups go to, so no test reaches an outside
+ * service. Closing the scope stops it and deletes the directory.
  */
 export const serve = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
@@ -41,6 +44,7 @@ export const serve = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
   const port = yield* Config.Port("RAS_E2E_PORT").pipe(Config.withDefault(4240))
   const url = new URL(`http://localhost:${port}`)
+  const s3 = yield* ApiTesting.localS3
 
   const scratch = yield* fs.makeTempDirectoryScoped({ prefix: "ras-e2e-" })
   const memory = path.join(scratch, "memory")
@@ -62,6 +66,8 @@ export const serve = Effect.gen(function* () {
       RAS_MEMORY_PATH: memory,
       RAS_AUTH_SECRET: "ras-e2e-auth-secret-not-for-production",
       RAS_MEMORY_WEBHOOK_SECRET: webhookSecret,
+      RAS_BACKUP_SCHEDULER_ACCOUNT: schedulerAccount,
+      ...ApiTesting.settings(s3.bucket),
       RAS_SAMPLE: "true"
     }
   }
@@ -76,5 +82,5 @@ export const serve = Effect.gen(function* () {
     Effect.timeout(Duration.seconds(30)),
     Effect.orDie
   )
-  return url
+  return { url, bucket: s3.bucket }
 })
