@@ -280,16 +280,20 @@ export const make = (apiKey: Redacted.Redacted) =>
     })
   })
 
+/** The owner's Reclaim API key, when it is set. */
+export const apiKey = Config.option(Config.Redacted("RAS_RECLAIM_API_KEY")).pipe(Effect.orDie)
+
+export const unset = "ras has no Reclaim API key. Set RAS_RECLAIM_API_KEY."
+
 /** Reclaim with the owner's API key; without one, every read fails saying so. */
 export const live = Layer.effect(
   Reclaim,
   Effect.gen(function* () {
-    const apiKey = yield* Config.option(Config.Redacted("RAS_RECLAIM_API_KEY")).pipe(Effect.orDie)
-    return yield* Option.match(apiKey, {
+    return yield* Option.match(yield* apiKey, {
       onNone: () => {
-        const unset = Effect.fail(failed("Reclaim is not connected: ras has no API key. Set RAS_RECLAIM_API_KEY."))
+        const fails = Effect.fail(failed(`Reclaim is not connected: ${unset}`))
         return Effect.succeed(
-          Reclaim.of({ calendars: unset, events: () => unset, providerId: () => unset, reply: () => unset })
+          Reclaim.of({ calendars: fails, events: () => fails, providerId: () => fails, reply: () => fails })
         )
       },
       onSome: make
