@@ -8,14 +8,7 @@ import * as Dialog from "@/components/ui/dialog"
 import * as Textarea from "@/components/ui/textarea"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-import * as DialogStore from "@/lib/dialog-store"
-
-interface Move {
-  readonly task: { readonly id: string; readonly title: string }
-  readonly status: Work.Status
-}
-
-export const useMoveDialog = DialogStore.createDialogStore<Move>()
+import * as UseMoveDialog from "@/features/board/hooks/use-move-dialog"
 
 /** The comment a move into `blocked` or `review` takes: what is needed, or what to check. */
 export function MoveDialog({
@@ -23,7 +16,7 @@ export function MoveDialog({
   onOpenChange,
   task,
   status
-}: Move & { open: boolean; onOpenChange: (open: boolean) => void }) {
+}: UseMoveDialog.Move & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
   const [comment, setComment] = React.useState("")

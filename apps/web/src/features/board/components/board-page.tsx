@@ -8,14 +8,14 @@ import * as Combobox from "@/components/combobox"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as PageHeader from "@/components/page-header"
 import * as Columns from "@/features/board/lib/columns"
-import * as MoveDialog from "@/features/board/components/move-dialog"
+import * as UseMoveDialog from "@/features/board/hooks/use-move-dialog"
 import * as NewTask from "@/features/tasks/components/new-task-dialog"
 import * as TaskBits from "@/features/tasks/components/task-bits"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Utils from "@/lib/utils"
-import * as TaskUrl from "@/features/tasks/lib/url"
+import * as UseOpenTask from "@/features/tasks/hooks/use-open-task"
 
 type Task = Api.TaskSummaryEncoded
 
@@ -79,8 +79,8 @@ export function BoardPage() {
     project: Nuqs.parseAsString.withDefault(all)
   })
   const [over, setOver] = React.useState<Work.Status | null>(null)
-  const moveDialog = MoveDialog.useMoveDialog()
-  const openTask = TaskUrl.useOpenTask()
+  const moveDialog = UseMoveDialog.useMoveDialog()
+  const openTask = UseOpenTask.useOpenTask()
 
   const query = {
     ...(assignee === all ? {} : { assignee }),

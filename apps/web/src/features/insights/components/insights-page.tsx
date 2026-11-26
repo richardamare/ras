@@ -8,8 +8,7 @@ import * as IconButton from "@/components/icon-button"
 import * as Alert from "@/components/ui/alert"
 import * as Button from "@/components/ui/button"
 import * as Skeleton from "@/components/ui/skeleton"
-import * as TimeGrid from "@/features/calendar/components/time-grid"
-import * as ChosenCalendars from "@/features/insights/lib/chosen-calendars"
+import * as UseChosenCalendars from "@/features/insights/hooks/use-chosen-calendars"
 import * as Hours from "@/features/insights/lib/hours"
 import * as Period from "@/features/insights/lib/period"
 import * as Timesheet from "@/features/insights/lib/timesheet"
@@ -19,9 +18,7 @@ import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
-
-type Insights = Api.InsightsEncoded
-type ShownEvent = Insights["unanswered"][number]
+import * as UseLabels from "@/features/insights/hooks/use-labels"
 
 function Time({ minutes, className }: { minutes: number; className?: string }) {
   const { i18n } = ReactI18next.useTranslation("Insights")
@@ -56,30 +53,9 @@ function Line({ label, minutes, inset }: { label: string; minutes: number; inset
   )
 }
 
-const useLabels = () => {
-  const { t, i18n } = ReactI18next.useTranslation("Insights")
-  const day = (date: string, options: Intl.DateTimeFormatOptions) => TimeGrid.dayLabel(date, i18n.language, options)
-  const range = (first: string, last: string) =>
-    first === last
-      ? day(first, { weekday: "short", day: "numeric", month: "numeric" })
-      : `${day(first, { day: "numeric", month: "numeric" })} – ${day(last, { day: "numeric", month: "numeric" })}`
-  return {
-    period: (kind: Period.Kind, first: string, last: string) => {
-      if (kind === "week")
-        return `${day(first, { day: "numeric", month: "short" })} – ${day(last, { day: "numeric", month: "short", year: "numeric" })}`
-      if (kind === "month") return day(first, { month: "long", year: "numeric" })
-      return t("quarterLabel", { quarter: (Number(first.slice(5, 7)) + 2) / 3, year: first.slice(0, 4) })
-    },
-    part: (kind: Period.Kind, part: Insights["parts"][number]) =>
-      kind === "quarter" ? day(part.first, { month: "long" }) : range(part.first, part.last),
-    when: (event: ShownEvent) =>
-      `${day(event.start.slice(0, 10), { weekday: "short", day: "numeric", month: "numeric" })} ${event.start.slice(11, 16)}–${event.end.slice(11, 16)}`
-  }
-}
-
-function EventList({ events }: { events: ReadonlyArray<ShownEvent> }) {
+function EventList({ events }: { events: ReadonlyArray<UseLabels.ShownEvent> }) {
   const { t } = ReactI18next.useTranslation("Insights")
-  const labels = useLabels()
+  const labels = UseLabels.useLabels()
   return (
     <ul className="mt-1 flex flex-col gap-0.5">
       {events.map((event) => (
@@ -98,13 +74,13 @@ function Report({
   calendars,
   work
 }: {
-  insights: Insights
-  weekBefore: Insights | undefined
+  insights: UseLabels.Insights
+  weekBefore: UseLabels.Insights | undefined
   calendars: ReadonlyArray<Api.CalendarEncoded>
   work: Parameters<typeof Timesheet.timesheet>[1]
 }) {
   const { t } = ReactI18next.useTranslation("Insights")
-  const labels = useLabels()
+  const labels = UseLabels.useLabels()
   const kind = insights.period.kind
   const names = new Map(calendars.map((calendar) => [calendar.id, calendar.name]))
   const lines = Timesheet.timesheet(insights.workBlocks.blocks, work)
@@ -241,13 +217,13 @@ function Report({
 
 export function InsightsPage() {
   const { t } = ReactI18next.useTranslation("Insights")
-  const labels = useLabels()
+  const labels = UseLabels.useLabels()
   const [{ period, date }, setUrl] = Nuqs.useQueryStates(Url.params)
   const today = Prague.today()
   const anchor = date ?? today
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   const shown = (calendars.data ?? []).filter((calendar) => calendar.enabled)
-  const { chosen, toggle } = ChosenCalendars.useChosenCalendars(
+  const { chosen, toggle } = UseChosenCalendars.useChosenCalendars(
     calendars.data === undefined ? undefined : shown.map((calendar) => calendar.id)
   )
   const ticked = chosen.length > 0

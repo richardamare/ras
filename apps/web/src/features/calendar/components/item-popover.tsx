@@ -7,21 +7,22 @@ import * as Sonner from "sonner"
 import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Popover from "@/components/ui/popover"
-import * as BlockMoveDialog from "@/features/tasks/components/block-move-dialog"
-import * as DraftControls from "@/features/calendar/components/draft-controls"
+import * as UseBlockMoveDialog from "@/features/tasks/hooks/use-block-move-dialog"
+import * as UseConfirmDrafts from "@/features/calendar/hooks/use-confirm-drafts"
 import * as Skeleton from "@/components/ui/skeleton"
 import type * as Grid from "@/features/calendar/lib/grid"
 import * as Pointer from "@/features/calendar/lib/pointer"
 import * as Url from "@/features/calendar/lib/url"
 import * as Completion from "@/features/tasks/components/completion"
 import * as TaskBits from "@/features/tasks/components/task-bits"
-import * as WorkActions from "@/features/tasks/components/work-actions"
-import * as WorkLog from "@/features/tasks/components/work-log"
+import * as UseClock from "@/features/tasks/hooks/use-clock"
+import * as UseRemoveBlock from "@/features/tasks/hooks/use-remove-block"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as CopyLink from "@/components/copy-link"
+import * as UseWhen from "@/features/calendar/hooks/use-when"
 
 const replies = ["accept", "tentative", "decline"] as const
 
@@ -31,23 +32,6 @@ const line = (icon: React.ReactNode, children: React.ReactNode) => (
     <div className="min-w-0 flex-1 wrap-anywhere">{children}</div>
   </div>
 )
-
-function useWhen() {
-  const { i18n } = ReactI18next.useTranslation()
-  const day = (local: string) =>
-    new Intl.DateTimeFormat(i18n.language, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
-      new Date(`${local.slice(0, 10)}T12:00:00Z`)
-    )
-  return {
-    day,
-    span: (start: string, end: string) => `${day(start)}, ${start.slice(11)}–${end.slice(11)}`,
-    /** All-day days: the end is the midnight after the last one, and a single day is named once. */
-    days: (start: string, end: string) => {
-      const last = Prague.addDays(end.slice(0, 10), -1)
-      return last === start.slice(0, 10) ? day(start) : `${day(start)} – ${day(last)}`
-    }
-  }
-}
 
 function Heading({ color, title, detail }: { color: string; title: string; detail: React.ReactNode }) {
   return (
@@ -76,7 +60,7 @@ function EventCard({
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   const client = ReactQuery.useQueryClient()
-  const when = useWhen()
+  const when = UseWhen.useWhen()
   const settle = {
     onSuccess: () => {
       onDone()
@@ -196,12 +180,12 @@ function BlockCard({
 }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   const work = ReactI18next.useTranslation("Work").t
-  const when = useWhen()
+  const when = UseWhen.useWhen()
   const task = ReactQuery.useQuery(Queries.workTaskOptions({ path: { id: block.task } }))
-  const moveDialog = BlockMoveDialog.useBlockMoveDialog()
-  const clock = WorkActions.useClock()
-  const remove = WorkLog.useRemoveBlock()
-  const confirm = DraftControls.useConfirmDrafts(onDone)
+  const moveDialog = UseBlockMoveDialog.useBlockMoveDialog()
+  const clock = UseClock.useClock()
+  const remove = UseRemoveBlock.useRemoveBlock()
+  const confirm = UseConfirmDrafts.useConfirmDrafts(onDone)
   const running = block.state === "running"
 
   return (

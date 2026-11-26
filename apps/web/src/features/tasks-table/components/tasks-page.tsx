@@ -12,27 +12,29 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Table from "@/components/ui/table"
 import * as Truncated from "@/components/truncated"
 import * as Completion from "@/features/tasks/components/completion"
+import * as UseTaskCompletion from "@/features/tasks/hooks/use-task-completion"
 import * as NewTask from "@/features/tasks/components/new-task-dialog"
 import * as TaskBits from "@/features/tasks/components/task-bits"
+import * as UseDayLabel from "@/features/tasks/hooks/use-day-label"
 import * as Work from "@/features/tasks/lib/work"
 import * as WorkActions from "@/features/tasks/components/work-actions"
 import * as Time from "@/features/tasks-table/lib/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
-import * as TaskUrl from "@/features/tasks/lib/url"
+import * as UseOpenTask from "@/features/tasks/hooks/use-open-task"
 
 const open = "open"
 const all = "all"
 
 export function TasksPage() {
   const { t } = ReactI18next.useTranslation("Work")
-  const dayLabel = TaskBits.useDayLabel()
+  const dayLabel = UseDayLabel.useDayLabel()
   const tasks = ReactQuery.useQuery(Queries.workTasksOptions())
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())
   const blocks = ReactQuery.useQuery(Queries.workBlocksOptions({ query: Time.span }))
-  const openTask = TaskUrl.useOpenTask()
-  const completion = Completion.useTaskCompletion()
+  const openTask = UseOpenTask.useOpenTask()
+  const completion = UseTaskCompletion.useTaskCompletion()
   const [{ q: search, status }, setUrl] = Nuqs.useQueryStates({
     q: Nuqs.parseAsString.withDefault(""),
     status: Nuqs.parseAsString.withDefault(open)

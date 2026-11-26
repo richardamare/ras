@@ -2,7 +2,6 @@ import * as ReactI18next from "react-i18next"
 
 import * as Grid from "@/features/calendar/lib/grid"
 import * as Items from "@/features/calendar/components/items"
-import * as TimeGrid from "@/features/calendar/components/time-grid"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
@@ -33,7 +32,7 @@ export function MonthGrid({ days, month, events, blocks, now, colorOf, onOpenDay
             key={day}
             className={Utils.cn("px-2 py-1.5 text-end text-sm", Prague.weekday(day) >= 5 && "text-muted-foreground")}
           >
-            {TimeGrid.dayLabel(day, i18n.language, { weekday: "short" })}
+            {Prague.dayLabel(day, i18n.language, { weekday: "short" })}
           </div>
         ))}
       </div>
@@ -59,11 +58,11 @@ export function MonthGrid({ days, month, events, blocks, now, colorOf, onOpenDay
                     day.slice(0, 7) !== month.slice(0, 7) && "text-muted-foreground",
                     day === now.slice(0, 10) && "bg-destructive font-semibold text-white hover:bg-destructive"
                   )}
-                  aria-label={TimeGrid.dayLabel(day, i18n.language, { weekday: "long", day: "numeric", month: "long" })}
+                  aria-label={Prague.dayLabel(day, i18n.language, { weekday: "long", day: "numeric", month: "long" })}
                   onClick={() => onOpenDay(day)}
                 >
                   {day.endsWith("-01")
-                    ? TimeGrid.dayLabel(day, i18n.language, { day: "numeric", month: "short" })
+                    ? Prague.dayLabel(day, i18n.language, { day: "numeric", month: "short" })
                     : Number(day.slice(8))}
                 </button>
                 {shown.map((item) => (

@@ -7,6 +7,7 @@ import * as IconButton from "@/components/icon-button"
 import * as Input from "@/components/ui/input"
 import * as Pointer from "@/features/calendar/lib/pointer"
 import * as Completion from "@/features/tasks/components/completion"
+import * as UseTaskCompletion from "@/features/tasks/hooks/use-task-completion"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Utils from "@/lib/utils"
 
@@ -15,7 +16,7 @@ export function TasksPanel({ onClose }: { onClose: () => void }) {
   const { t } = ReactI18next.useTranslation("Calendar")
   const [search, setSearch] = React.useState("")
   const tasks = ReactQuery.useQuery(Queries.workTasksOptions())
-  const completion = Completion.useTaskCompletion()
+  const completion = UseTaskCompletion.useTaskCompletion()
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())
   const projectNames = new Map((projects.data ?? []).map((one) => [one.id, one.name]))
   const term = search.trim().toLowerCase()

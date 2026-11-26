@@ -2,12 +2,18 @@ import * as React from "react"
 import * as ReactRouter from "@tanstack/react-router"
 
 import * as ConfirmDialog from "@/components/confirm-dialog"
+import * as UseConfirmDialog from "@/hooks/use-confirm-dialog"
 import * as MoveDialog from "@/features/board/components/move-dialog"
+import * as UseMoveDialog from "@/features/board/hooks/use-move-dialog"
 import * as BlockMoveDialog from "@/features/tasks/components/block-move-dialog"
+import * as UseBlockMoveDialog from "@/features/tasks/hooks/use-block-move-dialog"
 import * as EventDialog from "@/features/calendar/components/event-dialog"
+import * as UseEventDialog from "@/features/calendar/hooks/use-event-dialog"
 import * as NewTaskDialog from "@/features/tasks/components/new-task-dialog"
+import * as UseNewTaskDialog from "@/features/tasks/hooks/use-new-task-dialog"
 import * as TaskDialog from "@/features/tasks/components/task-dialog"
 import * as WorkActions from "@/features/tasks/components/work-actions"
+import * as UseBlockDialog from "@/features/tasks/hooks/use-block-dialog"
 
 interface ModalProps {
   open: boolean
@@ -50,12 +56,12 @@ export function ModalProvider() {
   return (
     <>
       <TaskDialog.TaskDialog />
-      <Slot useStore={NewTaskDialog.useNewTaskDialog} component={NewTaskDialog.NewTaskDialog} />
-      <Slot useStore={MoveDialog.useMoveDialog} component={MoveDialog.MoveDialog} />
-      <Slot useStore={EventDialog.useEventDialog} component={EventDialog.EventDialog} />
-      <Slot useStore={BlockMoveDialog.useBlockMoveDialog} component={BlockMoveDialog.BlockMoveDialog} />
-      <Slot useStore={WorkActions.useBlockDialog} component={WorkActions.BlockDialog} />
-      <Slot useStore={ConfirmDialog.useConfirmDialog} component={ConfirmDialog.ConfirmDialog} />
+      <Slot useStore={UseNewTaskDialog.useNewTaskDialog} component={NewTaskDialog.NewTaskDialog} />
+      <Slot useStore={UseMoveDialog.useMoveDialog} component={MoveDialog.MoveDialog} />
+      <Slot useStore={UseEventDialog.useEventDialog} component={EventDialog.EventDialog} />
+      <Slot useStore={UseBlockMoveDialog.useBlockMoveDialog} component={BlockMoveDialog.BlockMoveDialog} />
+      <Slot useStore={UseBlockDialog.useBlockDialog} component={WorkActions.BlockDialog} />
+      <Slot useStore={UseConfirmDialog.useConfirmDialog} component={ConfirmDialog.ConfirmDialog} />
     </>
   )
 }

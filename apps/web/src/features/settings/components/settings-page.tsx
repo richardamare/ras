@@ -4,12 +4,13 @@ import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 
 import * as Badge from "@/components/ui/badge"
-import * as ConfirmDialog from "@/components/confirm-dialog"
+import * as UseConfirmDialog from "@/hooks/use-confirm-dialog"
 import * as Button from "@/components/ui/button"
 import * as Input from "@/components/ui/input"
 import * as Select from "@/components/ui/select"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as SettingsSection from "@/features/settings/components/settings-section"
+import * as UseSettle from "@/features/settings/hooks/use-settle"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 
@@ -17,7 +18,7 @@ const noCalendar = "none"
 
 function SpaceRow({ space, calendars }: { space: Api.SpaceEncoded; calendars: ReadonlyArray<Api.CalendarEncoded> }) {
   const { t } = ReactI18next.useTranslation("Settings")
-  const settle = SettingsSection.useSettle()
+  const settle = UseSettle.useSettle()
   const change = ReactQuery.useMutation({ ...Queries.workChangeSpaceMutation(), ...settle })
   const archive = ReactQuery.useMutation({ ...Queries.workArchiveSpaceMutation(), ...settle })
   const [name, setName] = React.useState(space.name)
@@ -90,7 +91,7 @@ function SpaceRow({ space, calendars }: { space: Api.SpaceEncoded; calendars: Re
 
 function Spaces() {
   const { t } = ReactI18next.useTranslation("Settings")
-  const settle = SettingsSection.useSettle()
+  const settle = UseSettle.useSettle()
   const spaces = ReactQuery.useQuery(Queries.workSpacesOptions())
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   const add = ReactQuery.useMutation({ ...Queries.workAddSpaceMutation(), ...settle })
@@ -135,7 +136,7 @@ function Spaces() {
 
 function Agents() {
   const { t } = ReactI18next.useTranslation("Settings")
-  const settle = SettingsSection.useSettle()
+  const settle = UseSettle.useSettle()
   const agents = ReactQuery.useQuery(Queries.globalAgentsOptions())
   const add = ReactQuery.useMutation({ ...Queries.globalAddAgentMutation(), ...settle })
   const archive = ReactQuery.useMutation({ ...Queries.globalArchiveAgentMutation(), ...settle })
@@ -213,9 +214,9 @@ function Agents() {
 
 function Clients() {
   const { t } = ReactI18next.useTranslation("Settings")
-  const settle = SettingsSection.useSettle()
+  const settle = UseSettle.useSettle()
   const clients = ReactQuery.useQuery(Queries.globalClientsOptions())
-  const confirmDialog = ConfirmDialog.useConfirmDialog()
+  const confirmDialog = UseConfirmDialog.useConfirmDialog()
   const revoke = ReactQuery.useMutation({
     ...Queries.globalRevokeClientMutation(),
     ...settle

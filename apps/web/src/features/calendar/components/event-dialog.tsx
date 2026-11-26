@@ -14,13 +14,9 @@ import * as Repeat from "@/features/calendar/lib/repeat"
 import * as RepeatFields from "@/features/calendar/components/repeat-fields"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-import * as DialogStore from "@/lib/dialog-store"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
-
-export type DialogState =
-  | { readonly kind: "create"; readonly placement: Pointer.Placement; readonly draft: boolean }
-  | { readonly kind: "edit"; readonly event: Api.EventEncoded }
+import * as UseEventDialog from "@/features/calendar/hooks/use-event-dialog"
 
 const showAs = ["busy", "tentative", "free", "oof", "workingElsewhere"] as const
 
@@ -37,7 +33,7 @@ interface Form {
   readonly showAs: Api.EventEncoded["showAs"]
 }
 
-const formOf = (state: DialogState, calendars: ReadonlyArray<Api.CalendarEncoded>): Form => {
+const formOf = (state: UseEventDialog.DialogState, calendars: ReadonlyArray<Api.CalendarEncoded>): Form => {
   if (state.kind === "create") {
     const span = Pointer.span(state.placement)
     return {
@@ -187,7 +183,7 @@ function Body({
   calendars,
   onClose
 }: {
-  state: DialogState
+  state: UseEventDialog.DialogState
   calendars: ReadonlyArray<Api.CalendarEncoded>
   onClose: () => void
 }) {
@@ -273,8 +269,6 @@ function Body({
   )
 }
 
-export const useEventDialog = DialogStore.createDialogStore<{ state: DialogState }>()
-
 /** The form that creates an event or changes one ras may write. */
 export function EventDialog({
   open,
@@ -283,7 +277,7 @@ export function EventDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  state: DialogState
+  state: UseEventDialog.DialogState
 }) {
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   return (

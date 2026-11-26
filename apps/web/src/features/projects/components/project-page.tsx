@@ -10,23 +10,25 @@ import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Progress from "@/features/projects/lib/progress"
 import * as Completion from "@/features/tasks/components/completion"
+import * as UseTaskCompletion from "@/features/tasks/hooks/use-task-completion"
 import * as NewTask from "@/features/tasks/components/new-task-dialog"
 import * as TaskBits from "@/features/tasks/components/task-bits"
+import * as UseDayLabel from "@/features/tasks/hooks/use-day-label"
 import * as Time from "@/features/tasks-table/lib/time"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
-import * as TaskUrl from "@/features/tasks/lib/url"
+import * as UseOpenTask from "@/features/tasks/hooks/use-open-task"
 
 export function ProjectPage({ id }: { id: string }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const dayLabel = TaskBits.useDayLabel()
+  const dayLabel = UseDayLabel.useDayLabel()
   const project = ReactQuery.useQuery(Queries.workProjectOptions({ path: { id } }))
   const blocks = ReactQuery.useQuery(
     Queries.workBlocksOptions({ query: { from: `${Prague.today()}T00:00`, to: Time.span.to } })
   )
-  const openTask = TaskUrl.useOpenTask()
-  const completion = Completion.useTaskCompletion()
+  const openTask = UseOpenTask.useOpenTask()
+  const completion = UseTaskCompletion.useTaskCompletion()
 
   if (project.isPending) return <Skeleton.Skeleton className="h-64 w-full" />
   if (project.data === undefined) return <p className="text-sm text-muted-foreground">{t("projects.notFound")}</p>

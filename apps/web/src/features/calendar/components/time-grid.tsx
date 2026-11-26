@@ -30,9 +30,6 @@ const dayBackground = (column: Grid.DayColumn, colorOf: (calendar: number) => st
     : { className: "calendar-day-fill", style: { "--day-fill": colorOf(fill.calendar) } as React.CSSProperties }
 }
 
-export const dayLabel = (day: string, language: string, options: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat(language, { ...options, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))
-
 function Ghost({ placement }: { placement: Pointer.Placement }) {
   const style = {
     "--ghost-top": offset(placement.start),
@@ -110,7 +107,7 @@ export function TimeGrid({
                 weekend(column.day) && "text-muted-foreground"
               )}
             >
-              <span>{dayLabel(column.day, i18n.language, { weekday: "short" })}</span>
+              <span>{Prague.dayLabel(column.day, i18n.language, { weekday: "short" })}</span>
               <span
                 className={Utils.cn(
                   "flex min-w-8 items-center justify-center rounded-full px-1.5 tabular-nums",
@@ -122,7 +119,7 @@ export function TimeGrid({
               {Grid.hasDrafts(column) && (
                 <IconButton.IconButton
                   label={t("draft.confirmDay", {
-                    day: dayLabel(column.day, i18n.language, { weekday: "long", day: "numeric", month: "long" })
+                    day: Prague.dayLabel(column.day, i18n.language, { weekday: "long", day: "numeric", month: "long" })
                   })}
                   onClick={() => onConfirmDay(column.day)}
                 >

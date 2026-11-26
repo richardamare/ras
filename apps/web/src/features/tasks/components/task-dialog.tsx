@@ -13,6 +13,7 @@ import * as Skeleton from "@/components/ui/skeleton"
 import * as Textarea from "@/components/ui/textarea"
 import * as Completion from "@/features/tasks/components/completion"
 import * as TaskBits from "@/features/tasks/components/task-bits"
+import * as UseAssignee from "@/features/tasks/hooks/use-assignee"
 import * as TaskEdit from "@/features/tasks/components/task-edit"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
@@ -20,6 +21,7 @@ import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
 import * as CopyLink from "@/components/copy-link"
 import * as TaskUrl from "@/features/tasks/lib/url"
+import * as UseTaskParams from "@/features/tasks/hooks/use-task-params"
 import * as WorkActions from "@/features/tasks/components/work-actions"
 import * as WorkLog from "@/features/tasks/components/work-log"
 
@@ -35,7 +37,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Details({ id, comment: pointed, onClose }: { id: string; comment: string | null; onClose: () => void }) {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
-  const assignee = TaskBits.useAssignee()
+  const assignee = UseAssignee.useAssignee()
   const task = ReactQuery.useQuery(Queries.workTaskOptions({ path: { id } }))
   const agents = ReactQuery.useQuery(Queries.globalAgentsOptions())
   const note = React.useRef<HTMLTextAreaElement>(null)
@@ -254,7 +256,7 @@ function Details({ id, comment: pointed, onClose }: { id: string; comment: strin
 
 /** The task the address names, over whichever page is open, where its fields, brief, links and work blocks are edited and it is commented on. */
 export function TaskDialog() {
-  const [{ task, comment }, set] = TaskUrl.useTaskParams()
+  const [{ task, comment }, set] = UseTaskParams.useTaskParams()
   return (
     <Dialog.Dialog open={task !== null} onOpenChange={(open) => !open && void set({ task: null, comment: null })}>
       <Dialog.DialogContent className="sm:max-w-xl" aria-describedby={undefined}>

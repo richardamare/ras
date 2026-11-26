@@ -4,7 +4,6 @@ import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 import * as Sonner from "sonner"
 
-import * as ConfirmDialog from "@/components/confirm-dialog"
 import * as IconButton from "@/components/icon-button"
 import * as Button from "@/components/ui/button"
 import * as Input from "@/components/ui/input"
@@ -14,34 +13,20 @@ import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
+import * as UseChange from "@/features/tasks/hooks/use-change"
+import * as UseDeleteTask from "@/features/tasks/hooks/use-delete-task"
+import * as UseSettled from "@/features/tasks/hooks/use-settled"
 
-type Task = Api.TaskEncoded
-type Change = Api.WorkChangeTaskData["body"]
+export type Task = Api.TaskEncoded
+export type Change = Api.WorkChangeTaskData["body"]
 
 const noProject = "none"
 const trigger = "h-7 w-full bg-background"
 
-const useSettled = () => {
-  const { t } = ReactI18next.useTranslation("Work")
-  const client = ReactQuery.useQueryClient()
-  return {
-    onSuccess: () => client.invalidateQueries(),
-    onError: (error: unknown) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
-  }
-}
-
-/** Saves one change to the task, leaving whatever the dialog's comment box holds. */
-export const useChange = (id: string) => {
-  const change = ReactQuery.useMutation({ ...Queries.workChangeTaskMutation(), ...useSettled() })
-  return (body: Change, onSuccess?: () => void) => {
-    change.mutate({ path: { id }, body }, onSuccess === undefined ? {} : { onSuccess })
-  }
-}
-
 /** The title and the brief, edited together and saved with one write. */
 export function BriefForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const save = useChange(task.id)
+  const save = UseChange.useChange(task.id)
   const [title, setTitle] = React.useState(task.title)
   const [body, setBody] = React.useState(task.body)
 
@@ -86,7 +71,7 @@ export function BriefForm({ task, onDone }: { task: Task; onDone: () => void }) 
 
 export function ProjectSelect({ task }: { task: Task }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const save = useChange(task.id)
+  const save = UseChange.useChange(task.id)
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())
   const choices = (projects.data ?? []).filter((one) => one.status !== "done" || one.id === task.project)
 
@@ -112,7 +97,7 @@ export function ProjectSelect({ task }: { task: Task }) {
 
 export function PrioritySelect({ task }: { task: Task }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const save = useChange(task.id)
+  const save = UseChange.useChange(task.id)
   return (
     <Select.Select value={task.priority} onValueChange={(value) => save({ priority: value as Task["priority"] })}>
       <Select.SelectTrigger size="sm" aria-label={t("fields.priority")} className={trigger}>
@@ -132,7 +117,7 @@ export function PrioritySelect({ task }: { task: Task }) {
 /** Saves the day once the input holds a whole date, and clears the deadline once it is emptied. */
 export function DeadlineInput({ task }: { task: Task }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const save = useChange(task.id)
+  const save = UseChange.useChange(task.id)
   const overdue = task.deadline !== null && task.status !== "done" && task.deadline < Prague.today()
   return (
     <Input.Input
@@ -152,7 +137,7 @@ export function DeadlineInput({ task }: { task: Task }) {
 /** Takes `1:30` or a plain count of minutes; saves on Enter or when it loses focus, and an empty box clears it. */
 export function EstimateInput({ task }: { task: Task }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const save = useChange(task.id)
+  const save = UseChange.useChange(task.id)
   const shown = task.estimate === null ? "" : Prague.duration(task.estimate)
   const [text, setText] = React.useState(shown)
   React.useEffect(() => setText(shown), [shown])
@@ -185,7 +170,7 @@ export function EstimateInput({ task }: { task: Task }) {
 /** The GitHub issues and pull requests on the task, each with a button to detach it, and a box to attach another. */
 export function Links({ task }: { task: Task }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const settled = useSettled()
+  const settled = UseSettled.useSettled()
   const [url, setUrl] = React.useState("")
   const link = ReactQuery.useMutation({
     ...Queries.workLinkMutation(),
@@ -247,38 +232,9 @@ export function Links({ task }: { task: Task }) {
   )
 }
 
-/**
- * Asks first, then deletes the task. The API deletes a task with no work begun on it, and moves one with work to done
- * instead; the toast says which.
- */
-export const useDeleteTask = (onDeleted: () => void = () => {}) => {
-  const { t } = ReactI18next.useTranslation("Work")
-  const confirm = ConfirmDialog.useConfirmDialog()
-  const client = ReactQuery.useQueryClient()
-  const remove = ReactQuery.useMutation(Queries.workDeleteTaskMutation())
-
-  return (task: Pick<Task, "id" | "title">) =>
-    confirm.open({
-      title: t("delete.title", { title: task.title }),
-      description: t("delete.description"),
-      confirmLabel: t("delete.confirm"),
-      cancelLabel: t("delete.keep"),
-      destructive: true,
-      onConfirm: () =>
-        void remove.mutateAsync({ path: { id: task.id } }).then(
-          (kept) => {
-            Sonner.toast.success(t(kept === null ? "delete.deleted" : "delete.closed", { title: task.title }))
-            onDeleted()
-            return client.invalidateQueries()
-          },
-          (error: unknown) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
-        )
-    })
-}
-
 export function DeleteButton({ task, onDeleted }: { task: Task; onDeleted: () => void }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const ask = useDeleteTask(onDeleted)
+  const ask = UseDeleteTask.useDeleteTask(onDeleted)
   return (
     <IconButton.IconButton
       label={t("delete.button")}

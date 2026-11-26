@@ -3,8 +3,9 @@ import * as ReactI18next from "react-i18next"
 
 import * as Badge from "@/components/ui/badge"
 import * as Skeleton from "@/components/ui/skeleton"
-import * as HiddenCalendars from "@/features/calendar/lib/hidden-calendars"
+import * as UseHiddenCalendars from "@/features/calendar/hooks/use-hidden-calendars"
 import * as SettingsSection from "@/features/settings/components/settings-section"
+import * as UseSettle from "@/features/settings/hooks/use-settle"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 
 function Check({
@@ -34,10 +35,10 @@ function Check({
 
 export function CalendarsPage() {
   const { t } = ReactI18next.useTranslation("Settings")
-  const settle = SettingsSection.useSettle()
+  const settle = UseSettle.useSettle()
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions({ query: { includeDisabled: "true" } }))
   const change = ReactQuery.useMutation({ ...Queries.calendarChangeCalendarMutation(), ...settle })
-  const { hidden, toggle } = HiddenCalendars.useHiddenCalendars()
+  const { hidden, toggle } = UseHiddenCalendars.useHiddenCalendars()
 
   return (
     <div className="grid max-w-4xl gap-4">

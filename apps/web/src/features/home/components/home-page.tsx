@@ -11,23 +11,15 @@ import * as Card from "@/components/ui/card"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as Summary from "@/features/home/lib/summary"
 import * as Completion from "@/features/tasks/components/completion"
+import * as UseTaskCompletion from "@/features/tasks/hooks/use-task-completion"
 import * as TaskBits from "@/features/tasks/components/task-bits"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
-import * as TaskUrl from "@/features/tasks/lib/url"
-
-/** The Prague local time, ticking every `period` milliseconds. */
-const useNow = (period: number) => {
-  const [now, setNow] = React.useState(() => Prague.local())
-  React.useEffect(() => {
-    const timer = setInterval(() => setNow(Prague.local()), period)
-    return () => clearInterval(timer)
-  }, [period])
-  return now
-}
+import * as UseOpenTask from "@/features/tasks/hooks/use-open-task"
+import * as UseNow from "@/hooks/use-now"
 
 function Count({
   label,
@@ -57,7 +49,7 @@ function Count({
 function Running() {
   const { t } = ReactI18next.useTranslation("Home")
   const client = ReactQuery.useQueryClient()
-  const now = useNow(30_000)
+  const now = UseNow.useNow(30_000)
   const running = ReactQuery.useQuery(Queries.workRunningOptions())
   const stop = ReactQuery.useMutation({
     ...Queries.workStopMutation(),
@@ -99,7 +91,7 @@ function TaskRows({
   tasks: ReadonlyArray<Api.TaskSummaryEncoded>
   onOpen: (task: Api.TaskSummaryEncoded) => void
 }) {
-  const completion = Completion.useTaskCompletion()
+  const completion = UseTaskCompletion.useTaskCompletion()
   return (
     <ul className="-mx-2 flex flex-col">
       {tasks.map((task) => {
@@ -228,10 +220,10 @@ function Agenda({ today }: { today: string }) {
 
 export function HomePage() {
   const { t, i18n } = ReactI18next.useTranslation("Home")
-  const today = useNow(60_000).slice(0, 10)
+  const today = UseNow.useNow(60_000).slice(0, 10)
   const tasks = ReactQuery.useQuery(Queries.workTasksOptions())
   const result = Summary.summary(tasks.data ?? [], today)
-  const openTask = TaskUrl.useOpenTask()
+  const openTask = UseOpenTask.useOpenTask()
   const date = new Intl.DateTimeFormat(i18n.language, {
     weekday: "long",
     day: "numeric",

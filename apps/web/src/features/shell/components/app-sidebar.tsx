@@ -1,14 +1,14 @@
 import * as ReactRouter from "@tanstack/react-router"
 import * as ReactI18next from "react-i18next"
 
-import * as NavEntries from "@/features/shell/lib/nav-entries"
+import * as UseNavSections from "@/features/shell/hooks/use-nav-sections"
 import * as NavItem from "@/features/shell/components/nav-item"
 import * as RasMark from "@/features/shell/components/ras-mark"
 import * as Sidebar from "@/components/ui/sidebar"
 
 export const AppSidebar = () => {
   const { t } = ReactI18next.useTranslation("@App")
-  const navSections = NavEntries.useNavSections()
+  const navSections = UseNavSections.useNavSections()
   const pathname = ReactRouter.useRouterState({ select: (state) => state.location.pathname })
 
   return (

@@ -13,8 +13,8 @@ import * as Textarea from "@/components/ui/textarea"
 import * as TaskBits from "@/features/tasks/components/task-bits"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-import * as DialogStore from "@/lib/dialog-store"
 import type * as Api from "@/lib/api/generated/types.gen"
+import * as UseNewTaskDialog from "@/features/tasks/hooks/use-new-task-dialog"
 
 const noProject = "none"
 
@@ -27,18 +27,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-interface Preset {
-  /** Preselects the project. */
-  readonly project?: string
-  /** The column the task starts in; left out, the API's default. */
-  readonly status?: Work.Status
-}
-
-export const useNewTaskDialog = DialogStore.createDialogStore<Preset>()
-
-export function NewTaskButton(preset: Preset) {
+export function NewTaskButton(preset: UseNewTaskDialog.Preset) {
   const { t } = ReactI18next.useTranslation("Work")
-  const dialog = useNewTaskDialog()
+  const dialog = UseNewTaskDialog.useNewTaskDialog()
   return (
     <Button.Button onClick={() => dialog.open(preset)}>
       <LucideReact.PlusIcon />
@@ -52,7 +43,7 @@ export function NewTaskDialog({
   onOpenChange,
   project,
   status
-}: Preset & { open: boolean; onOpenChange: (open: boolean) => void }) {
+}: UseNewTaskDialog.Preset & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = ReactI18next.useTranslation("Work")
   const client = ReactQuery.useQueryClient()
   const projects = ReactQuery.useQuery(Queries.workProjectsOptions())

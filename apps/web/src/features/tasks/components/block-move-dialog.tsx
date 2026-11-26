@@ -11,9 +11,6 @@ import * as BlockMove from "@/features/tasks/lib/block-move"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
-import * as DialogStore from "@/lib/dialog-store"
-
-export const useBlockMoveDialog = DialogStore.createDialogStore<{ block: Api.BlockEncoded }>()
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

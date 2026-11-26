@@ -1,49 +1,21 @@
 import * as ReactQuery from "@tanstack/react-query"
 import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
-import * as Sonner from "sonner"
 
-import * as ConfirmDialog from "@/components/confirm-dialog"
 import * as IconButton from "@/components/icon-button"
 import * as Skeleton from "@/components/ui/skeleton"
-import * as BlockMoveDialog from "@/features/tasks/components/block-move-dialog"
-import * as Work from "@/features/tasks/lib/work"
+import * as UseBlockMoveDialog from "@/features/tasks/hooks/use-block-move-dialog"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
-import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
-
-/** Removes a block that is not running. A finished one asks first, because its time leaves the task's spent time. */
-export const useRemoveBlock = () => {
-  const { t } = ReactI18next.useTranslation("Work")
-  const confirm = ConfirmDialog.useConfirmDialog()
-  const client = ReactQuery.useQueryClient()
-  const remove = ReactQuery.useMutation(Queries.workRemoveMutation())
-  const run = (block: Api.BlockEncoded) =>
-    void remove.mutateAsync({ path: { id: block.id } }).then(
-      () => client.invalidateQueries(),
-      (error: unknown) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
-    )
-
-  return (block: Api.BlockEncoded) =>
-    block.state === "done"
-      ? confirm.open({
-          title: t("log.removeTitle"),
-          description: t("log.removeDescription"),
-          confirmLabel: t("log.remove"),
-          cancelLabel: t("log.keep"),
-          destructive: true,
-          onConfirm: () => run(block)
-        })
-      : run(block)
-}
+import * as UseRemoveBlock from "@/features/tasks/hooks/use-remove-block"
 
 /** The task's work blocks, latest first, each one moved, resized or removed unless it is running. */
 export function WorkLog({ task }: { task: string }) {
   const { t, i18n } = ReactI18next.useTranslation("Work")
   const blocks = ReactQuery.useQuery(Queries.workTaskBlocksOptions({ path: { id: task } }))
-  const moveDialog = BlockMoveDialog.useBlockMoveDialog()
-  const remove = useRemoveBlock()
+  const moveDialog = UseBlockMoveDialog.useBlockMoveDialog()
+  const remove = UseRemoveBlock.useRemoveBlock()
   const day = new Intl.DateTimeFormat(i18n.language, {
     weekday: "short",
     day: "numeric",

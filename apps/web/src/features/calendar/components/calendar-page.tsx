@@ -10,9 +10,10 @@ import * as Button from "@/components/ui/button"
 import * as Skeleton from "@/components/ui/skeleton"
 import * as CalendarFilter from "@/features/calendar/components/calendar-filter"
 import * as DraftControls from "@/features/calendar/components/draft-controls"
-import * as EventDialog from "@/features/calendar/components/event-dialog"
+import * as UseConfirmDrafts from "@/features/calendar/hooks/use-confirm-drafts"
+import * as UseEventDialog from "@/features/calendar/hooks/use-event-dialog"
 import * as Grid from "@/features/calendar/lib/grid"
-import * as HiddenCalendars from "@/features/calendar/lib/hidden-calendars"
+import * as UseHiddenCalendars from "@/features/calendar/hooks/use-hidden-calendars"
 import * as ItemPopover from "@/features/calendar/components/item-popover"
 import * as MonthGrid from "@/features/calendar/components/month-grid"
 import * as Pointer from "@/features/calendar/lib/pointer"
@@ -23,25 +24,17 @@ import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
-import * as TaskUrl from "@/features/tasks/lib/url"
-
-const useNow = () => {
-  const [now, setNow] = React.useState(() => Prague.local())
-  React.useEffect(() => {
-    const timer = setInterval(() => setNow(Prague.local()), 60_000)
-    return () => clearInterval(timer)
-  }, [])
-  return now
-}
+import * as UseOpenTask from "@/features/tasks/hooks/use-open-task"
+import * as UseNow from "@/hooks/use-now"
 
 const newEventMinute = 9 * 60
 
 export function CalendarPage() {
   const { t, i18n } = ReactI18next.useTranslation("Calendar")
   const [{ view, date, item: itemId }, setUrl] = Nuqs.useQueryStates(Url.params)
-  const openTask = TaskUrl.useOpenTask()
+  const openTask = UseOpenTask.useOpenTask()
   const client = ReactQuery.useQueryClient()
-  const now = useNow()
+  const now = UseNow.useNow(60_000)
   const today = now.slice(0, 10)
   const anchor = date ?? today
   const days = Grid.daysOf(view, anchor)
@@ -53,7 +46,7 @@ export function CalendarPage() {
   const calendars = ReactQuery.useQuery(Queries.calendarCalendarsOptions())
   const allCalendars = calendars.data ?? []
   const enabledCalendars = allCalendars.filter((calendar) => calendar.enabled)
-  const { hidden, toggle } = HiddenCalendars.useHiddenCalendars()
+  const { hidden, toggle } = UseHiddenCalendars.useHiddenCalendars()
   const shown = new Set(enabledCalendars.filter((calendar) => !hidden.has(calendar.id)).map((calendar) => calendar.id))
   const colors = new Map(allCalendars.map((calendar) => [calendar.id, calendar.color]))
   const colorOf = (calendar: number) => colors.get(calendar) ?? "var(--primary)"
@@ -65,7 +58,7 @@ export function CalendarPage() {
 
   const [drafting, setDrafting] = React.useState(false)
   const [planner, setPlanner] = React.useState(false)
-  const eventDialog = EventDialog.useEventDialog()
+  const eventDialog = UseEventDialog.useEventDialog()
 
   const settle = {
     onSuccess: () => client.invalidateQueries(),
@@ -74,7 +67,7 @@ export function CalendarPage() {
   const plan = ReactQuery.useMutation({ ...Queries.workAddMutation(), ...settle })
   const moveBlock = ReactQuery.useMutation({ ...Queries.workMoveMutation(), ...settle })
   const moveEvent = ReactQuery.useMutation({ ...Queries.calendarChangeEventMutation(), ...settle })
-  const confirmDay = DraftControls.useConfirmDrafts()
+  const confirmDay = UseConfirmDrafts.useConfirmDrafts()
 
   const show = (nextView: Grid.View, nextDate: string) =>
     void setUrl({ view: nextView, date: nextDate, item: null }, { history: "push" })
@@ -163,7 +156,7 @@ export function CalendarPage() {
         </div>
         <h1 className="me-auto text-2xl tracking-tight first-letter:uppercase">
           <span className="font-semibold">
-            {TimeGrid.dayLabel(
+            {Prague.dayLabel(
               anchor,
               i18n.language,
               view === "day" ? { day: "numeric", month: "long" } : { month: "long" }

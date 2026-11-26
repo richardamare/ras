@@ -1,12 +1,12 @@
-import * as ReactQuery from "@tanstack/react-query"
 import * as LucideReact from "lucide-react"
 import * as ReactI18next from "react-i18next"
 
 import type * as Work from "@/features/tasks/lib/work"
-import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
 import * as Prague from "@/lib/prague"
 import * as Utils from "@/lib/utils"
+import * as UseDayLabel from "@/features/tasks/hooks/use-day-label"
+import * as UseAssignee from "@/features/tasks/hooks/use-assignee"
 
 const statusTones: Record<Work.Status, string> = {
   inbox: "bg-muted text-muted-foreground",
@@ -55,24 +55,6 @@ export function PriorityFlag({
   )
 }
 
-/** A day as people say it: today, tomorrow, yesterday, else the weekday and date; the year only when it differs. */
-export const useDayLabel = () => {
-  const { t, i18n } = ReactI18next.useTranslation("Work")
-  const today = Prague.today()
-  return (day: string) => {
-    if (day === today) return t("day.today")
-    if (day === Prague.addDays(today, 1)) return t("day.tomorrow")
-    if (day === Prague.addDays(today, -1)) return t("day.yesterday")
-    return new Intl.DateTimeFormat(i18n.language, {
-      weekday: "short",
-      day: "numeric",
-      month: "numeric",
-      ...(day.slice(0, 4) === today.slice(0, 4) ? {} : { year: "numeric" }),
-      timeZone: "UTC"
-    }).format(new Date(`${day}T12:00:00Z`))
-  }
-}
-
 /** A deadline, red once it has passed on a task that is not done. */
 export function Due({
   task,
@@ -81,7 +63,7 @@ export function Due({
   task: Pick<Api.TaskSummaryEncoded, "deadline" | "status">
   className?: string
 }) {
-  const label = useDayLabel()
+  const label = UseDayLabel.useDayLabel()
   if (task.deadline === null) return <span className={Utils.cn("text-muted-foreground", className)}>—</span>
   const overdue = task.status !== "done" && task.deadline < Prague.today()
   return (
@@ -98,16 +80,8 @@ export function Due({
   )
 }
 
-/** The name an assignee goes by: "you" for the owner, an agent's display name for an agent. */
-export const useAssignee = () => {
-  const { t } = ReactI18next.useTranslation("Work")
-  const agents = ReactQuery.useQuery(Queries.globalAgentsOptions())
-  const names = new Map((agents.data ?? []).map((agent) => [agent.slug, agent.name]))
-  return (assignee: string) => (assignee === "owner" ? t("owner") : (names.get(assignee) ?? assignee))
-}
-
 export function Assignee({ assignee }: { assignee: string }) {
-  const name = useAssignee()(assignee)
+  const name = UseAssignee.useAssignee()(assignee)
   return (
     <span className="inline-flex items-center gap-1.5">
       <span

@@ -10,42 +10,18 @@ import * as Dialog from "@/components/ui/dialog"
 import * as DropdownMenu from "@/components/ui/dropdown-menu"
 import * as Input from "@/components/ui/input"
 import * as Label from "@/components/ui/label"
-import * as Completion from "@/features/tasks/components/completion"
-import * as TaskEdit from "@/features/tasks/components/task-edit"
-import * as TaskUrl from "@/features/tasks/lib/url"
+import * as UseTaskCompletion from "@/features/tasks/hooks/use-task-completion"
+import * as UseDeleteTask from "@/features/tasks/hooks/use-delete-task"
+import * as UseOpenTask from "@/features/tasks/hooks/use-open-task"
 import * as Work from "@/features/tasks/lib/work"
 import * as Queries from "@/lib/api/generated/@tanstack/react-query.gen"
 import type * as Api from "@/lib/api/generated/types.gen"
-import * as DialogStore from "@/lib/dialog-store"
 import * as Prague from "@/lib/prague"
+import * as UseClock from "@/features/tasks/hooks/use-clock"
+import * as UseBlockDialog from "@/features/tasks/hooks/use-block-dialog"
+import * as UseSettled from "@/features/tasks/hooks/use-settled"
 
-type Target = Pick<Api.TaskSummaryEncoded, "id" | "title" | "status">
-
-const useSettled = () => {
-  const { t } = ReactI18next.useTranslation("Work")
-  const client = ReactQuery.useQueryClient()
-  return {
-    onSuccess: () => client.invalidateQueries(),
-    onError: (error: unknown) => Sonner.toast.error(Work.reasonOf(error) ?? t("failed"))
-  }
-}
-
-/** Starting and stopping the clock on a task. Only one block runs at a time, and the API refuses a second. */
-export const useClock = () => {
-  const settled = useSettled()
-  const running = ReactQuery.useQuery(Queries.workRunningOptions())
-  const start = ReactQuery.useMutation({ ...Queries.workStartMutation(), ...settled })
-  const stop = ReactQuery.useMutation({ ...Queries.workStopMutation(), ...settled })
-  const block = running.data ?? null
-  return {
-    runs: (task: string) => block?.task === task,
-    start: (task: string) => start.mutate({ body: { task } }),
-    stop: () => stop.mutate({}),
-    busy: start.isPending || stop.isPending
-  }
-}
-
-export const useBlockDialog = DialogStore.createDialogStore<{ task: Pick<Target, "id" | "title"> }>()
+export type Target = Pick<Api.TaskSummaryEncoded, "id" | "title" | "status">
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -67,7 +43,7 @@ export function BlockDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const settled = useSettled()
+  const settled = UseSettled.useSettled()
   const [form, setForm] = React.useState(() => Work.blockDefaults(Prague.local()))
   const set = (change: Partial<typeof form>) => setForm((current) => ({ ...current, ...change }))
   const add = ReactQuery.useMutation({
@@ -139,8 +115,8 @@ export function BlockDialog({
 /** Start or stop and add a block, as a row of buttons for an open task. */
 export function WorkButtons({ task }: { task: Target }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const clock = useClock()
-  const blockDialog = useBlockDialog()
+  const clock = UseClock.useClock()
+  const blockDialog = UseBlockDialog.useBlockDialog()
   const runs = clock.runs(task.id)
   if (task.status === "done" && !runs) return null
 
@@ -168,11 +144,11 @@ export function WorkButtons({ task }: { task: Target }) {
 /** Every action on a task from a row's menu: the clock, adding a block, opening, closing and deleting it. */
 export function TaskMenu({ task }: { task: Target }) {
   const { t } = ReactI18next.useTranslation("Work")
-  const clock = useClock()
-  const completion = Completion.useTaskCompletion()
-  const blockDialog = useBlockDialog()
-  const openTask = TaskUrl.useOpenTask()
-  const remove = TaskEdit.useDeleteTask()
+  const clock = UseClock.useClock()
+  const completion = UseTaskCompletion.useTaskCompletion()
+  const blockDialog = UseBlockDialog.useBlockDialog()
+  const openTask = UseOpenTask.useOpenTask()
+  const remove = UseDeleteTask.useDeleteTask()
   const open = task.status !== "done"
   const runs = clock.runs(task.id)
 
