@@ -32,6 +32,11 @@ const name = (at: DateTime.Utc) => `ras-${Time.toPragueLocal(at).replace(":", ""
 
 const isBackup = (file: string) => /^ras-\d{4}-\d{2}-\d{2}T\d{4}\.db$/.test(file)
 
+/** A copy into a synced folder is staged under this name and renamed once complete, so no half copy syncs as a backup. */
+const staged = (file: string) => `.${file}.partial`
+
+const isStaged = (file: string) => /^\.ras-.*\.partial$/.test(file)
+
 /** The names past the newest `keep`. */
 export const expired = (names: ReadonlyArray<string>, keep: number) =>
   Arr.sort(Arr.filter(names, isBackup), Order.flip(Order.String)).slice(keep)
@@ -53,8 +58,10 @@ export const run = Effect.gen(function* () {
 
   if (Option.isSome(icloud)) {
     yield* fs.makeDirectory(icloud.value, { recursive: true })
-    yield* fs.copyFile(snapshot, path.join(icloud.value, file))
-    yield* Effect.forEach(expired(yield* fs.readDirectory(icloud.value), keptInICloud), (old) =>
+    yield* fs.copyFile(snapshot, path.join(icloud.value, staged(file)))
+    yield* fs.rename(path.join(icloud.value, staged(file)), path.join(icloud.value, file))
+    const names = yield* fs.readDirectory(icloud.value)
+    yield* Effect.forEach([...expired(names, keptInICloud), ...Arr.filter(names, isStaged)], (old) =>
       fs.remove(path.join(icloud.value, old))
     )
   }
