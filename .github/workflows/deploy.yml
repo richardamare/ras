@@ -1,0 +1,39 @@
+name: deploy
+
+# The release workflow calls this once it has published a v* tag. It builds the image, pushes it to Artifact Registry
+# and rolls it onto Cloud Run through Workload Identity Federation, which trusts only v* tags of this repository.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: europe-west1
+  SERVICE: ras
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          image="$REGION-docker.pkg.dev/$PROJECT/ras/ras:$TAG"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker build --build-arg APP_COMMIT="$GITHUB_SHA" --tag "$image" .
+          docker push "$image"
+          gcloud run deploy "$SERVICE" --image "$image" --region "$REGION" --project "$PROJECT" --quiet
+          url=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT" --format 'value(status.url)')
+          curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 6 "$url/health"
