@@ -76,7 +76,7 @@ jobs:
       - uses: terraform-linters/setup-tflint@v6
       - run: terraform fmt -check -recursive
       - run: |
-          for root in production modules/*; do
+          for root in envs/* modules/*; do
             terraform -chdir="$root" init -backend=false -input=false
             terraform -chdir="$root" validate
             terraform -chdir="$root" test

@@ -37,4 +37,4 @@ logs
 *.tfstate
 *.tfstate.*
 deploy/modules/*/.terraform.lock.hcl
-deploy/production/private.auto.tfvars
+deploy/envs/prod/private.auto.tfvars

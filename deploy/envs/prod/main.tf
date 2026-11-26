@@ -43,14 +43,14 @@ resource "google_service_account" "runtime" {
 }
 
 module "registry" {
-  source        = "../modules/registry"
+  source        = "../../modules/registry"
   location      = var.region
   repository_id = "ras"
   depends_on    = [google_project_service.this]
 }
 
 module "replica" {
-  source     = "../modules/replica"
+  source     = "../../modules/replica"
   name       = "${var.project_id}-replica"
   location   = var.region
   writer     = google_service_account.runtime.member
@@ -58,14 +58,14 @@ module "replica" {
 }
 
 module "secrets" {
-  source     = "../modules/secrets"
+  source     = "../../modules/secrets"
   secret_ids = toset(values(local.secrets))
   accessor   = google_service_account.runtime.member
   depends_on = [google_project_service.this]
 }
 
 module "service" {
-  source          = "../modules/service"
+  source          = "../../modules/service"
   name            = "ras"
   region          = var.region
   service_account = google_service_account.runtime.email
@@ -82,7 +82,7 @@ module "service" {
 }
 
 module "deployer" {
-  source          = "../modules/deployer"
+  source          = "../../modules/deployer"
   project_id      = var.project_id
   repository      = var.github_repository
   registry        = { name = module.registry.name, location = module.registry.location }
@@ -91,7 +91,7 @@ module "deployer" {
 }
 
 module "alerts" {
-  source          = "../modules/alerts"
+  source          = "../../modules/alerts"
   project_id      = var.project_id
   billing_account = var.billing_account
   email           = var.alert_email

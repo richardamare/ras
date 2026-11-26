@@ -10,7 +10,7 @@ terraform {
 
   # The bucket is given at init, as bootstrap.sh prints it.
   backend "gcs" {
-    prefix = "production"
+    prefix = "prod"
   }
 }
 
