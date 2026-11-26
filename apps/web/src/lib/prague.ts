@@ -39,3 +39,7 @@ export const minutesBetween = (from: string, to: string) =>
 
 /** Minutes as `h:mm`. */
 export const duration = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`
+
+/** A Prague date in the reader's language, formatted by `options`. */
+export const dayLabel = (day: string, language: string, options: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat(language, { ...options, timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))
