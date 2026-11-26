@@ -1,13 +1,13 @@
 import * as Arr from "effect/Array"
 import * as Context from "effect/Context"
 import * as DateTime from "effect/DateTime"
+import * as Deferred from "effect/Deferred"
+import * as Duration from "effect/Duration"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
-import * as Queue from "effect/Queue"
 import * as Order from "effect/Order"
-import * as Schedule from "effect/Schedule"
-import * as Semaphore from "effect/Semaphore"
+import * as Ref from "effect/Ref"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
@@ -31,6 +31,14 @@ type Read<A> = Effect.Effect<A, Errors.SourceFailed>
 const behind = 28
 const ahead = 84
 const chunk = 28
+
+/** A sync holds for two minutes, unless it ran before a write was a minute old, since Reclaim takes that long to show it. */
+const lasts = Duration.minutes(2)
+const settles = Duration.minutes(1)
+
+const isStale = (synced: DateTime.Utc, wrote: Option.Option<DateTime.Utc>, now: DateTime.Utc) =>
+  DateTime.isGreaterThanOrEqualTo(now, DateTime.addDuration(synced, lasts)) ||
+  Option.exists(wrote, (at) => DateTime.isLessThan(synced, DateTime.addDuration(at, settles)))
 
 /** The instants of a window of Prague local time; one that does not end after it starts is refused. */
 export const spanOf = (window: Span.Window): Effect.Effect<Span.Span, Errors.Invalid> =>
@@ -149,13 +157,8 @@ export class Calendar extends Context.Service<
       { readonly calendar: CalendarRepository.Connected; readonly entry: Event.Entry },
       Errors.NotFound | Errors.SourceFailed
     >
-    /** Reads the calendars and the cached span's events from Reclaim and replaces the cache with them. */
-    readonly sync: Read<void>
-    /**
-     * Syncs soon and again 45 seconds later, since Reclaim takes up to a minute to show a write; refreshes that arrive
-     * while a sync or a follow-up waits share it.
-     */
-    readonly refresh: Effect.Effect<void>
+    /** Notes a write to a calendar, so every read in the minute after it syncs from Reclaim first. */
+    readonly wrote: Effect.Effect<void>
   }
 >()("@ras/calendar/Calendar") {
   static readonly make = Effect.gen(function* () {
@@ -167,8 +170,8 @@ export class Calendar extends Context.Service<
     const calendars = yield* CalendarRepository.CalendarRepository
     const cache = yield* EventCacheRepository.EventCacheRepository
     const drafts = yield* DraftRepository.DraftRepository
-    const one = yield* Semaphore.make(1)
-    const scope = yield* Effect.scope
+    const lastWrite = yield* Ref.make(Option.none<DateTime.Utc>())
+    const running = yield* Ref.make(Option.none<Deferred.Deferred<void, Errors.SourceFailed>>())
 
     const sync = Effect.gen(function* () {
       const today = Time.pragueDateOf(yield* DateTime.now)
@@ -185,12 +188,38 @@ export class Calendar extends Context.Service<
         span,
         yield* DateTime.now
       )
-    }).pipe(one.withPermit, Effect.withSpan("calendar.sync"))
-
-    /** The cache, filled by a first sync when it is still empty. */
-    const filled = Effect.flatMap(cache.state, (state) =>
-      Option.isSome(state) ? Effect.succeed(state) : Effect.andThen(sync, cache.state)
+    }).pipe(
+      Effect.tapCause((cause) => Effect.logWarning("The calendar sync failed; the cache keeps what it had.", cause)),
+      Effect.withSpan("calendar.sync")
     )
+
+    /** The sync under way, joined by every read that arrives while it runs. */
+    const shared = Effect.uninterruptibleMask((restore) =>
+      Effect.gen(function* () {
+        const mine = yield* Deferred.make<void, Errors.SourceFailed>()
+        const joined = yield* Ref.modify(running, (found) =>
+          Option.isSome(found) ? [found.value, found] : [mine, Option.some(mine)]
+        )
+        if (joined !== mine) return yield* restore(Deferred.await(joined))
+        const exit = yield* Effect.exit(restore(sync))
+        yield* Ref.set(running, Option.none())
+        yield* Deferred.done(mine, exit)
+        return yield* exit
+      })
+    )
+
+    /**
+     * The cache's state, synced first when it is stale; a failed sync leaves the cache as it was, and fails the read only
+     * when there is no cache. Each read takes it once, since a read in the minute after a write syncs every time.
+     */
+    const current = Effect.gen(function* () {
+      const state = yield* cache.state
+      if (Option.isNone(state)) return yield* Effect.andThen(shared, cache.state)
+      if (!isStale(state.value.syncedAt, yield* Ref.get(lastWrite), yield* DateTime.now)) return state
+      return yield* Effect.andThen(Effect.exit(shared), cache.state)
+    })
+
+    type State = Option.Option<EventCacheRepository.SyncState>
 
     /** The accounts whose calendars ras writes, Outlook's first. */
     const accounts = Effect.map(
@@ -201,60 +230,53 @@ export class Calendar extends Context.Service<
       ]
     )
 
-    const connected = Effect.andThen(filled, Effect.flatMap(accounts, calendars.connected))
+    const listed = Effect.flatMap(accounts, calendars.connected)
 
-    const shown = Effect.map(connected, (all) =>
+    const connected = Effect.andThen(current, listed)
+
+    const shownOf = (all: ReadonlyArray<CalendarRepository.Connected>) =>
       Arr.map(
         Arr.filter(all, ({ calendar }) => calendar.enabled),
         ({ calendar }) => calendar.id
       )
-    )
 
     /** Every shown calendar when none is chosen, otherwise the chosen ones that are shown, in the chosen order. */
-    const countedOf = (chosen: ReadonlyArray<CalendarSchema.CalendarId>) =>
-      Effect.map(shown, (visible) => (chosen.length === 0 ? visible : Arr.filter(chosen, (id) => visible.includes(id))))
+    const countedOf = (
+      all: ReadonlyArray<CalendarRepository.Connected>,
+      chosen: ReadonlyArray<CalendarSchema.CalendarId>
+    ) => {
+      const visible = shownOf(all)
+      return chosen.length === 0 ? visible : Arr.filter(chosen, (id) => visible.includes(id))
+    }
 
     /** From the cache when it holds the span, otherwise from Reclaim. */
-    const read = (span: Span.Span) =>
-      Effect.flatMap(filled, (state) =>
-        Option.exists(
-          state,
-          (cached) =>
-            DateTime.isLessThanOrEqualTo(cached.from, span.start) &&
-            DateTime.isGreaterThanOrEqualTo(cached.to, span.end)
-        )
-          ? cache.events(span)
-          : Effect.map(
-              reclaim.events(Time.pragueDateOf(span.start), Time.addDays(Time.pragueDateOf(span.end), 1)),
-              Arr.filter((entry) => overlaps(entry, span))
-            )
+    const read = (state: State, span: Span.Span) =>
+      Option.exists(
+        state,
+        (cached) =>
+          DateTime.isLessThanOrEqualTo(cached.from, span.start) && DateTime.isGreaterThanOrEqualTo(cached.to, span.end)
       )
+        ? cache.events(span)
+        : Effect.map(
+            reclaim.events(Time.pragueDateOf(span.start), Time.addDays(Time.pragueDateOf(span.end), 1)),
+            Arr.filter((entry) => overlaps(entry, span))
+          )
 
     /** The events and drafts of every connected calendar that overlap the span, copies included. */
-    const gathered = (span: Span.Span) =>
+    const gathered = (state: State, span: Span.Span) =>
       Effect.gen(function* () {
-        const found = yield* read(span)
+        const found = yield* read(state, span)
         const drafted = Arr.map(yield* drafts.inSpan(span), entryOfDraft)
         const blocks = Arr.map(yield* busy.drafts(span), entryOfBlockDraft)
         return [...found, ...drafted, ...blocks]
       })
 
-    const entries = (span: Span.Span) =>
+    const entriesOf = (state: State, span: Span.Span) =>
       Effect.gen(function* () {
-        return originals(yield* gathered(span), yield* shown).toSorted(byStart)
+        return originals(yield* gathered(state, span), shownOf(yield* listed)).toSorted(byStart)
       })
 
-    const quietly = sync.pipe(
-      Effect.catchCause((cause) => Effect.logWarning("The calendar sync failed; the cache keeps what it had.", cause))
-    )
-    const requested = yield* Queue.dropping<void>(1)
-    yield* Effect.forkIn(Effect.forever(Effect.andThen(Queue.take(requested), quietly)), scope)
-    const request = Effect.asVoid(Queue.offer(requested, undefined))
-    const followUps = yield* Queue.dropping<void>(1)
-    yield* Effect.forkIn(
-      Effect.forever(Effect.andThen(Queue.take(followUps), Effect.delay(request, "45 seconds"))),
-      scope
-    )
+    const entries = (span: Span.Span) => Effect.flatMap(current, (state) => entriesOf(state, span))
 
     return Calendar.of({
       calendars: (includeDisabled) =>
@@ -309,22 +331,25 @@ export class Calendar extends Context.Service<
       conflicts: (window) =>
         Effect.gen(function* () {
           const span = yield* spanOf(window)
-          const found = yield* entries(span)
-          const shownCalendars = Arr.map(yield* connected, ({ calendar }) => calendar)
+          const state = yield* current
+          const found = yield* entriesOf(state, span)
+          const shownCalendars = Arr.map(yield* listed, ({ calendar }) => calendar)
           return Busy.conflicts(found, shownCalendars, span)
         }),
 
       workHours: (month, categories, chosen) =>
         Effect.gen(function* () {
-          const counted = yield* countedOf(chosen)
-          const found = originals(yield* gathered(WorkHours.spanOfMonth(month)), counted).toSorted(byStart)
+          const state = yield* current
+          const counted = countedOf(yield* listed, chosen)
+          const found = originals(yield* gathered(state, WorkHours.spanOfMonth(month)), counted).toSorted(byStart)
           return WorkHours.report(found, month, categories, yield* DateTime.now)
         }),
 
       insights: (period, chosen) =>
         Effect.gen(function* () {
-          const counted = yield* countedOf(chosen)
-          const found = yield* gathered(Insights.spanOfPeriod(period))
+          const state = yield* current
+          const counted = countedOf(yield* listed, chosen)
+          const found = yield* gathered(state, Insights.spanOfPeriod(period))
           return Insights.report(originals(found, counted), period, counted, yield* DateTime.now)
         }),
 
@@ -334,12 +359,13 @@ export class Calendar extends Context.Service<
         Effect.gen(function* () {
           const ref = Event.eventRef(id)
           const day = { start: Time.pragueMidnight(ref.date), end: Time.pragueMidnight(Time.addDays(ref.date, 1)) }
-          const all = yield* connected
+          const state = yield* current
+          const all = yield* listed
           const entry = ref.id.startsWith("block-draft-")
             ? Arr.findFirst(Arr.map(yield* busy.drafts(day), entryOfBlockDraft), (found) => found.ref.id === ref.id)
             : yield* Option.match(draftOf(ref.id), {
                 onNone: () =>
-                  Effect.map(read(day), (found) =>
+                  Effect.map(read(state, day), (found) =>
                     Arr.findFirst(
                       found,
                       (candidate) =>
@@ -362,24 +388,9 @@ export class Calendar extends Context.Service<
           return { calendar: calendar.value, entry: entry.value }
         }),
 
-      sync,
-
-      refresh: Effect.andThen(request, Effect.asVoid(Queue.offer(followUps, undefined)))
+      wrote: Effect.flatMap(DateTime.now, (now) => Ref.set(lastWrite, Option.some(now)))
     })
   })
 
-  /** The calendar, with a sync every two minutes for as long as the layer lives; a failed sync keeps the cache. */
-  static readonly layer = Layer.effect(
-    Calendar,
-    Effect.tap(Calendar.make, (calendar) =>
-      Effect.forkScoped(
-        calendar.sync.pipe(
-          Effect.catchCause((cause) =>
-            Effect.logWarning("The calendar sync failed; the cache keeps what it had.", cause)
-          ),
-          Effect.repeat(Schedule.spaced("2 minutes"))
-        )
-      )
-    )
-  )
+  static readonly layer = Layer.effect(Calendar, Calendar.make)
 }
