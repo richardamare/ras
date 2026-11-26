@@ -11,6 +11,8 @@ import * as Global from "@ras/global"
 import * as Time from "@ras/kernel/Time"
 import * as Suite from "../src/Suite.ts"
 
+const Health = Schema.Struct({ ok: Schema.Boolean, instance: Schema.String })
+
 const OpenApi = Schema.Struct({
   info: Schema.Struct({ title: Schema.String }),
   paths: Schema.Record(Schema.String, Schema.Unknown)
@@ -18,11 +20,18 @@ const OpenApi = Schema.Struct({
 
 describe("the HTTP API", () => {
   layer(Suite.layer, { excludeTestServices: true })("of a running ras", (it) => {
-    it.effect("answers the health check and publishes its OpenAPI document", () =>
+    it.effect("answers the health check with the instance serving it, and publishes its OpenAPI document", () =>
       Effect.gen(function* () {
         const { url } = yield* Suite.Server
-        const health = yield* HttpClient.get(new URL("/health", url))
-        assert.deepStrictEqual(yield* health.json, { ok: true })
+        const first = yield* HttpClient.get(new URL("/health", url)).pipe(
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(Health))
+        )
+        const second = yield* HttpClient.get(new URL("/health", url)).pipe(
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(Health))
+        )
+        assert.isTrue(first.ok)
+        assert.isNotEmpty(first.instance)
+        assert.strictEqual(second.instance, first.instance)
         const document = yield* HttpClient.get(new URL("/openapi.json", url)).pipe(
           Effect.flatMap(HttpClientResponse.filterStatusOk),
           Effect.flatMap(HttpClientResponse.schemaBodyJson(OpenApi))

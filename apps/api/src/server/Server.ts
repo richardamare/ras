@@ -16,7 +16,12 @@ import * as GoogleIdTokens from "../backup/GoogleIdTokens.ts"
 import * as Mcp from "./Mcp.ts"
 import * as Modules from "../composition/Modules.ts"
 
-const health = HttpRouter.add("GET", "/health", HttpServerResponse.jsonUnsafe({ ok: true }))
+/** `instance` is fresh in every process, so a caller sees when another instance answers, as after a cold start. */
+const health = Layer.unwrap(
+  Effect.sync(() =>
+    HttpRouter.add("GET", "/health", HttpServerResponse.jsonUnsafe({ ok: true, instance: crypto.randomUUID() }))
+  )
+)
 
 /**
  * The console's build from `apps/web/dist`. Its routes match only paths no other route takes, and a browser opening a
