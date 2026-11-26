@@ -31,9 +31,18 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           image="$REGION-docker.pkg.dev/$PROJECT/ras/ras:$TAG"
+          service=("$SERVICE" --region "$REGION" --project "$PROJECT" --quiet)
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
           docker build --build-arg APP_COMMIT="$GITHUB_SHA" --tag "$image" .
           docker push "$image"
-          gcloud run deploy "$SERVICE" --image "$image" --region "$REGION" --project "$PROJECT" --quiet
+
+          # Two revisions replicating at once lose writes, so the old instance stops and flushes before the new one
+          # restores. The service scales back up even when the deploy fails.
+          trap 'gcloud run services update "${service[@]}" --scaling=auto' EXIT
+          gcloud run services update "${service[@]}" --scaling=0
+          gcloud run deploy "${service[@]}" --image "$image"
+          gcloud run services update "${service[@]}" --scaling=auto
+          trap - EXIT
+
           url=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT" --format 'value(status.url)')
           curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 6 "$url/health"
