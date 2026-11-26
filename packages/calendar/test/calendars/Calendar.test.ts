@@ -2,12 +2,15 @@ import { assert, describe, it, layer } from "@effect/vitest"
 import * as Arr from "effect/Array"
 import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
+import * as Fiber from "effect/Fiber"
 import * as Layer from "effect/Layer"
+import * as Logger from "effect/Logger"
 import * as Option from "effect/Option"
 import * as Ref from "effect/Ref"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as TestClock from "effect/testing/TestClock"
 import * as Testing from "@ras/global/testing"
+import * as Errors from "@ras/kernel/Errors"
 import * as KernelModule from "@ras/kernel/Module"
 import * as Time from "@ras/kernel/Time"
 import * as BusyTime from "../../src/calendars/BusyTime.ts"
@@ -221,46 +224,176 @@ describe("Reclaim", () => {
 
 const tables = KernelModule.make({ name: "calendar", migrations: Migrations.migrations })
 
-describe("refreshes after writes", () => {
-  it.effect("shares one pending sync between the refreshes of a burst", () =>
+/** A Reclaim that counts its syncs and calls, holds the events added to it, and is slow or fails while told to. */
+const fakeReclaim = Effect.gen(function* () {
+  const syncs = yield* Ref.make(0)
+  const calls = yield* Ref.make(0)
+  const failing = yield* Ref.make(false)
+  const slow = yield* Ref.make(false)
+  const added = yield* Ref.make<ReadonlyArray<Event.Entry>>([])
+  const sample = Sample.make(yield* today)
+  const called = Effect.andThen(
+    Ref.update(calls, (n) => n + 1),
+    Effect.flatMap(Ref.get(failing), (fails) =>
+      fails ? Effect.fail(new Errors.SourceFailed({ source: "Reclaim", reason: "down" })) : Effect.void
+    )
+  )
+  const answering = Effect.flatMap(Ref.get(slow), (waits) => (waits ? Effect.sleep("1 second") : Effect.void))
+  const reclaim = Reclaim.Reclaim.of({
+    ...sample,
+    calendars: Effect.andThen(
+      Ref.update(syncs, (n) => n + 1),
+      Effect.andThen(called, Effect.andThen(answering, sample.calendars))
+    ),
+    events: (first, end) =>
+      Effect.andThen(
+        called,
+        Effect.flatMap(sample.events(first, end), (found) =>
+          Effect.map(Ref.get(added), (extra) => [
+            ...found,
+            ...Arr.filter(
+              extra,
+              (entry) =>
+                DateTime.isLessThan(entry.span.start, Time.pragueMidnight(end)) &&
+                DateTime.isGreaterThan(entry.span.end, Time.pragueMidnight(first))
+            )
+          ])
+        )
+      )
+  })
+  const layer = Calendars.Calendar.layer.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.succeed(Reclaim.Reclaim, reclaim),
+        Outlook.sample,
+        GoogleCalendar.sample,
+        BusyTime.BusyTime.none,
+        CalendarRepository.CalendarRepository.layer,
+        EventCacheRepository.EventCacheRepository.layer,
+        DraftRepository.DraftRepository.layer
+      )
+    ),
+    Layer.provideMerge(Testing.layer([tables]))
+  )
+  return { syncs, calls, failing, slow, added, layer }
+})
+
+const planning = (day: Time.PragueDate): Event.Entry => ({
+  ref: { calendar: Sample.personal, date: day, id: "planning" },
+  title: "Planning",
+  span: { start: Time.pragueMidnight(day), end: Time.pragueMidnight(Time.addDays(day, 1)) },
+  allDay: true,
+  kind: "plain",
+  showAs: "busy",
+  rsvp: "accepted",
+  cancelled: false,
+  recurring: false,
+  location: Option.none(),
+  category: Option.none(),
+  notes: Option.none(),
+  attendees: [],
+  copyOf: Option.none()
+})
+
+const holds = (entries: ReadonlyArray<Event.Event>, title: string) => entries.some((event) => event.title === title)
+
+describe("keeps the calendar current", () => {
+  it.effect("calls Reclaim not at all while nobody reads", () =>
     Effect.gen(function* () {
-      const syncs = yield* Ref.make(0)
-      const sample = Sample.make(yield* today)
-      const counting = Layer.succeed(
-        Reclaim.Reclaim,
-        Reclaim.Reclaim.of({
-          ...sample,
-          calendars: Effect.andThen(
-            Ref.update(syncs, (n) => n + 1),
-            sample.calendars
-          )
-        })
-      )
-      const calendarLayer = Layer.effect(Calendars.Calendar, Calendars.Calendar.make).pipe(
-        Layer.provide(
-          Layer.mergeAll(
-            counting,
-            Outlook.sample,
-            GoogleCalendar.sample,
-            BusyTime.BusyTime.none,
-            CalendarRepository.CalendarRepository.layer,
-            EventCacheRepository.EventCacheRepository.layer,
-            DraftRepository.DraftRepository.layer
-          )
-        ),
-        Layer.provideMerge(Testing.layer([tables]))
-      )
-      const [soon, later] = yield* Effect.gen(function* () {
+      const fake = yield* fakeReclaim
+      yield* Effect.gen(function* () {
+        yield* Calendars.Calendar
+        yield* TestClock.adjust("10 minutes")
+      }).pipe(Effect.provide(fake.layer))
+      assert.strictEqual(yield* Ref.get(fake.calls), 0)
+    })
+  )
+
+  it.effect("answers from the cache within two minutes of a sync", () =>
+    Effect.gen(function* () {
+      const fake = yield* fakeReclaim
+      const day = yield* today
+      yield* Effect.gen(function* () {
         const calendar = yield* Calendars.Calendar
-        yield* Effect.forEach(Arr.range(1, 10), () => calendar.refresh, { discard: true })
+        yield* calendar.events(days(day, 1))
+        const after = yield* Ref.get(fake.calls)
+        yield* TestClock.adjust("119 seconds")
+        yield* calendar.events(days(day, 1))
+        assert.strictEqual(yield* Ref.get(fake.calls), after)
+      }).pipe(Effect.provide(fake.layer))
+    })
+  )
+
+  it.effect("syncs a read more than two minutes after the last sync", () =>
+    Effect.gen(function* () {
+      const fake = yield* fakeReclaim
+      const day = yield* today
+      yield* Effect.gen(function* () {
+        const calendar = yield* Calendars.Calendar
+        yield* calendar.events(days(day, 1))
+        yield* Ref.set(fake.added, [planning(day)])
+        yield* TestClock.adjust("121 seconds")
+        assert.isTrue(holds(yield* calendar.events(days(day, 1)), "Planning"))
+        assert.strictEqual(yield* Ref.get(fake.syncs), 2)
+      }).pipe(Effect.provide(fake.layer))
+    })
+  )
+
+  it.effect("syncs every read in the minute after a write, so the write shows once Reclaim has it", () =>
+    Effect.gen(function* () {
+      const fake = yield* fakeReclaim
+      const day = yield* today
+      yield* Effect.gen(function* () {
+        const calendar = yield* Calendars.Calendar
+        yield* calendar.events(days(day, 1))
+        yield* calendar.wrote
+        yield* TestClock.adjust("10 seconds")
+        assert.isFalse(holds(yield* calendar.events(days(day, 1)), "Planning"))
+        yield* Ref.set(fake.added, [planning(day)])
+        yield* TestClock.adjust("30 seconds")
+        assert.isTrue(holds(yield* calendar.events(days(day, 1)), "Planning"))
+        assert.strictEqual(yield* Ref.get(fake.syncs), 3)
+      }).pipe(Effect.provide(fake.layer))
+    })
+  )
+
+  it.effect("shares one sync between two reads that arrive together", () =>
+    Effect.gen(function* () {
+      const fake = yield* fakeReclaim
+      const day = yield* today
+      yield* Effect.gen(function* () {
+        const calendar = yield* Calendars.Calendar
+        yield* calendar.events(days(day, 1))
+        yield* TestClock.adjust("3 minutes")
+        yield* Ref.set(fake.slow, true)
+        const reads = yield* Effect.forkChild(
+          Effect.all([calendar.events(days(day, 1)), calendar.events(days(day, 1))], { concurrency: 2 })
+        )
         yield* TestClock.adjust("1 second")
-        const afterBurst = yield* Ref.get(syncs)
-        yield* TestClock.adjust("1 minute")
-        return [afterBurst, yield* Ref.get(syncs)] as const
-      }).pipe(Effect.provide(calendarLayer))
-      assert.isAtLeast(soon, 1)
-      assert.isAtMost(soon, 2)
-      assert.isAtMost(later, 4)
+        yield* Fiber.join(reads)
+        assert.strictEqual(yield* Ref.get(fake.syncs), 2)
+      }).pipe(Effect.provide(fake.layer))
+    })
+  )
+
+  it.effect("shows what the cache held when a sync fails, and logs the failure", () =>
+    Effect.gen(function* () {
+      const fake = yield* fakeReclaim
+      const day = yield* today
+      const logged: Array<string> = []
+      const capture = Logger.layer([
+        Logger.make(({ logLevel, message }) => {
+          logged.push(`${logLevel} ${String(message)}`)
+        })
+      ])
+      yield* Effect.gen(function* () {
+        const calendar = yield* Calendars.Calendar
+        const before = yield* calendar.events(days(day, 1))
+        yield* Ref.set(fake.failing, true)
+        yield* TestClock.adjust("3 minutes")
+        assert.deepStrictEqual(yield* calendar.events(days(day, 1)), before)
+      }).pipe(Effect.provide(Layer.merge(fake.layer, capture)))
+      assert.isTrue(logged.some((line) => line.startsWith("Warn") && line.includes("calendar sync failed")))
     })
   )
 })
