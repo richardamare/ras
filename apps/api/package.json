@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./api": "./src/composition/Api.ts",
+    "./health": "./src/server/Health.ts",
     "./testing": "./src/Testing.ts"
   },
   "scripts": {

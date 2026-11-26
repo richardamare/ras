@@ -4,7 +4,6 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Path from "effect/Path"
 import * as HttpRouter from "effect/http/HttpRouter"
-import * as HttpServerResponse from "effect/http/HttpServerResponse"
 import * as HttpStaticServer from "effect/http/HttpStaticServer"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Global from "@ras/global"
@@ -13,10 +12,9 @@ import * as Api from "../composition/Api.ts"
 import * as Backup from "../backup/Backup.ts"
 import * as BackupRoute from "../backup/Route.ts"
 import * as GoogleIdTokens from "../backup/GoogleIdTokens.ts"
+import * as Health from "./Health.ts"
 import * as Mcp from "./Mcp.ts"
 import * as Modules from "../composition/Modules.ts"
-
-const health = HttpRouter.add("GET", "/health", HttpServerResponse.jsonUnsafe({ ok: true }))
 
 /**
  * The console's build from `apps/web/dist`. Its routes match only paths no other route takes, and a browser opening a
@@ -39,7 +37,7 @@ export const routes = Layer.mergeAll(
   Mcp.routes,
   Module.routes(Modules.modules),
   BackupRoute.routes.pipe(Layer.provide(GoogleIdTokens.layer)),
-  health,
+  Health.routes,
   webConsole
 )
 

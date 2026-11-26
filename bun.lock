@@ -53,6 +53,7 @@
       "name": "@ras/e2e",
       "dependencies": {
         "@effect/platform-bun": "catalog:",
+        "@effect/sql-sqlite-bun": "catalog:",
         "@ras/api": "workspace:*",
         "@ras/calendar": "workspace:*",
         "@ras/global": "workspace:*",

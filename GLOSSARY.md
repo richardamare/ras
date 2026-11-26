@@ -27,3 +27,11 @@ _Avoid_: Calendar insights, calendar stats, report, dashboard
 **Backup**:
 A full copy of the database, named `ras-<Prague time>.db`, in the R2 bucket. Cloud Scheduler asks for one every night through the backup route, and the owner takes one with `ras backup`.
 _Avoid_: Snapshot, dump, export
+
+**Instance**:
+One running ras process on Cloud Run. Each one picks its own id, which `/health` answers, so a caller sees when another instance answers, as after an idle stop or a deploy.
+_Avoid_: Container, server
+
+**Smoke run**:
+The checks `bun run --cwd apps/e2e smoke` runs against the service's `run.app` address: a write survives an idle stop, a deploy loses no write, the replica restores, and a connector keeps calling tools without a new authorization.
+_Avoid_: Smoke test

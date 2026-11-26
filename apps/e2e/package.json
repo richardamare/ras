@@ -6,10 +6,12 @@
     "typecheck": "tsc",
     "lint": "oxlint src test",
     "e2e": "bun --bun vitest run",
+    "smoke": "bun src/main.ts",
     "e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@effect/platform-bun": "catalog:",
+    "@effect/sql-sqlite-bun": "catalog:",
     "@ras/api": "workspace:*",
     "@ras/calendar": "workspace:*",
     "@ras/global": "workspace:*",
