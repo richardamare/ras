@@ -38,7 +38,7 @@ const client = Layer.succeed(
   )
 )
 
-const connected = Layer.effect(Google.Google, Effect.orDie(Google.make)).pipe(
+const connected = Layer.effect(Google.Google, Effect.orDie(Google.Google.make)).pipe(
   Layer.provideMerge(Writes.Writes.layer),
   Layer.provide(client),
   Layer.provideMerge(Testing.database([])),

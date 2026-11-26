@@ -14,11 +14,11 @@ import * as Writes from "./audit/Writes.ts"
 export const module = Module.make({
   name: "global",
   migrations: Migrations.migrations,
-  services: Layer.mergeAll(Agents.Agents.layer, Clients.Clients.layer, Graph.layer, Google.layer).pipe(
+  services: Layer.mergeAll(Agents.Agents.layer, Clients.Clients.layer, Graph.Graph.layer, Google.Google.layer).pipe(
     Layer.provideMerge(Writes.Writes.layer),
     Layer.merge(Auth.Auth.layer)
   ),
   http: { group: Http.group, handlers: Http.handlers },
   tools: { toolkit: Tools.toolkit, handlers: Tools.handlers },
-  routes: Layer.mergeAll(Routes.routes, Graph.routes, Google.routes)
+  routes: Layer.mergeAll(Routes.routes, Graph.Graph.routes, Google.Google.routes)
 })

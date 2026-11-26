@@ -20,6 +20,10 @@ export {
   type Snapshot,
   type Write
 } from "./audit/Writes.ts"
-export { Graph, layer as graph } from "./graph/Graph.ts"
-export { Google, layer as google } from "./google/Google.ts"
-export { Connection as OAuthConnection, type Service as OAuthService } from "./oauth/OAuth.ts"
+export { Graph } from "./graph/Graph.ts"
+export { Google } from "./google/Google.ts"
+export {
+  Connection as OAuthConnection,
+  type Account as OAuthAccount,
+  type Service as OAuthService
+} from "./oauth/OAuth.ts"
