@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../calendars/Calendar.ts"
+import * as Calendar from "./Calendar.ts"
 import * as Event from "./Event.ts"
 
 export const Weekday = Schema.Literals(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"])

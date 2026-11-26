@@ -3,8 +3,8 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
-import * as Span from "./Span.ts"
-import * as Event from "../events/Event.ts"
+import * as Span from "../model/Span.ts"
+import * as Event from "../model/Event.ts"
 import * as Schema from "effect/Schema"
 
 /** A Prague month, `2026-10`. */

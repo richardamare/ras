@@ -8,10 +8,9 @@ import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "./Calendar.ts"
-import * as Span from "./Span.ts"
-import * as Event from "../events/Event.ts"
-import type * as Reclaim from "../reclaim/Reclaim.ts"
+import * as Calendar from "../model/Calendar.ts"
+import * as Span from "../model/Span.ts"
+import * as Event from "../model/Event.ts"
 
 /** When the cache was last filled, and the span of time it holds. */
 export interface SyncState {
@@ -78,7 +77,7 @@ export class EventCacheRepository extends Context.Service<
      * is not audited, since it only mirrors Reclaim.
      */
     readonly replace: (
-      calendars: ReadonlyArray<Reclaim.SourceCalendar>,
+      calendars: ReadonlyArray<Calendar.SourceCalendar>,
       entries: ReadonlyArray<Event.Entry>,
       span: Span.Span,
       at: DateTime.Utc

@@ -1,3 +1,4 @@
+import type * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 
 /** Reclaim's id for a calendar. */
@@ -21,3 +22,14 @@ export const CalendarChange = Schema.Struct({
   })
 })
 export type CalendarChange = typeof CalendarChange.Type
+
+/** A calendar as Reclaim lists it, with the handles a write to its provider needs. */
+export interface SourceCalendar {
+  readonly id: CalendarId
+  readonly name: string
+  readonly color: string
+  readonly account: number
+  /** The email of the account the calendar belongs to. */
+  readonly email: string
+  readonly providerId: Option.Option<string>
+}

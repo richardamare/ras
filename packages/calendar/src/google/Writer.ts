@@ -3,9 +3,9 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Recurrence from "../events/Recurrence.ts"
-import type * as Writer from "../events/Writer.ts"
-import type * as Reclaim from "../reclaim/Reclaim.ts"
+import * as Recurrence from "../model/Recurrence.ts"
+import type * as Writer from "../model/Writer.ts"
+import type * as Calendar from "../model/Calendar.ts"
 import * as GoogleCalendar from "./GoogleCalendar.ts"
 
 const timeZone = "Europe/Prague"
@@ -70,7 +70,7 @@ export const bodyOf = (write: Writer.Write): GoogleCalendar.Body => ({
 export const idOf = (key: string) => key.toLowerCase().replace(/[^a-v0-9]/g, "")
 
 const within = <A>(
-  calendar: Reclaim.SourceCalendar,
+  calendar: Calendar.SourceCalendar,
   write: (id: string) => Effect.Effect<A, Errors.SourceFailed>
 ): Effect.Effect<A, Errors.SourceFailed> =>
   Option.match(calendar.providerId, {

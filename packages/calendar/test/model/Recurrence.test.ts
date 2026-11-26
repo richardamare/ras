@@ -2,7 +2,7 @@ import { assert, describe, it } from "@effect/vitest"
 import * as Effect from "effect/Effect"
 import * as Time from "@ras/kernel/Time"
 import * as KernelTesting from "@ras/kernel/Testing"
-import * as Recurrence from "../../src/events/Recurrence.ts"
+import * as Recurrence from "../../src/model/Recurrence.ts"
 import * as GoogleWriter from "../../src/google/Writer.ts"
 import * as OutlookWriter from "../../src/outlook/Writer.ts"
 

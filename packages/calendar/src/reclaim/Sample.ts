@@ -4,17 +4,19 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../calendars/Calendar.ts"
-import * as GoogleCalendar from "../google/GoogleCalendar.ts"
-import * as Event from "../events/Event.ts"
+import * as Calendar from "../model/Calendar.ts"
+import * as Event from "../model/Event.ts"
 import * as Reclaim from "./Reclaim.ts"
+
+/** The account of the sample's Google calendar. */
+export const googleAccount = "owner@gmail.example.com"
 
 export const personal = Calendar.CalendarId.make(101)
 export const work = Calendar.CalendarId.make(201)
 export const workCopy = Calendar.CalendarId.make(102)
 export const family = Calendar.CalendarId.make(301)
 
-const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
+const calendars: ReadonlyArray<Calendar.SourceCalendar> = [
   {
     id: personal,
     name: "Personal",
@@ -44,7 +46,7 @@ const calendars: ReadonlyArray<Reclaim.SourceCalendar> = [
     name: "Family",
     color: "#33b679",
     account: 3,
-    email: GoogleCalendar.sampleAccount,
+    email: googleAccount,
     providerId: Option.some("family@group.calendar.google.com")
   }
 ]

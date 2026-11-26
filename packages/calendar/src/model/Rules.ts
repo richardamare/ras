@@ -1,6 +1,6 @@
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
-import * as Calendar from "../calendars/Calendar.ts"
+import * as Calendar from "./Calendar.ts"
 import * as Event from "./Event.ts"
 
 /** One write to a calendar, as the rules judge it. */

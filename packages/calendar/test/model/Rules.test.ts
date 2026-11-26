@@ -2,9 +2,9 @@ import { assert, describe, it } from "@effect/vitest"
 import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../../src/calendars/Calendar.ts"
-import * as Event from "../../src/events/Event.ts"
-import * as Rules from "../../src/events/Rules.ts"
+import * as Calendar from "../../src/model/Calendar.ts"
+import * as Event from "../../src/model/Event.ts"
+import * as Rules from "../../src/model/Rules.ts"
 
 const calendar = (writable: boolean, enabled = true) =>
   new Calendar.Calendar({ id: Calendar.CalendarId.make(1), name: "Calendar", color: "#000000", writable, enabled })

@@ -3,8 +3,8 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "../../src/calendars/Busy.ts"
-import * as Calendar from "../../src/calendars/Calendar.ts"
-import * as Event from "../../src/events/Event.ts"
+import * as Calendar from "../../src/model/Calendar.ts"
+import * as Event from "../../src/model/Event.ts"
 import * as WorkHours from "../../src/calendars/WorkHours.ts"
 
 const at = (iso: string) => DateTime.makeUnsafe(iso)

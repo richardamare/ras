@@ -5,10 +5,10 @@ import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import * as Time from "@ras/kernel/Time"
 import * as Busy from "./Busy.ts"
-import * as Calendar from "./Calendar.ts"
-import * as Span from "./Span.ts"
+import * as Calendar from "../model/Calendar.ts"
+import * as Span from "../model/Span.ts"
 import * as WorkHours from "./WorkHours.ts"
-import * as Event from "../events/Event.ts"
+import * as Event from "../model/Event.ts"
 
 export const PeriodKind = Schema.Literals(["week", "month", "quarter"])
 export type PeriodKind = typeof PeriodKind.Type

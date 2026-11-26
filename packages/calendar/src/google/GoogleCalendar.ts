@@ -11,6 +11,7 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Global from "@ras/global"
 import * as Errors from "@ras/kernel/Errors"
+import * as Sample from "../reclaim/Sample.ts"
 
 /** A timed moment in a named zone, or a whole day. */
 export type Moment = { readonly dateTime: string; readonly timeZone: string } | { readonly date: string }
@@ -143,9 +144,6 @@ export const sampleCalls = Ref.makeUnsafe<ReadonlyArray<Call>>([])
 
 const record = (call: Call) => Ref.update(sampleCalls, (all) => [...all, call])
 
-/** The account of the sample's Google calendar. */
-export const sampleAccount = "owner@gmail.example.com"
-
 export const sample = Layer.succeed(
   GoogleCalendar,
   GoogleCalendar.of({
@@ -156,7 +154,7 @@ export const sample = Layer.succeed(
       ),
     patch: (calendar, event, body) => record({ _tag: "Patch", calendar, event, body }),
     remove: (calendar, event) => record({ _tag: "Remove", calendar, event }),
-    account: Effect.succeed(Option.some(sampleAccount)),
+    account: Effect.succeed(Option.some(Sample.googleAccount)),
     reach: Effect.void
   })
 )
