@@ -8,6 +8,7 @@ import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as GitHub from "../releases/GitHub.ts"
 import * as Launchd from "./Launchd.ts"
+import * as Lock from "./Lock.ts"
 import type * as Layout from "./Layout.ts"
 import * as Releases from "../releases/Releases.ts"
 import * as Shell from "../shell/Shell.ts"
@@ -43,18 +44,10 @@ export const make = (layout: Layout.Layout) =>
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
 
-    /** Holds the deploy lock, taking it over from a process that died holding it. */
     const locked = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-      Effect.acquireUseRelease(
-        Effect.gen(function* () {
-          yield* fs.makeDirectory(layout.state, { recursive: true })
-          const holder = yield* fs.readFileString(layout.lock).pipe(Effect.orElseSucceed(() => ""))
-          const alive = holder !== "" && (yield* Shell.succeeds("kill", ["-0", holder]))
-          if (alive) return yield* new Shell.Failed({ reason: `Another deploy is running, as process ${holder}.` })
-          yield* fs.writeFileString(layout.lock, String(process.pid))
-        }).pipe(filesystem("The deploy lock could not be taken")),
-        () => effect,
-        () => Effect.ignore(fs.remove(layout.lock, { force: true }))
+      Effect.andThen(
+        fs.makeDirectory(layout.state, { recursive: true }).pipe(filesystem("The deploy lock could not be taken")),
+        Lock.held(layout.lock, process.pid)(effect)
       )
 
     const syncSource = Effect.gen(function* () {

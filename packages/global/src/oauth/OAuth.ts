@@ -5,11 +5,13 @@ import * as Duration from "effect/Duration"
 import * as Base64 from "effect/encoding/Base64"
 import * as Base64Url from "effect/encoding/Base64Url"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Redacted from "effect/Redacted"
 import * as Result from "effect/Result"
 import * as Schema from "effect/Schema"
 import * as Semaphore from "effect/Semaphore"
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
@@ -120,7 +122,7 @@ const sealer = (secret: Redacted.Redacted, name: string) =>
     }
   })
 
-export const make = (provider: Provider) =>
+const make = (provider: Provider) =>
   Effect.gen(function* () {
     const tokens = yield* TokenRepository.make(provider.name)
     const writes = yield* Writes.Writes
@@ -287,7 +289,7 @@ export const make = (provider: Provider) =>
 const owner = new Actor.Actor({ channel: { _tag: "Console" }, agent: Option.none() })
 
 /** Where the provider sends the owner back after connecting; the state the attempt carries is its proof. */
-export const routes = <I>(tag: Context.Key<I, Service>, provider: Provider) =>
+const routes = <I>(tag: Context.Key<I, Service>, provider: Provider) =>
   HttpRouter.use((router) =>
     Effect.gen(function* () {
       const service = yield* tag
@@ -320,3 +322,27 @@ export const routes = <I>(tag: Context.Key<I, Service>, provider: Provider) =>
       )
     })
   )
+
+type Make = ReturnType<typeof make>
+
+/** One connected account's service class: `make` builds it over any `HttpClient`, `layer` over fetch. */
+export interface Account<Self, Id extends string> extends Context.ServiceClass<Self, Id, Service> {
+  readonly provider: Provider
+  readonly make: Make
+  readonly layer: Layer.Layer<Self, never, Exclude<Effect.Services<Make>, HttpClient.HttpClient>>
+  /** Serves the provider's callback. */
+  readonly routes: Layer.Layer<never, never, Self | HttpRouter.HttpRouter>
+}
+
+export const Account =
+  <Self>() =>
+  <const Id extends string>(id: Id, provider: Provider): Account<Self, Id> => {
+    const tag = Context.Service<Self, Service>()(id)
+    const built = make(provider)
+    return class extends tag {
+      static readonly provider = provider
+      static readonly make = built
+      static readonly layer = Layer.effect(tag, Effect.orDie(built)).pipe(Layer.provide(FetchHttpClient.layer))
+      static readonly routes = routes(tag, provider)
+    }
+  }

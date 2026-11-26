@@ -57,7 +57,7 @@ const client = Layer.effect(
   )
 )
 
-const connected = Layer.effect(Graph.Graph, Effect.orDie(Graph.make)).pipe(
+const connected = Layer.effect(Graph.Graph, Effect.orDie(Graph.Graph.make)).pipe(
   Layer.provideMerge(Writes.Writes.layer),
   Layer.provide(client),
   Layer.provideMerge(microsoft),

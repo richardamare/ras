@@ -30,4 +30,21 @@ describe("the backup", () => {
       assert.strictEqual(tables.length, 1)
     }).pipe(Effect.scoped, Effect.provide(Testing.database([])), Effect.provide(BunServices.layer))
   )
+
+  it.effect("removes a half copy an interrupted backup left in the iCloud folder", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const icloud = yield* fs.makeTempDirectoryScoped({ prefix: "ras-icloud-" })
+      yield* fs.writeFileString(path.join(icloud, ".ras-2026-11-01T0300.db.partial"), "half")
+      yield* Backup.run.pipe(
+        Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord({ RAS_BACKUP_ICLOUD: icloud })))
+      )
+      const files = yield* fs.readDirectory(icloud)
+      assert.deepStrictEqual(
+        files.map((file) => /^ras-\d{4}-\d{2}-\d{2}T\d{4}\.db$/.test(file)),
+        [true]
+      )
+    }).pipe(Effect.scoped, Effect.provide(Testing.database([])), Effect.provide(BunServices.layer))
+  )
 })

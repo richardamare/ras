@@ -312,21 +312,22 @@ export const make = (username: string, password: Redacted.Redacted) => {
   })
 }
 
+/** The owner's Apple ID and app-specific password, when both are set. */
+export const credentials = Config.option(
+  Config.all({ username: Config.String("RAS_MAIL_USERNAME"), password: Config.Redacted("RAS_MAIL_APP_PASSWORD") })
+).pipe(Effect.orDie)
+
+export const unset = "ras has no Apple ID or app-specific password. Set RAS_MAIL_USERNAME and RAS_MAIL_APP_PASSWORD."
+
 /** iCloud Mail with the owner's Apple ID and app-specific password; without them, every read fails saying so. */
 export const live = Layer.effect(
   Mailbox,
-  Effect.gen(function* () {
-    const username = yield* Config.option(Config.String("RAS_MAIL_USERNAME")).pipe(Effect.orDie)
-    const password = yield* Config.option(Config.Redacted("RAS_MAIL_APP_PASSWORD")).pipe(Effect.orDie)
-    if (Option.isNone(username) || Option.isNone(password)) {
-      const unset = Effect.fail(
-        failed(
-          "iCloud Mail is not connected: ras has no Apple ID or app-specific password. Set RAS_MAIL_USERNAME and RAS_MAIL_APP_PASSWORD."
-        )
-      )
-      return Mailbox.of({ search: () => unset, recent: () => unset, message: () => unset, attachments: () => unset })
+  Effect.map(credentials, (found) => {
+    if (Option.isNone(found)) {
+      const fails = Effect.fail(failed(`iCloud Mail is not connected: ${unset}`))
+      return Mailbox.of({ search: () => fails, recent: () => fails, message: () => fails, attachments: () => fails })
     }
-    return make(username.value, password.value)
+    return make(found.value.username, found.value.password)
   })
 )
 

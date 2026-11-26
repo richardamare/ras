@@ -1,7 +1,6 @@
 import * as BunRuntime from "@effect/platform-bun/BunRuntime"
 import * as BunServices from "@effect/platform-bun/BunServices"
 import * as Config from "effect/Config"
-import type * as Context from "effect/Context"
 import * as Console from "effect/Console"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -10,7 +9,6 @@ import * as Argument from "effect/cli/Argument"
 import * as Command from "effect/cli/Command"
 import * as Flag from "effect/cli/Flag"
 import * as Prompt from "effect/cli/Prompt"
-import type * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Package from "../../../package.json" with { type: "json" }
 import * as Api from "./composition/Api.ts"
@@ -91,19 +89,15 @@ const agent = Command.make("agent").pipe(
 )
 
 /** `ras <name> connect` and `ras <name> status` for an account ras holds its own tokens to. */
-const accountCommand = <I>(
-  name: string,
-  label: string,
-  signIn: string,
-  connection: Context.Key<I, Global.OAuthService>,
-  layer: Layer.Layer<I, never, Global.Writes | SqlClient.SqlClient>
-) => {
-  const at = (file: string) => layer.pipe(Layer.provide(Global.Writes.layer), Layer.provide(Server.database(file)))
+const accountCommand = <I, Id extends string>(account: Global.OAuthAccount<I, Id>) => {
+  const { name, label, signIn } = account.provider
+  const at = (file: string) =>
+    account.layer.pipe(Layer.provide(Global.Writes.layer), Layer.provide(Server.database(file)))
   return Command.make(name).pipe(
     Command.withDescription(`Connects the owner's ${label} account, whose calendars ras writes.`),
     Command.withSubcommands([
       Command.make("connect", { database }, (flags) =>
-        Effect.flatMap(Effect.service(connection), (account) => account.connect).pipe(
+        Effect.flatMap(Effect.service(account), (connection) => connection.connect).pipe(
           Effect.flatMap((url) => Console.log(`Open this within ten minutes and allow ras the calendar:\n${url.href}`)),
           Effect.provide(at(flags.database))
         )
@@ -113,7 +107,7 @@ const accountCommand = <I>(
         )
       ),
       Command.make("status", { database }, (flags) =>
-        Effect.flatMap(Effect.service(connection), (account) => account.connection).pipe(
+        Effect.flatMap(Effect.service(account), (connection) => connection.connection).pipe(
           Effect.flatMap((found) =>
             Console.log(
               Option.match(found, {
@@ -129,9 +123,6 @@ const accountCommand = <I>(
   )
 }
 
-const graph = accountCommand("graph", "Outlook", "Microsoft", Global.Graph, Global.graph)
-const google = accountCommand("google", "Google", "Google", Global.Google, Global.google)
-
 const backup = Command.make("backup", { database }, (flags) =>
   Effect.provide(Backup.run, Server.database(flags.database))
 ).pipe(
@@ -143,7 +134,16 @@ const openapi = Command.make("openapi", {}, () => Console.log(JSON.stringify(Api
 )
 
 const ras = Command.make("ras").pipe(
-  Command.withSubcommands([serve, migrate, owner, agent, graph, google, backup, openapi])
+  Command.withSubcommands([
+    serve,
+    migrate,
+    owner,
+    agent,
+    accountCommand(Global.Graph),
+    accountCommand(Global.Google),
+    backup,
+    openapi
+  ])
 )
 
 Command.run(ras, { version: Package.version }).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain)

@@ -1,10 +1,6 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OAuth from "../oauth/OAuth.ts"
 
-export const provider: OAuth.Provider = {
+const provider: OAuth.Provider = {
   name: "google",
   label: "Google",
   signIn: "Google",
@@ -20,10 +16,4 @@ export const provider: OAuth.Provider = {
 }
 
 /** The owner's Google account, whose calendars the Calendar API writes. */
-export class Google extends Context.Service<Google, OAuth.Service>()("@ras/global/Google") {}
-
-export const make = OAuth.make(provider)
-
-export const layer = Layer.effect(Google, Effect.orDie(make)).pipe(Layer.provide(FetchHttpClient.layer))
-
-export const routes = OAuth.routes(Google, provider)
+export class Google extends OAuth.Account<Google>()("@ras/global/Google", provider) {}
