@@ -43,9 +43,51 @@ jobs:
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
           ./actionlint -color
 
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      deploy: ${{ steps.filter.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            deploy:
+              - deploy/**
+
+  terraform:
+    needs: changes
+    if: needs.changes.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ~1.17
+          terraform_wrapper: false
+      - uses: terraform-linters/setup-tflint@v6
+      - run: terraform fmt -check -recursive
+      - run: |
+          for root in production modules/*; do
+            terraform -chdir="$root" init -backend=false -input=false
+            terraform -chdir="$root" validate
+            terraform -chdir="$root" test
+          done
+      - run: |
+          tflint --init
+          tflint --recursive --config "$PWD/.tflint.hcl"
+
   # The ruleset requires only this job, so adding or renaming a job above never touches repository settings.
   ci-ok:
-    needs: [check, e2e, actionlint]
+    needs: [check, e2e, actionlint, changes, terraform]
     if: always()
     runs-on: ubuntu-latest
     steps:
