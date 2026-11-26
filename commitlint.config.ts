@@ -10,6 +10,7 @@ const config: UserConfig = {
         "api",
         "calendar",
         "ctl",
+        "deploy",
         "ci",
         "deps",
         "deps-dev",
