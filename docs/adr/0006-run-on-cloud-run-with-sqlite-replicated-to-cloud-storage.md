@@ -19,8 +19,8 @@ The entrypoint clones the memory repository with a deploy key that can write to 
 ## Consequences
 
 - The schema, the migrations and the queries stay as they are, FTS5 memory search included.
-- Only one instance may write, so the service runs at most one. A deploy briefly runs two revisions that both replicate, until the smoke run settles how to avoid it.
-- Litestream may get too little CPU between requests under request-based billing. Instance-based billing would cost about 2–3 USD a month if it does.
+- Only one instance may write, so the service runs at most one. A deploy scales the service to no instances before it rolls the new revision, because two revisions replicating at once lose writes. ras refuses requests for about 40 seconds of each deploy.
+- Litestream sends the last writes before an idle stop under request-based billing, as the smoke run shows.
 - A cold start restores the database and clones memory before ras answers, so the first request after an idle stop is slower.
 - The owner applies Terraform from their own machine, and CI only checks it.
 - The owner gets an email when the month's bill passes 120 CZK or `/health` stops answering.
