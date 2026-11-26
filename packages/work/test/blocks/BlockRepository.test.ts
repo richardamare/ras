@@ -11,10 +11,10 @@ import * as Testing from "@ras/global/testing"
 import * as KernelModule from "@ras/kernel/Module"
 import * as BlockRepository from "../../src/blocks/BlockRepository.ts"
 import * as Block from "../../src/blocks/Block.ts"
-import * as Task from "../../src/board/Task.ts"
+import * as Task from "../../src/tasks/Task.ts"
 import * as Migrations from "../../src/Migrations.ts"
-import * as SpaceRepository from "../../src/board/SpaceRepository.ts"
-import * as TaskRepository from "../../src/board/TaskRepository.ts"
+import * as SpaceRepository from "../../src/tasks/SpaceRepository.ts"
+import * as TaskRepository from "../../src/tasks/TaskRepository.ts"
 
 const tables = KernelModule.make({ name: "work", migrations: Migrations.migrations })
 

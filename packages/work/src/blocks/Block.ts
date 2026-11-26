@@ -2,7 +2,7 @@ import * as Schema from "effect/Schema"
 import * as Calendar from "@ras/calendar"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
-import * as Task from "../board/Task.ts"
+import * as Task from "../tasks/Task.ts"
 
 export const BlockId = Id.Uuid.pipe(Schema.brand("BlockId"))
 export type BlockId = typeof BlockId.Type
