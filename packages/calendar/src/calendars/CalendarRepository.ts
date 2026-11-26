@@ -7,8 +7,7 @@ import * as Schema from "effect/Schema"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
-import * as Calendar from "./Calendar.ts"
-import type * as Reclaim from "../reclaim/Reclaim.ts"
+import * as Calendar from "../model/Calendar.ts"
 
 /** The providers ras writes plain events through. */
 export type Provider = "outlook" | "google"
@@ -22,7 +21,7 @@ export interface Account {
 /** A connected calendar with its settings and the handles a write to its provider needs. */
 export interface Connected {
   readonly calendar: Calendar.Calendar
-  readonly source: Reclaim.SourceCalendar
+  readonly source: Calendar.SourceCalendar
   /** The provider that writes it, when its account is connected to ras. */
   readonly provider: Option.Option<Provider>
 }

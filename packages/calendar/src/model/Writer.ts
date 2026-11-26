@@ -1,7 +1,7 @@
 import type * as Effect from "effect/Effect"
 import type * as Errors from "@ras/kernel/Errors"
 import type * as Time from "@ras/kernel/Time"
-import type * as Reclaim from "../reclaim/Reclaim.ts"
+import type * as Calendar from "./Calendar.ts"
 import type * as Event from "./Event.ts"
 import type * as Recurrence from "./Recurrence.ts"
 
@@ -35,13 +35,13 @@ export type Target =
 /** Plain events in the calendars of one account connected to ras, written through that account's provider. */
 export interface Writer {
   readonly create: (
-    calendar: Reclaim.SourceCalendar,
+    calendar: Calendar.SourceCalendar,
     event: NewEvent
   ) => Effect.Effect<{ readonly id: string; readonly link: string | null }, Errors.SourceFailed>
   readonly change: (
-    calendar: Reclaim.SourceCalendar,
+    calendar: Calendar.SourceCalendar,
     target: Target,
     write: Write
   ) => Effect.Effect<void, Errors.SourceFailed>
-  readonly cancel: (calendar: Reclaim.SourceCalendar, target: Target) => Effect.Effect<void, Errors.SourceFailed>
+  readonly cancel: (calendar: Calendar.SourceCalendar, target: Target) => Effect.Effect<void, Errors.SourceFailed>
 }

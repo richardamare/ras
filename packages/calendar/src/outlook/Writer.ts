@@ -2,9 +2,10 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Recurrence from "../events/Recurrence.ts"
-import type * as Writer from "../events/Writer.ts"
+import * as Recurrence from "../model/Recurrence.ts"
+import type * as Writer from "../model/Writer.ts"
 import * as Reclaim from "../reclaim/Reclaim.ts"
+import type * as Calendar from "../model/Calendar.ts"
 import * as Outlook from "./Outlook.ts"
 
 const clock = (local: string): Outlook.Clock => ({ dateTime: `${local}:00`, timeZone: Outlook.timeZone })
@@ -50,7 +51,7 @@ export const writeOf = (write: Writer.Write): Outlook.Write => ({
   ...(write.when === undefined ? {} : schedule(write.when))
 })
 
-const unreachable = (calendar: Reclaim.SourceCalendar) =>
+const unreachable = (calendar: Calendar.SourceCalendar) =>
   new Errors.SourceFailed({ source: "graph", reason: `"${calendar.name}" has no Outlook id in Reclaim.` })
 
 /** Writes through Graph; an event read from Reclaim is found by the id Outlook gives it, its occurrence's in a series. */
@@ -58,7 +59,7 @@ export const make = Effect.gen(function* () {
   const outlook = yield* Outlook.Outlook
   const reclaim = yield* Reclaim.Reclaim
 
-  const eventOf = (calendar: Reclaim.SourceCalendar, target: Writer.Target) =>
+  const eventOf = (calendar: Calendar.SourceCalendar, target: Writer.Target) =>
     target._tag === "Placed"
       ? Effect.succeed(target.id)
       : Effect.flatMap(reclaim.providerId(calendar, target.entry.ref.id), (series) =>

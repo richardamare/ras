@@ -1,8 +1,8 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import type * as Calendar from "./Calendar.ts"
-import type * as Span from "./Span.ts"
+import type * as Calendar from "../model/Calendar.ts"
+import type * as Span from "../model/Span.ts"
 
 /** A work block planned as a draft: it has no event yet, but its time is taken. */
 export interface BlockDraft {

@@ -11,8 +11,8 @@ import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
 import * as Block from "./Block.ts"
-import * as Project from "../board/Project.ts"
-import * as Task from "../board/Task.ts"
+import * as Project from "../tasks/Project.ts"
+import * as Task from "../tasks/Task.ts"
 
 /** A block as its row keeps it: no end while it runs, no event while it is a draft. */
 export interface StoredBlock {

@@ -3,11 +3,11 @@ import * as DateTime from "effect/DateTime"
 import * as Option from "effect/Option"
 import * as Result from "effect/Result"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "./Calendar.ts"
-import * as Span from "./Span.ts"
-import * as Rules from "../events/Rules.ts"
+import * as Calendar from "../model/Calendar.ts"
+import * as Span from "../model/Span.ts"
+import * as Rules from "../model/Rules.ts"
 import * as Schema from "effect/Schema"
-import * as Event from "../events/Event.ts"
+import * as Event from "../model/Event.ts"
 
 export class Slot extends Schema.Class<Slot>("Slot")({
   start: Time.PragueLocal,

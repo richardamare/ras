@@ -18,6 +18,20 @@ const offending = (rule: RegExp, allowed: (path: string) => boolean) =>
 
 const owner = (path: string) => /^packages\/([a-z]+)\/src\//.exec(path)?.[1]
 
+/**
+ * Each module's feature folders, lowest first. A folder imports only the folders before it, so the folders of a module
+ * never form a cycle, and none imports the module's root files, which compose the folders.
+ */
+const folderOrder: Readonly<Record<string, ReadonlyArray<string>>> = {
+  global: ["audit", "agents", "auth", "oauth", "graph", "google"],
+  calendar: ["model", "reclaim", "google", "outlook", "calendars", "events"],
+  work: ["tasks", "blocks", "board", "drafts"],
+  mail: ["mailbox"],
+  memory: ["clone", "registry", "facts", "webhook"]
+}
+
+const folderOf = (path: string) => /^packages\/([a-z]+)\/src\/(?:([a-z]+)\/)?/.exec(path)
+
 describe("the architecture", () => {
   it("writes SQL only in a module's repositories, its migrations and the audit", () => {
     assert.deepStrictEqual(
@@ -122,6 +136,42 @@ describe("the architecture", () => {
         ([, table, prefix]) =>
           modules.has(prefix!) && prefix !== module ? Result.succeed(`${file.path}: ${table}`) : Result.failVoid
       )
+    })
+    assert.deepStrictEqual(offences, [])
+  })
+
+  it("lists every feature folder of a module in its folder order", () => {
+    const folders = Arr.dedupe(
+      Arr.filterMap(sources, (file) => {
+        const found = folderOf(file.path)
+        return found === null || found[1] === "kernel" || found[2] === undefined
+          ? Result.failVoid
+          : Result.succeed(`${found[1]}/${found[2]}`)
+      })
+    )
+    assert.deepStrictEqual(
+      Arr.filter(folders, (folder) => {
+        const [module, name] = folder.split("/") as [string, string]
+        return !(folderOrder[module] ?? []).includes(name)
+      }),
+      []
+    )
+  })
+
+  it("lets a feature folder import only the folders before it in its module", () => {
+    const offences = Arr.flatMap(sources, (file) => {
+      const found = folderOf(file.path)
+      if (found === null || found[2] === undefined) return []
+      const order = folderOrder[found[1]!] ?? []
+      const rank = order.indexOf(found[2])
+      return Arr.filterMap(Arr.fromIterable(file.text.matchAll(/from "(\.\.?\/[^"]+)"/g)), ([, specifier]) => {
+        const target = new URL(specifier!, `file:///${file.path}`).pathname.slice(1)
+        const reached = folderOf(target)
+        if (reached === null || reached[2] === found[2]) return Result.failVoid
+        return reached[2] === undefined || order.indexOf(reached[2]) > rank
+          ? Result.succeed(`${file.path} -> ${target}`)
+          : Result.failVoid
+      })
     })
     assert.deepStrictEqual(offences, [])
   })

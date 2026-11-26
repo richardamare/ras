@@ -2,8 +2,8 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Id from "@ras/kernel/Id"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../calendars/Calendar.ts"
-import * as Span from "../calendars/Span.ts"
+import * as Calendar from "./Calendar.ts"
+import * as Span from "./Span.ts"
 
 /** Who owns an event: its calendar's own account, someone who invited it, Calendar Sync, or Reclaim itself. */
 export const Kind = Schema.Literals(["plain", "invitation", "copy", "reclaim"])

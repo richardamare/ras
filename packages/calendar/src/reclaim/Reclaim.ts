@@ -13,34 +13,26 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Errors from "@ras/kernel/Errors"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../calendars/Calendar.ts"
-import * as Span from "../calendars/Span.ts"
-import * as Event from "../events/Event.ts"
-import * as EventWrites from "../events/EventWrites.ts"
-
-/** A calendar as Reclaim lists it, with the handles a write to its provider needs. */
-export interface SourceCalendar {
-  readonly id: Calendar.CalendarId
-  readonly name: string
-  readonly color: string
-  readonly account: number
-  /** The email of the account the calendar belongs to. */
-  readonly email: string
-  readonly providerId: Option.Option<string>
-}
+import * as Calendar from "../model/Calendar.ts"
+import * as Span from "../model/Span.ts"
+import * as Event from "../model/Event.ts"
+import * as EventWrites from "../model/EventWrites.ts"
 
 /** The calendars Reclaim reaches and their events, as Reclaim holds them; folding copies is the caller's. */
 export class Reclaim extends Context.Service<
   Reclaim,
   {
-    readonly calendars: Effect.Effect<ReadonlyArray<SourceCalendar>, Errors.SourceFailed>
+    readonly calendars: Effect.Effect<ReadonlyArray<Calendar.SourceCalendar>, Errors.SourceFailed>
     /** Every event of every connected calendar that overlaps the Prague days from `first` up to, not including, `end`. */
     readonly events: (
       first: Time.PragueDate,
       end: Time.PragueDate
     ) => Effect.Effect<ReadonlyArray<Event.Entry>, Errors.SourceFailed>
     /** The id the calendar's provider gives the event; for an occurrence of a series, the series' id. */
-    readonly providerId: (calendar: SourceCalendar, event: string) => Effect.Effect<string, Errors.SourceFailed>
+    readonly providerId: (
+      calendar: Calendar.SourceCalendar,
+      event: string
+    ) => Effect.Effect<string, Errors.SourceFailed>
     /** Answers an invitation and lets its organizer know. */
     readonly reply: (
       calendar: Calendar.CalendarId,
@@ -242,7 +234,7 @@ export const make = (apiKey: Redacted.Redacted) =>
         const credentials = yield* get("/api/credentials", Schema.Array(WireCredential))
         return Arr.map(
           Arr.filter(Arr.flatten(Object.values(accounts)), (calendar) => calendar.connected && calendar.id > 0),
-          (calendar): SourceCalendar => ({
+          (calendar): Calendar.SourceCalendar => ({
             id: Calendar.CalendarId.make(calendar.id),
             name: calendar.name,
             color: calendar.colorHex ?? "#888888",

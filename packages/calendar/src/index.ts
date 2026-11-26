@@ -1,5 +1,5 @@
 export { Calendar } from "./calendars/Calendars.ts"
-export { CalendarId } from "./calendars/Calendar.ts"
+export { CalendarId } from "./model/Calendar.ts"
 export { Events, type BlockEvent } from "./events/Events.ts"
-export type { Span } from "./calendars/Span.ts"
+export type { Span } from "./model/Span.ts"
 export { BusyTime, type BlockDraft } from "./calendars/BusyTime.ts"

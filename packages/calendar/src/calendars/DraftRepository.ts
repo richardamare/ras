@@ -9,9 +9,9 @@ import * as SqlClient from "effect/sql/SqlClient"
 import * as Global from "@ras/global"
 import * as Sql from "@ras/kernel/Sql"
 import * as Time from "@ras/kernel/Time"
-import * as Calendar from "../calendars/Calendar.ts"
-import * as Span from "../calendars/Span.ts"
-import * as Event from "./Event.ts"
+import * as Calendar from "../model/Calendar.ts"
+import * as Span from "../model/Span.ts"
+import * as Event from "../model/Event.ts"
 
 /** A plain event drafted in ras; it reaches its calendar only once the owner confirms it. */
 export interface Draft {

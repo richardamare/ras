@@ -6,7 +6,7 @@ import * as Option from "effect/Option"
 import type * as SqlClient from "effect/sql/SqlClient"
 import * as Module from "@ras/kernel/Module"
 import * as Actor from "./audit/Actor.ts"
-import * as Http from "./Http.ts"
+import * as Session from "./auth/Session.ts"
 import * as Global from "./Module.ts"
 
 export const owner = new Actor.Actor({ channel: { _tag: "Console" }, agent: Option.none() })
@@ -20,7 +20,7 @@ export const database = (modules: ReadonlyArray<Module.Module>) =>
 /** The owner, signed in at the console. */
 export const signedIn = Layer.mergeAll(
   Layer.succeed(Actor.CurrentActor, owner),
-  Layer.succeed(Http.Authenticated, (httpEffect) => Effect.provideService(httpEffect, Actor.CurrentActor, owner))
+  Layer.succeed(Session.Authenticated, (httpEffect) => Effect.provideService(httpEffect, Actor.CurrentActor, owner))
 )
 
 const compose = Module.services as unknown as (modules: ReadonlyArray<Module.Module>) => Layer.Layer<never>
@@ -35,7 +35,7 @@ export const layer = <const Ms extends ReadonlyArray<Module.Module> = readonly [
 ): Layer.Layer<
   | Module.Services<readonly [typeof Global.module, ...Ms]>
   | Actor.CurrentActor
-  | Http.Authenticated
+  | Session.Authenticated
   | SqlClient.SqlClient
 > =>
   compose([Global.module, ...modules]).pipe(

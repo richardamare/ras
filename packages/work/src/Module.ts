@@ -6,9 +6,9 @@ import * as Board from "./board/Board.ts"
 import * as Drafts from "./drafts/Drafts.ts"
 import * as Http from "./Http.ts"
 import * as Migrations from "./Migrations.ts"
-import * as ProjectRepository from "./board/ProjectRepository.ts"
-import * as SpaceRepository from "./board/SpaceRepository.ts"
-import * as TaskRepository from "./board/TaskRepository.ts"
+import * as ProjectRepository from "./tasks/ProjectRepository.ts"
+import * as SpaceRepository from "./tasks/SpaceRepository.ts"
+import * as TaskRepository from "./tasks/TaskRepository.ts"
 import * as Tools from "./Tools.ts"
 
 export const module = Module.make({
