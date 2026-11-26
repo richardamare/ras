@@ -85,10 +85,6 @@ resource "google_billing_budget" "this" {
   }
 
   threshold_rules {
-    threshold_percent = 0.5
-  }
-
-  threshold_rules {
     threshold_percent = 1.0
   }
 

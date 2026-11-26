@@ -21,6 +21,15 @@ run "budgets_120_czk_a_month" {
   }
 }
 
+run "emails_only_once_the_month_passes_the_budget" {
+  command = plan
+
+  assert {
+    condition     = length(google_billing_budget.this.threshold_rules) == 1 && google_billing_budget.this.threshold_rules[0].threshold_percent == 1.0
+    error_message = "The budget's one rule fires at 100% of the month's amount."
+  }
+}
+
 run "checks_health_over_https" {
   command = plan
 
