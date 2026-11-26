@@ -49,11 +49,7 @@ const exec = (command: string, args: ReadonlyArray<string>) =>
       if (Number(code) !== 0)
         return yield* Effect.fail(new Smoke.SmokeFailed({ message: `${command} ${args.join(" ")} exited ${code}.` }))
     })
-  ).pipe(
-    Effect.mapError((error) =>
-      error instanceof Smoke.SmokeFailed ? error : new Smoke.SmokeFailed({ message: `${command}: ${error}` })
-    )
-  )
+  ).pipe(Smoke.failing(command))
 
 const idle = Command.make(
   "idle",
@@ -131,9 +127,7 @@ const smoke = Command.make("smoke").pipe(
 )
 
 Command.run(smoke, { version: "1" }).pipe(
-  Effect.tapError((error) =>
-    error instanceof Smoke.SmokeFailed ? Console.error(`Failed. ${error.message}`) : Effect.void
-  ),
+  Effect.tapErrorTag("SmokeFailed", (error) => Console.error(`Failed. ${error.message}`)),
   Effect.provide(Layer.merge(BunServices.layer, FetchHttpClient.layer)),
   BunRuntime.runMain
 )

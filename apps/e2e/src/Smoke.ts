@@ -1,11 +1,13 @@
 import * as SqliteClient from "@effect/sql-sqlite-bun/SqliteClient"
 import * as Arr from "effect/Array"
+import * as DateTime from "effect/DateTime"
 import * as Duration from "effect/Duration"
 import * as Effect from "effect/Effect"
 import * as Fiber from "effect/Fiber"
 import * as FileSystem from "effect/FileSystem"
 import * as Option from "effect/Option"
 import * as Path from "effect/Path"
+import * as PlatformError from "effect/PlatformError"
 import * as Redacted from "effect/Redacted"
 import * as Ref from "effect/Ref"
 import * as Schedule from "effect/Schedule"
@@ -13,10 +15,12 @@ import * as Schema from "effect/Schema"
 import * as Cookies from "effect/http/Cookies"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as HttpClient from "effect/http/HttpClient"
+import * as HttpClientError from "effect/http/HttpClientError"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as HttpApiClient from "effect/http-api/HttpApiClient"
 import * as SqlClient from "effect/sql/SqlClient"
+import * as SqlError from "effect/sql/SqlError"
 import * as Api from "@ras/api/api"
 import * as Health from "@ras/api/health"
 
@@ -29,6 +33,19 @@ export interface Target {
 export class SmokeFailed extends Schema.TaggedError<SmokeFailed>()("SmokeFailed", { message: Schema.String }) {}
 
 const failed = (message: string) => new SmokeFailed({ message })
+
+/** What else goes wrong while a smoke run talks to ras, reads a file or runs a command. */
+export type Unexpected =
+  | HttpClientError.HttpClientError
+  | Schema.SchemaError
+  | PlatformError.PlatformError
+  | SqlError.SqlError
+
+/** Fails with a SmokeFailed that names what was `doing` when an unexpected error stops `effect`. */
+export const failing =
+  (doing: string) =>
+  <A, R>(effect: Effect.Effect<A, SmokeFailed | Unexpected, R>): Effect.Effect<A, SmokeFailed, R> =>
+    Effect.mapError(effect, (error) => (error._tag === "SmokeFailed" ? error : failed(`${doing}: ${error.message}`)))
 
 /** How a connector that holds its token kept calling tools when an instance it had no session with answered. */
 export type Recovery = "refreshed" | "reinitialized"
@@ -54,33 +71,36 @@ const signIn = (target: Target) =>
     Effect.mapError(() => failed(`The owner ${target.owner.email} could not sign in.`))
   )
 
-const owner = (url: URL, cookie: string) =>
+/** The HTTP API client that calls ras with the owner's session `cookie`. */
+const signedInClient = (url: URL, cookie: string) =>
   HttpApiClient.make(Api.Api, {
     baseUrl: url.origin,
     transformClient: HttpClient.mapRequest(HttpClientRequest.setHeader("cookie", cookie))
   })
 
-type Owner = Effect.Success<ReturnType<typeof owner>>
+type Client = Effect.Success<ReturnType<typeof signedInClient>>
 
-const write = (client: Owner, title: string) =>
+const write = (client: Client, title: string) =>
   Effect.map(client.work.addTask({ payload: { title } }), (task) => task.id)
 
+type TaskId = Effect.Success<ReturnType<typeof write>>
+
 /** Whether the task the owner wrote is still there; a lost session counts as lost too. */
-const survived = (client: Owner, id: Parameters<Owner["work"]["task"]>[0]["params"]["id"]) =>
+const survived = (client: Client, id: TaskId) =>
   client.work.task({ params: { id } }).pipe(
     Effect.as(true),
     Effect.orElseSucceed(() => false)
   )
 
-const cleanUp = (client: Owner, ids: ReadonlyArray<Parameters<Owner["work"]["deleteTask"]>[0]["params"]["id"]>) =>
+const cleanUp = (client: Client, ids: ReadonlyArray<TaskId>) =>
   Effect.ignore(Effect.forEach(ids, (id) => client.work.deleteTask({ params: { id } }), { concurrency: 4 }))
 
 const Registered = Schema.Struct({ client_id: Schema.String })
 const Consented = Schema.Struct({ url: Schema.String })
 const Tokens = Schema.Struct({ access_token: Schema.String, refresh_token: Schema.String })
 const RpcResponse = Schema.Struct({
-  result: Schema.optionalKey(Schema.Struct({ isError: Schema.optionalKey(Schema.Boolean) })),
-  error: Schema.optionalKey(Schema.Struct({ message: Schema.String }))
+  result: Schema.OptionFromOptionalKey(Schema.Struct({ isError: Schema.OptionFromOptionalKey(Schema.Boolean) })),
+  error: Schema.OptionFromOptionalKey(Schema.Struct({ message: Schema.String }))
 })
 const decodeRpc = Schema.decodeUnknownEffect(Schema.fromJsonString(RpcResponse))
 
@@ -146,8 +166,10 @@ const connector = (url: URL, cookie: string) =>
       Effect.flatMap(HttpClientResponse.filterStatusOk),
       Effect.flatMap(HttpClientResponse.schemaBodyJson(Consented))
     )
-    const code = new URL(consented.url).searchParams.get("code")
-    if (code === null) return yield* Effect.fail(failed(`Consent sent no code: ${consented.url}`))
+    const code = yield* Option.match(Option.fromNullOr(new URL(consented.url).searchParams.get("code")), {
+      onNone: () => Effect.fail(failed(`Consent sent no code: ${consented.url}`)),
+      onSome: Effect.succeed
+    })
 
     const token = (params: Record<string, string>) =>
       HttpClientRequest.post(new URL("/auth/oauth2/token", url)).pipe(
@@ -202,7 +224,10 @@ const connector = (url: URL, cookie: string) =>
         yield* Ref.update(recoveries, (done) => [...done, recovery])
       })
 
-    const attempt = (name: string, left: number): Effect.Effect<void, unknown, HttpClient.HttpClient> =>
+    const attempt = (
+      name: string,
+      left: number
+    ): Effect.Effect<void, SmokeFailed | Unexpected, HttpClient.HttpClient> =>
       Effect.gen(function* () {
         const response = yield* post({ id: 1, method: "tools/call", params: { name, arguments: {} } })
         if (left > 0 && (response.status === 401 || response.status === 404)) {
@@ -211,8 +236,11 @@ const connector = (url: URL, cookie: string) =>
         }
         if (response.status !== 200) return yield* Effect.fail(failed(`${name} answered ${response.status}.`))
         const text = yield* response.text
+        const streamed = Option.exists(Option.fromNullishOr(response.headers["content-type"]), (type) =>
+          type.startsWith("text/event-stream")
+        )
         const body = yield* decodeRpc(
-          (response.headers["content-type"] ?? "").startsWith("text/event-stream")
+          streamed
             ? Arr.join(
                 Arr.map(
                   Arr.filter(text.split("\n"), (line) => line.startsWith("data:")),
@@ -222,23 +250,22 @@ const connector = (url: URL, cookie: string) =>
               )
             : text
         )
-        if (body.error !== undefined || body.result?.isError === true)
-          return yield* Effect.fail(failed(`${name} refused: ${body.error?.message ?? text}`))
+        const toolError = Option.exists(
+          Option.flatMap(body.result, (result) => result.isError),
+          (isError) => isError
+        )
+        if (Option.isSome(body.error) || toolError)
+          return yield* Effect.fail(
+            failed(
+              `${name} refused: ${Option.match(body.error, { onNone: () => text, onSome: (error) => error.message })}`
+            )
+          )
       })
 
     /** Calls a tool that takes no arguments, recovering at most twice. */
-    const call = (name: string) =>
-      attempt(name, 2).pipe(
-        Effect.mapError((error) =>
-          error instanceof SmokeFailed ? error : failed(`The connector could not call ${name}: ${String(error)}`)
-        )
-      )
+    const call = (name: string) => attempt(name, 2).pipe(failing(`The connector could not call ${name}`))
     return { call, recoveries: Ref.get(recoveries) }
-  }).pipe(
-    Effect.mapError((error) =>
-      error instanceof SmokeFailed ? error : failed(`The connector could not connect: ${String(error)}`)
-    )
-  )
+  }).pipe(failing("The connector could not connect"))
 
 /** Runs `stop` until another instance answers than `before`, at most `attempts` times. */
 const awaitNewInstance = <R>(
@@ -255,7 +282,8 @@ const awaitNewInstance = <R>(
         return after === before ? yield* awaitNewInstance(url, before, stop, attempts - 1) : after
       })
 
-const run = () => `ras smoke ${new Date().toISOString()}`
+/** The title of the tasks a smoke run's `check` writes, stamped with the moment it asks. */
+const taskTitle = (check: string) => Effect.map(DateTime.now, (now) => `ras smoke ${DateTime.formatIso(now)} ${check}`)
 
 /**
  * Writes a task and connects a connector, runs `stop` until another instance answers, then reads the task back with
@@ -267,8 +295,10 @@ export const idle = <R>(
 ) =>
   Effect.gen(function* () {
     const cookie = yield* signIn(target)
-    const client = yield* owner(target.url, cookie)
-    const id = yield* Effect.mapError(write(client, `${run()} idle`), (error) => failed(`The write failed: ${error}`))
+    const client = yield* signedInClient(target.url, cookie)
+    const id = yield* Effect.mapError(write(client, yield* taskTitle("idle")), (error) =>
+      failed(`The write failed: ${error}`)
+    )
     yield* Effect.addFinalizer(() => cleanUp(client, [id]))
     const connected = yield* connector(target.url, cookie)
     yield* connected.call("whoami")
@@ -307,11 +337,11 @@ export const deploy = <R>(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const prefix = `${run()} deploy`
-    const client = yield* owner(target.url, yield* signIn(target))
+    const prefix = yield* taskTitle("deploy")
+    const client = yield* signedInClient(target.url, yield* signIn(target))
     const before = yield* instance(target.url)
 
-    const acknowledged = yield* Ref.make<ReadonlyArray<Parameters<typeof survived>[1]>>([])
+    const acknowledged = yield* Ref.make<ReadonlyArray<TaskId>>([])
     yield* Effect.addFinalizer(() => Effect.flatMap(Ref.get(acknowledged), (ids) => cleanUp(client, ids)))
     const refused = yield* Ref.make(0)
     const stopping = yield* Ref.make(false)
@@ -355,10 +385,7 @@ export const deploy = <R>(
           return yield* Effect.fail(failed(`The restored replica lacks ${missing} of the ${ids.length} writes.`))
         return ids.length
       })
-    ).pipe(
-      Effect.retry({ times: 6, schedule: Schedule.spaced(Duration.seconds(10)) }),
-      Effect.mapError((error) => (error instanceof SmokeFailed ? error : failed(`The restore failed: ${error}`)))
-    )
+    ).pipe(Effect.retry({ times: 6, schedule: Schedule.spaced(Duration.seconds(10)) }), failing("The restore failed"))
 
     return { before, after, acknowledged: ids.length, refused: yield* Ref.get(refused), restored }
   }).pipe(Effect.scoped)
