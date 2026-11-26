@@ -16,6 +16,10 @@ _Avoid_: Calendar, workspace
 A stretch of time worked or planned on one task, kept as an event in its space's calendar.
 _Avoid_: Worklog, time entry
 
+**Replica**:
+The copy of the database Litestream keeps in a Cloud Storage bucket, which every start restores from and every write reaches.
+_Avoid_: Backup (a backup is a full copy taken at one moment)
+
 **Insights**:
 The statistics of the time the events of the calendars the owner picks take per week, month and calendar quarter: the time already taken, and beside it the time still planned.
 _Avoid_: Calendar insights, calendar stats, report, dashboard
