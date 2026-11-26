@@ -1,0 +1,4 @@
+dbs:
+  - path: ${RAS_DATABASE}
+    replica:
+      url: gs://${RAS_REPLICA_BUCKET}/ras
