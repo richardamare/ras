@@ -14,6 +14,8 @@ secrets=(
   graph-client-secret
   google-client-secret
   mail-app-password
+  r2-access-key-id
+  r2-secret-access-key
 )
 
 add() {
