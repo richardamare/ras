@@ -40,17 +40,6 @@ variable "soft_delete_days" {
   }
 }
 
-variable "noncurrent_days" {
-  description = "How long a replaced or deleted version is kept before Cloud Storage removes it."
-  type        = number
-  default     = 30
-
-  validation {
-    condition     = var.noncurrent_days >= 1
-    error_message = "noncurrent_days is at least 1."
-  }
-}
-
 resource "google_storage_bucket" "this" {
   name                        = var.name
   location                    = var.location
@@ -64,17 +53,6 @@ resource "google_storage_bucket" "this" {
 
   soft_delete_policy {
     retention_duration_seconds = var.soft_delete_days * 86400
-  }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-
-    condition {
-      days_since_noncurrent_time = var.noncurrent_days
-      with_state                 = "ARCHIVED"
-    }
   }
 }
 

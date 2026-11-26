@@ -18,6 +18,11 @@ run "keeps_versions_and_soft_deleted_objects" {
     condition     = google_storage_bucket.this.soft_delete_policy[0].retention_duration_seconds == 7 * 86400
     error_message = "The replica bucket keeps soft-deleted objects for seven days by default."
   }
+
+  assert {
+    condition     = length(google_storage_bucket.this.lifecycle_rule) == 0
+    error_message = "No lifecycle rule deletes the replica's object versions."
+  }
 }
 
 run "rejects_a_soft_delete_shorter_than_a_week" {
