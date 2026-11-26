@@ -7,11 +7,10 @@ import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/http/HttpClient"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
+import * as Health from "@ras/api/health"
 import * as Global from "@ras/global"
 import * as Time from "@ras/kernel/Time"
 import * as Suite from "../src/Suite.ts"
-
-const Health = Schema.Struct({ ok: Schema.Boolean, instance: Schema.String })
 
 const OpenApi = Schema.Struct({
   info: Schema.Struct({ title: Schema.String }),
@@ -24,10 +23,10 @@ describe("the HTTP API", () => {
       Effect.gen(function* () {
         const { url } = yield* Suite.Server
         const first = yield* HttpClient.get(new URL("/health", url)).pipe(
-          Effect.flatMap(HttpClientResponse.schemaBodyJson(Health))
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(Health.Health))
         )
         const second = yield* HttpClient.get(new URL("/health", url)).pipe(
-          Effect.flatMap(HttpClientResponse.schemaBodyJson(Health))
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(Health.Health))
         )
         assert.isTrue(first.ok)
         assert.isNotEmpty(first.instance)

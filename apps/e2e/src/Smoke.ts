@@ -18,6 +18,7 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as HttpApiClient from "effect/http-api/HttpApiClient"
 import * as SqlClient from "effect/sql/SqlClient"
 import * as Api from "@ras/api/api"
+import * as Health from "@ras/api/health"
 
 /** The ras a smoke run checks, at its own address, and the owner it signs in as. */
 export interface Target {
@@ -32,13 +33,11 @@ const failed = (message: string) => new SmokeFailed({ message })
 /** How a connector that holds its token kept calling tools when an instance it had no session with answered. */
 export type Recovery = "refreshed" | "reinitialized"
 
-const Health = Schema.Struct({ ok: Schema.Boolean, instance: Schema.String })
-
 /** The instance answering `/health`, waiting while one starts. */
 export const instance = (url: URL) =>
   HttpClient.get(new URL("/health", url)).pipe(
     Effect.flatMap(HttpClientResponse.filterStatusOk),
-    Effect.flatMap(HttpClientResponse.schemaBodyJson(Health)),
+    Effect.flatMap(HttpClientResponse.schemaBodyJson(Health.Health)),
     Effect.map((health) => health.instance),
     Effect.retry(Schedule.spaced(Duration.millis(500))),
     Effect.timeout(Duration.minutes(2)),
