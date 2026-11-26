@@ -295,7 +295,8 @@ const planning = (day: Time.PragueDate): Event.Entry => ({
   copyOf: Option.none()
 })
 
-const holds = (entries: ReadonlyArray<Event.Event>, title: string) => entries.some((event) => event.title === title)
+const holds = (entries: ReadonlyArray<Event.Event>, title: string) =>
+  Arr.some(entries, (event) => event.title === title)
 
 describe("keeps the calendar current", () => {
   it.effect("calls Reclaim not at all while nobody reads", () =>
@@ -393,7 +394,7 @@ describe("keeps the calendar current", () => {
         yield* TestClock.adjust("3 minutes")
         assert.deepStrictEqual(yield* calendar.events(days(day, 1)), before)
       }).pipe(Effect.provide(Layer.merge(fake.layer, capture)))
-      assert.isTrue(logged.some((line) => line.startsWith("Warn") && line.includes("calendar sync failed")))
+      assert.isTrue(Arr.some(logged, (line) => line.startsWith("Warn") && line.includes("calendar sync failed")))
     })
   )
 })
