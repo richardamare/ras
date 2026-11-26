@@ -62,3 +62,23 @@ variable "mail_username" {
   description = "The username of the mailbox ras reads. Private."
   type        = string
 }
+
+variable "r2_endpoint" {
+  description = "The S3 endpoint of the Cloudflare account holding the backup bucket. Private."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://[0-9a-f]{32}(\\.[a-z]+)?\\.r2\\.cloudflarestorage\\.com$", var.r2_endpoint))
+    error_message = "r2_endpoint is the account's R2 endpoint, such as https://<account id>.r2.cloudflarestorage.com."
+  }
+}
+
+variable "r2_bucket" {
+  description = "The R2 bucket the nightly backups land in. Private."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$", var.r2_bucket))
+    error_message = "r2_bucket is an R2 bucket name: lowercase letters, digits and hyphens."
+  }
+}

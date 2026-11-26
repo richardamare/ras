@@ -22,3 +22,8 @@ output "replica_bucket" {
   description = "The bucket holding the replica, which the move seeds."
   value       = module.replica.name
 }
+
+output "backup_job" {
+  description = "The Scheduler job that backs the database up to R2 each night."
+  value       = module.scheduler.job
+}
