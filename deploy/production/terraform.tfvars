@@ -1,0 +1,6 @@
+project_id        = ""
+region            = "europe-west1"
+github_repository = "richardamare/ras"
+memory_repository = "git@github.com:richardamare/memory.git"
+graph_client_id   = ""
+google_client_id  = ""
