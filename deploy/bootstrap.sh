@@ -19,3 +19,5 @@ gcloud storage buckets update "gs://$bucket" --project "$project" --versioning
 
 echo "Initialise the production root with:"
 echo "  terraform -chdir=deploy/envs/prod init -backend-config=bucket=$bucket"
+echo "and apply it with:"
+echo "  deploy/apply.sh $project"
