@@ -1,6 +1,11 @@
 output "url" {
-  description = "The service's run.app address."
+  description = "The service's run.app address, which answers beside the domain."
   value       = module.service.uri
+}
+
+output "dns_records" {
+  description = "The records Cloudflare points the domain at, DNS only."
+  value       = google_cloud_run_domain_mapping.this.status[0].resource_records
 }
 
 output "image" {

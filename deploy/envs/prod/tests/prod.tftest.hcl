@@ -1,15 +1,10 @@
-mock_provider "google" {
-  mock_data "google_project" {
-    defaults = {
-      number = "123456789"
-    }
-  }
-}
+mock_provider "google" {}
 
 variables {
   project_id       = "example-project"
   graph_client_id  = "graph-client"
   google_client_id = "google-client"
+  domain           = "ras.example.com"
   billing_account  = "000000-AAAAAA-111111"
   alert_email      = "owner@example.com"
   mail_username    = "owner@example.com"
@@ -17,12 +12,17 @@ variables {
   r2_bucket        = "ras-backups"
 }
 
-run "serves_on_its_own_run_app_address" {
+run "serves_on_the_domain" {
   command = plan
 
   assert {
-    condition     = local.host == "ras-123456789.europe-west1.run.app"
-    error_message = "The service and the uptime check use the service's run.app address."
+    condition     = local.url == "https://ras.example.com"
+    error_message = "ras knows itself by the domain, so sign-in and OAuth redirects stay on it."
+  }
+
+  assert {
+    condition     = google_cloud_run_domain_mapping.this.name == "ras.example.com"
+    error_message = "The domain mapping routes the domain to the service."
   }
 }
 
@@ -39,7 +39,7 @@ run "backs_up_through_the_route_on_the_address_ras_knows_itself_by" {
   command = plan
 
   assert {
-    condition     = local.backup_url == "https://ras-123456789.europe-west1.run.app/backup"
+    condition     = local.backup_url == "https://ras.example.com/backup"
     error_message = "The job calls /backup on RAS_URL, so its token's audience is the one ras expects."
   }
 }
@@ -72,4 +72,14 @@ run "rejects_a_memory_repository_over_https" {
   }
 
   expect_failures = [var.memory_repository]
+}
+
+run "rejects_a_domain_with_a_scheme" {
+  command = plan
+
+  variables {
+    domain = "https://ras.example.com"
+  }
+
+  expect_failures = [var.domain]
 }

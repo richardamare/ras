@@ -46,6 +46,6 @@ variable "host" {
 
   validation {
     condition     = can(regex("^[a-z0-9.-]+$", var.host))
-    error_message = "host is a bare host name, such as ras-123.europe-west1.run.app."
+    error_message = "host is a bare host name, such as ras.example.com."
   }
 }
