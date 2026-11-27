@@ -14,7 +14,7 @@ ras writes plain events through Graph into the calendars of the owner's Outlook 
 
 The owner connects Outlook once, with `ras graph connect` or from Settings. ras sends the owner to the consumers tenant's authorize endpoint with PKCE, asking for `offline_access` and `Calendars.ReadWrite`, and Microsoft returns to `/graph/callback`. ras redeems the code with the client secret and stores the access and refresh tokens in `global_graph_tokens`, sealed with AES-GCM under a key derived from `RAS_AUTH_SECRET`. `Graph.token` hands every caller a current access token and refreshes it, one refresh at a time, when less than two minutes are left.
 
-ras uses the Entra app registration the owner already has for personal accounts, with ras's callback added as a web redirect URI. Its client id and secret live in the 1Password vault `ras` as `entra`.
+ras uses the Entra app registration the owner already has for personal accounts, with ras's callback added as a web redirect URI. Its client id is a Terraform variable, and its secret lives in Secret Manager as `graph-client-secret`.
 
 ## Consequences
 
