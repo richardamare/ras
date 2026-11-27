@@ -1,7 +1,3 @@
-data "google_project" "this" {
-  project_id = var.project_id
-}
-
 resource "google_project_service" "this" {
   for_each           = toset(local.services)
   service            = each.value
@@ -56,6 +52,19 @@ module "service" {
   depends_on = [module.secrets]
 }
 
+resource "google_cloud_run_domain_mapping" "this" {
+  name     = var.domain
+  location = var.region
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = module.service.name
+  }
+}
+
 module "scheduler" {
   source     = "../../modules/scheduler"
   region     = var.region
@@ -77,6 +86,6 @@ module "alerts" {
   project_id      = var.project_id
   billing_account = var.billing_account
   email           = var.alert_email
-  host            = local.host
+  host            = var.domain
   depends_on      = [google_project_service.this]
 }

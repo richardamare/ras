@@ -48,6 +48,16 @@ variable "google_client_id" {
   }
 }
 
+variable "domain" {
+  description = "The host name ras serves on, which Cloudflare points at the domain mapping. Private."
+  type        = string
+
+  validation {
+    condition     = can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$", var.domain))
+    error_message = "domain is a bare host name, such as ras.example.com."
+  }
+}
+
 variable "billing_account" {
   description = "The id of the billing account the budget watches. Private."
   type        = string

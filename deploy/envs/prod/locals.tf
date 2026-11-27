@@ -25,9 +25,7 @@ locals {
     RAS_BACKUP_R2_SECRET_ACCESS_KEY = "r2-secret-access-key"
   }
 
-  # Cloud Run's deterministic address, known before the service exists, so the service can be told its own URL.
-  host = "ras-${data.google_project.this.number}.${var.region}.run.app"
-  url  = "https://${local.host}"
+  url = "https://${var.domain}"
 
   # ras expects this URL as the audience of the Scheduler's token, so it is built from RAS_URL.
   backup_url = "${local.url}/backup"
