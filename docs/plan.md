@@ -149,14 +149,14 @@ The owner's clock is Europe/Prague. Every tool and screen takes and shows Prague
 
 ## Running it
 
-| Piece          | Choice                                                                                                                                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Host           | The always-on Mac, a launchd agent that restarts on exit                                                                                                                                                        |
-| Public address | A Cloudflare Tunnel to the API's port                                                                                                                                                                           |
-| Deploy         | `rasctl`, a launchd agent, checks GitHub every two minutes; a newly published release deploys: the host fetches the release's commit into its own folder, starts it, and rolls back when its health check fails |
-| Secrets        | 1Password vault `ras`, injected by `op run` at start                                                                                                                                                            |
-| Backup         | SQLite `VACUUM INTO` nightly to iCloud (7 kept) and Cloudflare R2 (30 kept); memory is backed up by GitHub                                                                                                      |
-| Budget         | Under 150 MB resident at idle on the host                                                                                                                                                                       |
+| Piece          | Choice                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Host           | One Cloud Run service with at most one instance; Litestream replicates the SQLite file to Cloud Storage (ADR 0006)             |
+| Public address | The owner's domain, mapped to the service                                                                                      |
+| Deploy         | A `v*` tag publishes the release and the deploy workflow rolls it onto Cloud Run; Terraform in `deploy/` describes the rest    |
+| Secrets        | Secret Manager, reaching the container as environment variables                                                                |
+| Backup         | Cloud Scheduler asks for a SQLite `VACUUM INTO` nightly, which lands in Cloudflare R2 (30 kept); memory is backed up by GitHub |
+| Budget         | Inside the Google Cloud free tier                                                                                              |
 
 ## Steps
 
@@ -164,7 +164,7 @@ Build one step at a time. A step is done when its criterion holds on the running
 
 1. **Skeleton.** Workspace and `apps/api`; the module packages with Bun's isolated linker set in `bunfig.toml`; SQLite and migrations; better-auth with the owner's email and password; the sign-in and consent pages; `/mcp` behind OAuth with `whoami`; audit, health, OpenAPI, sample mode. **Done when** Claude Code connects to a local ras through OAuth and `whoami` answers; nobody but the owner can sign in or sign up; and a module importing an undeclared module fails the build.
 2. **Memory.** The clone, the registry, the tools, the FTS index, the webhook. **Done when** a fact the owner pushes from the IDE is returned by `memory_read` within a minute, a `memory_write` lands as a commit by its agent on GitHub, a write against a stale version is refused with the current text, a bot's write to another bot's SOP or to its own specification is refused with the reason, and a kind the owner adds to `registry.yaml` from the IDE takes writes after the next pull.
-3. **Live.** launchd, tunnel, secrets, backup, deploy from a release. **Done when** a Grok bot and claude.ai are connected to the ras on the host and read memory.
+3. **Live.** Hosting, address, secrets, backup, deploy from a release. **Done when** a Grok bot and claude.ai are connected to the hosted ras and read memory.
 4. **Board.** Agents, spaces, projects, tasks with status, assignee, body, comments and links, their tools and HTTP. **Done when** an agent's poll finds a task assigned to it, the agent moves it to `review` with a comment, and `tasks` returns it to the owner's filter.
 5. **Calendar.** Connecting Graph, the Reclaim and Graph clients, the cache, writable calendars, rules, free time, conflicts, event drafts, the tools. **Done when** the owner connects Outlook and, after the Graph access token expires, ras refreshes it; the week across every calendar shows each event once, a show-as change and an all-day event land in a writable calendar, and a weekly series keeps its clock across a daylight-saving change.
 6. **Work blocks.** Plan, start, stop, log, move, remove, block drafts, time spent. **Done when** a block planned from a thread lands in its space's calendar, start and stop leave a block with the real times, and the project shows the time spent.
@@ -174,6 +174,4 @@ Build one step at a time. A step is done when its criterion holds on the running
 ## Open
 
 - Whether Grok can start a routine from an incoming webhook; until it can, its agents poll and ras pushes nothing.
-- How the host authenticates its pushes to `memory`: a deploy key or a fine-grained token from 1Password.
 - Whether the test runner is `bun test` or Vitest under Bun; step 1 picks the one that runs the Effect layers and `bun:sqlite` together.
-- The tunnel's domain.

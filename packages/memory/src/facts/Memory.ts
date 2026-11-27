@@ -88,7 +88,7 @@ const refuseSecret = (draft: Fact.Draft) =>
       refused(
         "fact.secret",
         `The fact looks like it holds ${kind}. Memory is shared with every agent and kept in git history.`,
-        "Keep the secret in 1Password and write only where to find it."
+        "Keep the secret in a password manager and write only where to find it."
       )
   })
 

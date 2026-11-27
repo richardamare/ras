@@ -125,9 +125,7 @@ const accountCommand = <I, Id extends string>(account: Global.OAuthAccount<I, Id
 
 const backup = Command.make("backup", { database }, (flags) =>
   Effect.provide(Backup.run, Server.database(flags.database))
-).pipe(
-  Command.withDescription("Backs the database up now, to the iCloud folder and the R2 bucket that are configured.")
-)
+).pipe(Command.withDescription("Backs the database up now, to the R2 bucket that is configured."))
 
 const openapi = Command.make("openapi", {}, () => Console.log(JSON.stringify(Api.openApi(), null, 2))).pipe(
   Command.withDescription("Prints the OpenAPI document of the HTTP API. Needs no configuration and no database.")
