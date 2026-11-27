@@ -53,6 +53,11 @@ resource "google_monitoring_uptime_check_config" "this" {
       host       = var.host
     }
   }
+
+  # The alert policy names this check, so the replacement exists before the policy moves off the old one.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "google_monitoring_alert_policy" "this" {
